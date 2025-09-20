@@ -1,0 +1,113 @@
+ INSERT INTO public.cardapio (numero, nome, descricao, tipo, categoria, preco_grande, preco_medio)
+VALUES  (127, 'Calabresa', 'Calabresa', 'item', 'item', 10.0, 8.0);
+
+INSERT INTO public.cardapio  (numero, nome, descricao, tipo, categoria, preco_grande, preco_medio)
+VALUES (128, 'Mussarela', 'Mussarela', 'item', 'item', 10.0, 8.0);
+
+  INSERT INTO public.cardapio (numero, nome, descricao, tipo, categoria, preco_grande, preco_medio)
+VALUES (129, 'Presunto', 'Presunto', 'item', 'item', 10.0, 8.0);
+
+  
+INSERT INTO public.cardapio  (numero, nome, descricao, tipo, categoria, preco_grande, preco_medio)
+VALUES  (130, 'Bacon', 'Bacon', 'item', 'item', 10.0, 8.0);
+
+INSERT INTO public.cardapio  (numero, nome, descricao, tipo, categoria, preco_grande, preco_medio)
+VALUES(131, 'Cheddar', 'Cheddar', 'item', 'item', 10.0, 8.0);
+
+
+INSERT INTO public.cardapio  (numero, nome, descricao, tipo, categoria, preco_grande, preco_medio)
+VALUES (132, 'Champignon', 'Champignon', 'item', 'item', 10.0, 8.0);
+
+ 
+INSERT INTO public.cardapio  (numero, nome, descricao, tipo, categoria, preco_grande, preco_medio)
+VALUES (133, 'Salaminho', 'Salaminho', 'item', 'item', 10.0, 8.0);
+
+INSERT INTO public.cardapio  (numero, nome, descricao, tipo, categoria, preco_grande, preco_medio)
+VALUES (134, 'Lombo', 'Lombo', 'item', 'item', 10.0, 8.0);
+ 
+INSERT INTO public.cardapio (numero, nome, descricao, tipo, categoria, preco_grande, preco_medio)
+VALUES  (135, 'Frango', 'Frango', 'item', 'item', 10.0, 8.0);
+
+INSERT INTO public.cardapio  (numero, nome, descricao, tipo, categoria, preco_grande, preco_medio)
+VALUES (136, 'Catupiry', 'Catupiry', 'item', 'item', 10.0, 8.0);
+
+
+ INSERT INTO public.cardapio (numero, nome, descricao, tipo, categoria, preco_grande, preco_medio)
+VALUES(137, 'Parmesão', 'Parmesão', 'item', 'item', 10.0, 8.0);
+
+ 
+INSERT INTO public.cardapio  (numero, nome, descricao, tipo, categoria, preco_grande, preco_medio)
+VALUES (138, 'Milho', 'Milho', 'item', 'item', 8.0, 6.0);
+
+  
+INSERT INTO public.cardapio   (numero, nome, descricao, tipo, categoria, preco_grande, preco_medio)
+VALUES (139, 'Palmito', 'Palmito', 'item', 'item', 8.0, 6.0);
+
+INSERT INTO public.cardapio (numero, nome, descricao, tipo, categoria, preco_grande, preco_medio)
+ VALUES (140, 'Ovo', 'Ovo', 'item', 'item', 8.0, 6.0);
+
+
+  INSERT INTO public.cardapio (numero, nome, descricao, tipo, categoria, preco_grande, preco_medio)
+VALUES  (141, 'Ervilha', 'Ervilha', 'item', 'item', 8.0, 6.0);
+
+
+ 
+
+
+
+ ALTER TABLE public.cardapio
+  ADD COLUMN preco_custo_grande  numeric(8,2) DEFAULT 0.00;
+
+   ALTER TABLE public.cardapio
+  ADD COLUMN preco_custo_media  numeric(8,2) DEFAULT 0.00;
+
+  
+
+  update cardapio set  preco_custo_grande = preco_grande * 0.55
+
+    update cardapio set  preco_custo_media = preco_grande * 0.62
+
+ 
+   ALTER TABLE public.item_pedido_temp
+  ADD COLUMN nome_fracao text;
+
+
+ALTER TABLE public.item_pedido_temp
+  ADD COLUMN pizza_referencia text;
+
+ALTER TABLE public.item_pedido_temp
+  ADD COLUMN nome_fracao text;
+
+
+ALTER TABLE public.item_pedido_temp
+  ADD COLUMN ordem_item  bigint ;
+
+
+
+ALTER TABLE public.item_pedido_temp
+  ADD COLUMN id_pizza_pai  bigint ;
+
+ 
+ALTER TABLE public.item_pedido_temp
+  ADD COLUMN id_pizza_filha bigint ;
+
+
+
+ALTER TABLE item_pedido_temp
+ADD CONSTRAINT fk_item_pizza_pai
+FOREIGN KEY (id_pizza_pai)
+REFERENCES item_pedido_temp (item_id)
+ON DELETE CASCADE;
+
+
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
+CREATE INDEX idx_cardapio_nome_trgm
+  ON cardapio USING gin (LOWER(nome) gin_trgm_ops);
+
+CREATE INDEX idx_cardapio_palavras_trgm
+  ON cardapio USING gin (LOWER(palavras_chave) gin_trgm_ops);
+
+
+
+

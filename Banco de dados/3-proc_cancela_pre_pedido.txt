@@ -1,0 +1,22 @@
+-- 🔁 Remove a função antiga se existir
+DROP FUNCTION IF EXISTS public.cancela_pre_pedido(INTEGER, INTEGER);
+
+-- ✅ Criação da função
+CREATE OR REPLACE FUNCTION public.cancela_pre_pedido(p_user_id INTEGER, p_pedido_id INTEGER)
+RETURNS VOID AS $$
+BEGIN
+  -- Exclui itens do pré-pedido
+  DELETE FROM item_pedido_temp
+  WHERE user_id = p_user_id
+    AND pedido_id = p_pedido_id;
+
+  -- Exclui o pedido temporário
+  --DELETE FROM 
+  update  pedido_temp set status = 'enviado'
+  WHERE user_id = p_user_id
+    AND pedido_id = p_pedido_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+GRANT EXECUTE ON FUNCTION public.cancela_pre_pedido(INTEGER, INTEGER) TO anon;
+GRANT EXECUTE ON FUNCTION public.cancela_pre_pedido(INTEGER, INTEGER) TO authenticated;
