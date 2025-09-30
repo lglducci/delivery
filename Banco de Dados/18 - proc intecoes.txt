@@ -1,0 +1,81 @@
+ CREATE OR REPLACE FUNCTION grava_intencao_opcao(
+    p_user_id   INT,
+    p_pedido_id INT,
+    p_nome      TEXT
+)
+RETURNS TABLE (
+    opcao        INT,
+    numero       INT,
+    user_id      INT,
+    pedido_id    INT, 
+    tamanho      TEXT,
+    nome         TEXT,
+    valor_grande NUMERIC,
+    valor_medio  NUMERIC,
+    escolhido    BOOLEAN,
+    created_at   TIMESTAMP,
+    categoria    TEXT,
+    tipo            TEXT,
+    descricao TEXT 
+) AS $$
+BEGIN
+  RETURN QUERY
+  WITH base AS (
+    -- Busca pizza/esfirra/borda/item
+    SELECT 
+       b.numero,
+       b.nome,
+       b.preco_grande AS valor_grande,
+       b.preco_media  AS valor_medio,
+       b.categoria,
+       b.tipo,
+      b.descricao
+    FROM busca_cardapio((
+           SELECT string_agg(num, ', ' ORDER BY num::int)
+           FROM (
+             SELECT DISTINCT c.numero::text AS num
+             FROM cardapio c
+             WHERE lower(c.categoria) IN ('pizza','esfirra','borda','item')
+               AND c.nome ILIKE '%' || p_nome || '%'
+           ) t
+         )) b
+
+    UNION ALL
+
+    -- Busca bebidas
+    SELECT 
+       b.numero,
+       b.nome,
+       b.preco_grande AS valor_grande,
+       b.preco_media  AS valor_medio,
+       b.categoria,
+       b.tipo,
+      b.descricao
+    FROM busca_cardapio((
+           SELECT string_agg(num, ', ' ORDER BY num::int)
+           FROM (
+             SELECT DISTINCT c.numero::text AS num
+             FROM cardapio c
+             WHERE lower(c.tipo) = 'bebida'
+               AND c.palavras_chave ILIKE '%' || p_nome || '%'
+           ) t
+         )) b
+  )
+  SELECT
+     ROW_NUMBER() OVER (ORDER BY base.numero) AS opcao,  -- sequencial
+     base.numero,
+     p_user_id     AS user_id,
+     p_pedido_id   AS pedido_id,
+     NULL::TEXT    AS tamanho,
+     base.nome,
+     base.valor_grande,
+     base.valor_medio,
+     FALSE         AS escolhido,
+     NOW()         AS created_at,
+     base.categoria,
+     base.tipo,
+      base.descricao
+  FROM base
+  ORDER BY base.numero;
+END;
+$$ LANGUAGE plpgsql;

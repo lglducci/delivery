@@ -1,0 +1,26 @@
+ CREATE OR REPLACE FUNCTION GetOpcoes(p_item_id INT, p_parte INT)
+RETURNS TABLE (
+  opcao INT,
+  item_id INT,
+  numero INT,
+  nome TEXT,
+  descricao TEXT,
+  preco NUMERIC,
+  total  BIGINT  -- 👈 ajustado de INT para BIGINT
+) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    o.opcao, 
+    o.item_id, 
+    o.numero, 
+    o.nome, 
+    o.descricao, 
+    o.preco,
+    COUNT(*) OVER() AS total   -- aqui conta o total de linhas
+  FROM item_opcoes o
+  WHERE o.item_id = p_item_id
+    AND o.parte = p_parte
+  ORDER BY o.opcao ASC;
+END;
+$$ LANGUAGE plpgsql;
