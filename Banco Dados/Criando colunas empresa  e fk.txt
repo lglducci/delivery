@@ -1,0 +1,54 @@
+-- ===================================
+-- ADICIONA COLUNA id_empresa
+-- ===================================
+ALTER TABLE Item_pedido ADD COLUMN id_empresa INT NOT NULL DEFAULT 1;
+ALTER TABLE cardapio ADD COLUMN id_empresa INT NOT NULL DEFAULT 1;
+ALTER TABLE comentario_pedido ADD COLUMN id_empresa INT NOT NULL DEFAULT 1;
+ALTER TABLE comentario_pedido_temp ADD COLUMN id_empresa INT NOT NULL DEFAULT 1;
+ALTER TABLE intencao_opcao ADD COLUMN id_empresa INT NOT NULL DEFAULT 1;
+ALTER TABLE item_opcoes ADD COLUMN id_empresa INT NOT NULL DEFAULT 1;
+ALTER TABLE item_pedido ADD COLUMN id_empresa INT NOT NULL DEFAULT 1;
+ALTER TABLE item_pedido_temp ADD COLUMN id_empresa INT NOT NULL DEFAULT 1;
+ALTER TABLE n8n_chat_histories ADD COLUMN id_empresa INT NOT NULL DEFAULT 1;
+ALTER TABLE pedido_temp ADD COLUMN id_empresa INT NOT NULL DEFAULT 1;
+ALTER TABLE pedidos ADD COLUMN id_empresa INT NOT NULL DEFAULT 1;
+ALTER TABLE usuario    ADD COLUMN id_empresa INT NOT NULL DEFAULT 1;
+
+-- ===================================
+-- ADICIONA FK id_empresa -> empresas
+-- ===================================
+ALTER TABLE Item_pedido 
+  ADD CONSTRAINT fk_itempedido_empresa FOREIGN KEY (id_empresa) REFERENCES empresas (id_empresa) ON DELETE CASCADE;
+
+ALTER TABLE cardapio 
+  ADD CONSTRAINT fk_cardapio_empresa FOREIGN KEY (id_empresa) REFERENCES empresas (id_empresa) ON DELETE CASCADE;
+
+ALTER TABLE comentario_pedido 
+  ADD CONSTRAINT fk_comentario_pedido_empresa FOREIGN KEY (id_empresa) REFERENCES empresas (id_empresa) ON DELETE CASCADE;
+
+ALTER TABLE comentario_pedido_temp 
+  ADD CONSTRAINT fk_comentario_pedido_temp_empresa FOREIGN KEY (id_empresa) REFERENCES empresas (id_empresa) ON DELETE CASCADE;
+
+ALTER TABLE intencao_opcao 
+  ADD CONSTRAINT fk_intencao_opcao_empresa FOREIGN KEY (id_empresa) REFERENCES empresas (id_empresa) ON DELETE CASCADE;
+
+ALTER TABLE item_opcoes 
+  ADD CONSTRAINT fk_item_opcoes_empresa FOREIGN KEY (id_empresa) REFERENCES empresas (id_empresa) ON DELETE CASCADE;
+
+ALTER TABLE item_pedido 
+  ADD CONSTRAINT fk_item_pedido_empresa FOREIGN KEY (id_empresa) REFERENCES empresas (id_empresa) ON DELETE CASCADE;
+
+ALTER TABLE item_pedido_temp 
+  ADD CONSTRAINT fk_item_pedido_temp_empresa FOREIGN KEY (id_empresa) REFERENCES empresas (id_empresa) ON DELETE CASCADE;
+
+ALTER TABLE n8n_chat_histories 
+  ADD CONSTRAINT fk_n8n_chat_histories_empresa FOREIGN KEY (id_empresa) REFERENCES empresas (id_empresa) ON DELETE CASCADE;
+
+ALTER TABLE pedido_temp 
+  ADD CONSTRAINT fk_pedido_temp_empresa FOREIGN KEY (id_empresa) REFERENCES empresas (id_empresa) ON DELETE CASCADE;
+
+ALTER TABLE pedidos 
+  ADD CONSTRAINT fk_pedidos_empresa FOREIGN KEY (id_empresa) REFERENCES empresas (id_empresa) ON DELETE CASCADE;
+
+ALTER TABLE usuario_
+  ADD CONSTRAINT fk_usuario__empresa FOREIGN KEY (id_empresa) REFERENCES empresas (id_empresa) ON DELETE CASCADE;

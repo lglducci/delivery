@@ -1,0 +1,51 @@
+   DROP FUNCTION IF EXISTS busca_cardapio(TEXT,INTEGER);
+ 
+
+CREATE OR REPLACE FUNCTION busca_cardapio(numeros TEXT, INTEGER)
+RETURNS TABLE (
+  numero BIGINT,
+  nome TEXT,
+  descricao TEXT,
+  preco_grande NUMERIC,
+  preco_media NUMERIC,
+  tipo TEXT ,
+  categoria text 
+) AS $$
+ 
+
+BEGIN
+  RETURN QUERY
+  SELECT n::bigint,
+         COALESCE(c.nome,'Produto não encontrado'),
+         COALESCE(c.descricao,'não encontrado.'),
+         COALESCE(c.preco_grande::numeric,0),
+         COALESCE(c.preco_medio::numeric,0),
+         c.tipo,
+         c.categoria
+    FROM unnest(string_to_array(numeros, ',')::int8[]) n
+    LEFT JOIN public.cardapio c ON c.numero = n
+    WHERE id_empresa = p_empresa_id;
+END; 
+
+
+
+$$ LANGUAGE plpgsql;
+
+
+ 
+
+GRANT EXECUTE ON FUNCTION busca_cardapio(TEXT,INTEGER) TO authenticated;
+GRANT EXECUTE ON FUNCTION busca_cardapio(TEXT,INTEGER) TO service_role;
+GRANT EXECUTE ON FUNCTION busca_cardapio(TEXT, INTEGER) TO anon;
+
+
+SELECT * FROM busca_cardapio('1,2,45,32,67,13,18'); 
+SELECT routine_name, specific_schema
+FROM information_schema.routines
+WHERE routine_name = 'busca_cardapio';
+
+
+ Finalização
+
+ 
+ 

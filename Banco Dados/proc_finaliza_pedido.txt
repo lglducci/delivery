@@ -1,0 +1,129 @@
+   CREATE OR REPLACE FUNCTION public.finalizar_pedido(
+  p_user_id   integer,
+  p_pedido_id integer,
+  p_id_empresa integer 
+)
+RETURNS text
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_pedido_id bigint;  
+  v_total     numeric;
+  v_pagto     text;
+  v_itens     text;
+  v_resumo    text;
+  v_comentario text;
+  v_nome      text;
+  v_endereco  text;
+  v_bairro    text;
+BEGIN
+  -- Atualiza valor no pedido_temp
+  UPDATE public.pedido_temp p
+     SET valor = COALESCE((
+       SELECT SUM(i.valor)
+         FROM public.item_pedido_temp i
+        WHERE i.user_id   = p_user_id
+          AND i.pedido_id = p_pedido_id
+     ),0) + 3
+   WHERE p.user_id   = p_user_id
+     AND p.pedido_id = p_pedido_id
+     and p.id_empresa = p_id_empresa  ;
+
+  -- Busca totais, itens e comentário
+  SELECT
+    SUM(i.valor) + 3 AS total,
+    MAX(p.tipo_cobranca) AS tipo_cobranca,
+    STRING_AGG(
+      E'\n       ' ||
+      TRIM(BOTH ' ' FROM
+        CASE WHEN i.quantidade > 1 THEN i.quantidade::text || 'x ' ELSE '' END ||
+        i.nome ||
+        CASE WHEN COALESCE(i.tamanho,'') <> '' THEN ' (' || i.tamanho || ')' ELSE '' END ||
+        CASE WHEN COALESCE(i.categoria,'') <> '' THEN ' - ' || i.categoria ELSE '' END ||
+        ' - R$ ' || TO_CHAR(i.valor, 'FM999G999G990D00')
+      ),
+      '' ORDER BY i.categoria, i.nome
+    ) AS itens,
+    COALESCE(NULLIF(BTRIM(c.comentario),''),'—') AS comentario
+  INTO v_total, v_pagto, v_itens, v_comentario
+  FROM public.item_pedido_temp i
+  LEFT JOIN public.pedido_temp p
+         ON p.user_id   = i.user_id
+        AND p.pedido_id = i.pedido_id
+          AND p.id_empresa  = i.id_empresa 
+  LEFT JOIN public.comentario_pedido_temp c
+         ON c.user_id   = i.user_id
+        AND c.pedido_id = i.pedido_id
+ WHERE i.user_id   = p_user_id
+   AND i.pedido_id = p_pedido_id
+  and    i.id_empresa = p_id_empresa 
+ GROUP BY c.comentario;
+
+  IF v_total IS NULL THEN
+    RAISE EXCEPTION 'Pedido temporário % do usuário % não encontrado ou sem itens.', p_pedido_id, p_user_id;
+  END IF;
+
+  -- Busca dados do cliente
+  SELECT u.nome, u.endereço, u.bairro
+    INTO v_nome, v_endereco, v_bairro
+    FROM usuario u
+   WHERE u.user_id = p_user_id 
+   and id_empresa = p_id_empresa 
+   LIMIT 1;
+
+  -- Insere em pedidos
+  INSERT INTO public.pedidos (user_id, status, valor, resumo, tipo_cobranca)
+  SELECT user_id, 'recebido', COALESCE(valor, v_total), NULL, tipo_cobranca
+    FROM public.pedido_temp
+   WHERE user_id   = p_user_id
+     AND pedido_id = p_pedido_id
+  RETURNING pedido_id INTO v_pedido_id;
+
+  -- Monta resumo já com o NOVO pedido_id
+  v_resumo :=
+      '📦 Pedido nº ' || v_pedido_id || E'\n' ||
+      '📋 Resumo: '   || COALESCE(v_itens,'') || E'\n' ||
+      '💳 Forma de pagamento: ' || COALESCE(v_pagto,'não informado') || E'\n' ||
+      '📦 Entrega: R$3,00' || E'\n' ||
+      '💰 Total: R$ ' || TO_CHAR(v_total,'FM999G999G990D00') || E'\n' ||
+      '💬 Comentário: ' || v_comentario || E'\n' ||
+      '👤 Cliente: '   || COALESCE(v_nome,'(não cadastrado)') || E'\n' ||
+      '🏠 Endereço: '  || COALESCE(v_endereco,'(sem endereço)') || ' – ' || COALESCE(v_bairro,'(sem bairro)');
+
+  -- Insere itens finais
+  INSERT INTO public.item_pedido (
+    numero, user_id, quantidade, tamanho, fracionada, tipo,
+    categoria, numero_fracao, nome, volume, status, valor,
+    valor_fracao, pedido_id, valor_unitario
+  )
+  SELECT numero, user_id, quantidade, tamanho, fracionada, tipo,
+         categoria, numero_fracao, nome, volume, status, valor,
+         valor_fracao, v_pedido_id, valor_unitario
+    FROM public.item_pedido_temp
+   WHERE user_id   = p_user_id
+     AND pedido_id = p_pedido_id 
+       and    id_empresa = p_id_empresa ;
+
+  -- Move comentários
+  INSERT INTO public.comentario_pedido (user_id,pedido_id,comentario)
+  SELECT user_id, v_pedido_id, comentario
+    FROM public.comentario_pedido_temp
+   WHERE user_id   = p_user_id
+     AND pedido_id = p_pedido_id
+    and    id_empresa = p_id_empresa ;
+
+  -- Atualiza resumo
+  UPDATE public.pedidos SET resumo = v_resumo WHERE pedido_id = v_pedido_id
+   and    id_empresa = p_id_empresa ;
+
+  -- Limpa temporários
+  DELETE FROM public.comentario_pedido_temp WHERE user_id=p_user_id AND pedido_id=p_pedido_id and    id_empresa = p_id_empresa ;
+  DELETE FROM public.item_pedido_temp      WHERE user_id=p_user_id AND pedido_id=p_pedido_id and    id_empresa = p_id_empresa ;
+  DELETE FROM public.pedido_temp           WHERE user_id=p_user_id AND pedido_id=p_pedido_id and    id_empresa = p_id_empresa ;
+
+  RETURN v_resumo;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.finalizar_pedido(integer,integer, integer) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.finalizar_pedido(integer,integer, integer) TO public;
