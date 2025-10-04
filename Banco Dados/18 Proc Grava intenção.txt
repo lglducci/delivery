@@ -1,0 +1,105 @@
+ CREATE OR REPLACE FUNCTION grava_intencao_opcao(
+    p_user_id     INT,
+    p_pedido_id   INT,
+    p_empresa_id  INT, 
+    p_nome        TEXT
+)
+RETURNS TABLE (linha TEXT) AS $$
+BEGIN
+  RETURN QUERY
+  WITH
+  -- 1) Números candidatos (produtos/itens)
+  nums_prod AS (
+    SELECT DISTINCT c.numero::TEXT AS num
+    FROM cardapio c
+    WHERE lower(c.categoria) IN ('pizza','esfirra','borda','item')
+      AND c.nome ILIKE '%' || p_nome || '%'
+      AND c.id_empresa = p_empresa_id
+  ),
+  -- 2) Aplica a função e GARANTE empresa via JOIN no cardapio
+  base_prod AS (
+    SELECT
+      c.numero::INT        AS numero,
+      c.nome,
+      c.preco_grande       AS valor_grande,
+      c.preco_medio        AS valor_medio,   -- << aqui
+      c.categoria,
+      c.tipo,
+      c.descricao
+    FROM busca_cardapio((
+           SELECT string_agg(num, ', ' ORDER BY num::INT)
+           FROM nums_prod
+         ), p_empresa_id) b
+    JOIN cardapio c
+      ON c.id_empresa = p_empresa_id
+     AND c.numero     = b.numero            -- trava empresa aqui
+  ),
+
+  -- 3) Números candidatos (bebidas)
+  nums_beb AS (
+    SELECT DISTINCT c.numero::TEXT AS num
+    FROM cardapio c
+    WHERE lower(c.categoria) = 'bebida'
+      AND c.palavras_chave ILIKE '%' || p_nome || '%'
+      AND c.id_empresa = p_empresa_id
+  ),
+  -- 4) Aplica a função e GARANTE empresa via JOIN no cardapio
+  base_beb AS (
+    SELECT
+      c.numero::INT        AS numero,
+      c.nome,
+      c.preco_grande       AS valor_grande,
+      c.preco_medio        AS valor_medio,   -- << e aqui
+      c.categoria,
+      c.tipo,
+      c.descricao
+    FROM busca_cardapio((
+           SELECT string_agg(num, ', ' ORDER BY num::INT)
+           FROM nums_beb
+         ), p_empresa_id) b
+    JOIN cardapio c
+      ON c.id_empresa = p_empresa_id
+     AND c.numero     = b.numero            -- trava empresa aqui
+  ),
+
+  -- 5) União das bases já filtradas pela empresa
+  base AS (
+    SELECT * FROM base_prod
+    UNION ALL
+    SELECT * FROM base_beb
+  ),
+
+  formatado AS (
+    SELECT
+      ROW_NUMBER() OVER (PARTITION BY base.categoria ORDER BY base.numero)::INT AS opcao,
+      base.categoria,
+      format(
+        '🔹 *(%s)* %s – *(G) R$%s / (M) R$%s* *[%s]*' || E'\n' ||
+        '📝 %s' || E'\n' ||
+        '💡 Exemplo: "1 %s %s grande"',
+        base.numero,
+        base.nome,
+        to_char(base.valor_grande, 'FM999G999G990D00'),
+        to_char(base.valor_medio , 'FM999G999G990D00'),
+        base.tipo,
+        COALESCE(NULLIF(base.descricao,''),'(sem descrição)'),
+        base.categoria,
+        base.numero
+      ) AS linha_fmt,
+      base.numero
+    FROM base
+  )
+  SELECT 
+    string_agg(
+      CASE 
+        WHEN opcao = 1 THEN 
+          E'\nCategoria ' || categoria || E'\n' || linha_fmt
+        ELSE 
+          linha_fmt
+      END,
+      E'\n\n'
+      ORDER BY numero
+    ) AS linha
+  FROM formatado;
+END;
+$$ LANGUAGE plpgsql;

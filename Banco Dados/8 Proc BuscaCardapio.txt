@@ -1,7 +1,7 @@
    DROP FUNCTION IF EXISTS busca_cardapio(TEXT,INTEGER);
  
 
-CREATE OR REPLACE FUNCTION busca_cardapio(numeros TEXT, INTEGER)
+CREATE OR REPLACE FUNCTION busca_cardapio(numeros TEXT, p_empresa_id  INTEGER)
 RETURNS TABLE (
   numero BIGINT,
   nome TEXT,
