@@ -72,8 +72,8 @@ BEGIN
    LIMIT 1;
 
   -- Insere em pedidos
-  INSERT INTO public.pedidos (user_id, status, valor, resumo, tipo_cobranca)
-  SELECT user_id, 'recebido', COALESCE(valor, v_total), NULL, tipo_cobranca
+  INSERT INTO public.pedidos (user_id, status, valor, resumo, tipo_cobranca, id_empresa )
+  SELECT user_id, 'recebido', COALESCE(valor, v_total), NULL, tipo_cobranca, id_empresa
     FROM public.pedido_temp
    WHERE user_id   = p_user_id
      AND pedido_id = p_pedido_id
@@ -94,19 +94,19 @@ BEGIN
   INSERT INTO public.item_pedido (
     numero, user_id, quantidade, tamanho, fracionada, tipo,
     categoria, numero_fracao, nome, volume, status, valor,
-    valor_fracao, pedido_id, valor_unitario
+    valor_fracao, pedido_id, valor_unitario, id_empresa
   )
   SELECT numero, user_id, quantidade, tamanho, fracionada, tipo,
          categoria, numero_fracao, nome, volume, status, valor,
-         valor_fracao, v_pedido_id, valor_unitario
+         valor_fracao, v_pedido_id, valor_unitario, id_empresa
     FROM public.item_pedido_temp
    WHERE user_id   = p_user_id
      AND pedido_id = p_pedido_id 
        and    id_empresa = p_id_empresa ;
 
   -- Move comentários
-  INSERT INTO public.comentario_pedido (user_id,pedido_id,comentario)
-  SELECT user_id, v_pedido_id, comentario
+  INSERT INTO public.comentario_pedido (user_id,pedido_id,comentario, id_empresa)
+  SELECT user_id, v_pedido_id, comentario, id_empresa
     FROM public.comentario_pedido_temp
    WHERE user_id   = p_user_id
      AND pedido_id = p_pedido_id
