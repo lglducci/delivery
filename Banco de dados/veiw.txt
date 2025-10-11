@@ -1,0 +1,11 @@
+CREATE OR REPLACE VIEW vw_ingrediente_pizzas AS
+SELECT 
+  pi.id, pi.nome, pi.id_empresa,
+  COUNT(c.numero) AS qtd_pizzas,
+  string_agg('('||c.numero||') '||c.nome, ', ' ORDER BY c.numero) AS pizzas_relacionadas
+FROM principais_ingredientes pi
+LEFT JOIN cardapio c
+  ON c.id_empresa = pi.id_empresa
+ AND c.categoria = 'pizza'
+ AND unaccent(lower(c.descricao)) ILIKE '%' || unaccent(lower(pi.nome)) || '%'
+GROUP BY pi.id, pi.nome, pi.id_empresa;

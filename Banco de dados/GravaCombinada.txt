@@ -1,0 +1,92 @@
+-- ===============================================================
+-- 🔧 Função: GravaCombinada
+-- Autor: ChatGPT (ajuste La Cantina)
+-- Objetivo: inserir itens combinados (borda, item, etc.)
+-- vinculados a uma pizza principal pela mesma referência
+-- ===============================================================
+
+DROP FUNCTION IF EXISTS public.GravaCombinada(integer, integer);
+CREATE OR REPLACE FUNCTION public.GravaCombinada(p_user integer, p_pedido integer)
+RETURNS TABLE(msg text, qtd_inserida int) AS
+$$
+DECLARE
+    v_ref record;
+    v_pizza record;
+    v_item record;
+    v_ordem int;
+    v_qtd int := 0;
+BEGIN
+    -- 🔸 percorre todas as referências únicas de intencao_opcao do usuário/pedido
+    FOR v_ref IN
+        SELECT DISTINCT referencia
+        FROM intencao_opcao
+        WHERE user_id = p_user
+          AND pedido_id = p_pedido
+          AND fracionada = false
+          AND categoria IN ('borda', 'item')
+    LOOP
+        -- 🔸 busca a pizza principal com mesma referência
+        SELECT *
+        INTO v_pizza
+        FROM item_pedido_temp
+        WHERE user_id = p_user
+          AND pedido_id = p_pedido
+          AND referencia = v_ref.referencia
+          AND categoria = 'pizza'
+        LIMIT 1;
+
+        IF v_pizza.id_pizza_pai IS NULL THEN
+            -- continua normalmente, não é obrigatório
+        END IF;
+
+        -- 🔸 se encontrou a pizza principal, insere os itens combinados
+        IF FOUND THEN
+            FOR v_item IN
+                SELECT *
+                FROM intencao_opcao
+                WHERE user_id = p_user
+                  AND pedido_id = p_pedido
+                  AND referencia = v_ref.referencia
+                  AND fracionada = false
+                  AND categoria IN ('borda', 'item')
+            LOOP
+                SELECT COALESCE(MAX(ordem_item),0) + 1
+                INTO v_ordem
+                FROM item_pedido_temp
+                WHERE pedido_id = p_pedido AND user_id = p_user;
+
+                INSERT INTO item_pedido_temp (
+                    pedido_id, user_id, categoria, nome, numero,
+                    tamanho, quantidade, valor, status,
+                    referencia, id_pizza_pai, ordem_item
+                )
+                VALUES (
+                    p_pedido, p_user,
+                    v_item.categoria,
+                    v_item.nome,
+                    v_item.numero,
+                    COALESCE(v_item.tamanho, v_pizza.tamanho),
+                    v_item.quantidade,
+                    v_item.valor,
+                    'combinado',
+                    v_ref.referencia,
+                    v_pizza.item_id,
+                    v_ordem
+                );
+
+                v_qtd := v_qtd + 1;
+            END LOOP;
+        END IF;
+    END LOOP;
+
+    RETURN QUERY SELECT
+        'Itens combinados gravados com sucesso pela referência.' AS msg,
+        v_qtd AS qtd_inserida;
+
+END;
+$$ LANGUAGE plpgsql;
+
+-- Permissões
+GRANT EXECUTE ON FUNCTION public.GravaCombinada(integer, integer) TO anon;
+GRANT EXECUTE ON FUNCTION public.GravaCombinada(integer, integer) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.GravaCombinada(integer, integer) TO service_role;

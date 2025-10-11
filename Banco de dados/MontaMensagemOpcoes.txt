@@ -1,0 +1,66 @@
+ CREATE OR REPLACE FUNCTION MontaMensagemOpcoes(p_user INT, p_pedido INT, p_empresa_id INT)
+RETURNS TEXT
+LANGUAGE plpgsql AS $$
+DECLARE
+  it    RECORD;   -- item retornado por GetPizzaMontagem
+  n     INT;      -- total de opções
+  lista TEXT;     -- lista formatada
+BEGIN
+  -- 1) pegar o item pendente
+  SELECT * INTO it
+  FROM GetPizzaMontagem(p_user, p_pedido, p_empresa_id )
+  LIMIT 1;
+
+  -- Se não tiver item: marcar como enviado e encerrar
+  IF NOT FOUND OR it.item_id IS NULL THEN
+    UPDATE pedido_temp p
+       SET status = 'enviado'
+     WHERE p.user_id = p_user
+       AND p.pedido_id = p_pedido 
+      and  p.id_empresa =  p_empresa_id ;
+    RETURN '✅ Todas as opções foram resolvidas, podemos prosseguir com o fechamento do pedido.';
+  END IF;
+
+  -- 2) formatar opções do item
+  WITH op AS (
+    SELECT * FROM GetOpcoes( (it.item_id)::int , (it.parte)::int , (p_empresa_id )::int    ) ORDER BY opcao
+  ),
+  fmt AS (
+    SELECT
+      o.opcao,
+      -- Linha 1
+      format('%s.) **(%s) %s** – R$ %s',
+             o.opcao, o.numero, o.nome,
+             to_char(o.preco, 'FM999G999G990D00')) || E'\n' ||
+      -- Linha 2
+      format('ℹ️ Descrição: %s', COALESCE(NULLIF(o.descricao,''),'(sem descrição)')) || E'\n' ||
+      -- Linha 3 (usa fracionada do ITEM)
+      format('🍕 Fracionada: %s', CASE WHEN it.fracionada THEN 'Sim' ELSE 'Não' END)
+      AS linha
+    FROM op o
+  )
+  SELECT COUNT(*), string_agg(linha, E'\n\n' ORDER BY opcao)
+    INTO n, lista
+  FROM fmt;
+
+  -- Sem opções: marcar como enviado e encerrar
+  IF COALESCE(n,0) = 0 THEN
+    UPDATE pedido_temp p
+       SET status = 'enviado'
+     WHERE p.user_id = p_user
+       AND p.pedido_id = p_pedido
+       and  p.id_empresa =  p_empresa_id ;
+    RETURN '✅ Todas as opções foram resolvidas, podemos prosseguir com o fechamento do pedido.';
+  END IF;
+
+  -- 3) mensagem final
+  RETURN
+    '🚫 Você tem um item pendente para escolher:' || E'\n' ||
+    '**Comando Original:** ' || it.comando_original || E'\n' ||
+    'As opções disponíveis para você escolher são:' || E'\n' ||
+    lista || E'\n' ||
+    format('Qual opção você escolhe? Responda com 1…%s.', n);
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION MontaMensagemOpcoes(INT, INT,INT) TO PUBLIC;

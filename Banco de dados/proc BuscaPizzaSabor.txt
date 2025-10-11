@@ -1,0 +1,45 @@
+ 
+
+CREATE OR REPLACE FUNCTION BuscaPizzaSabor(p_texto text, p_id_empresa int)
+RETURNS TABLE(
+  numero int,
+  nome text,
+  descricao text,
+  preco_grande numeric,
+  preco_medio numeric,
+  preco_pequena numeric
+)
+LANGUAGE sql
+AS $$
+WITH tokens AS (
+  SELECT DISTINCT unaccent(lower(trim(t))) AS token
+  FROM regexp_split_to_table(p_texto, '\s+|,') AS t
+  WHERE length(trim(t)) > 1
+),
+validos AS (
+  SELECT pi.nome
+  FROM principais_ingredientes pi
+  JOIN tokens tk
+    ON unaccent(lower(pi.nome)) = tk.token
+  WHERE pi.id_empresa = p_id_empresa
+),
+match AS (
+  SELECT c.numero, c.nome, c.descricao,
+         c.preco_grande, c.preco_medio, c.preco_pequena,
+         COUNT(*) AS hits,
+         (SELECT COUNT(*) FROM validos) AS need
+  FROM cardapio c
+  JOIN validos v
+    ON unaccent(lower(c.descricao)) ILIKE '%' || unaccent(lower(v.nome)) || '%'
+  WHERE c.id_empresa = p_id_empresa
+    AND c.categoria = 'pizza'
+  GROUP BY c.numero, c.nome, c.descricao, c.preco_grande, c.preco_medio, c.preco_pequena
+)
+SELECT numero, nome, descricao, preco_grande, preco_medio, preco_pequena
+FROM match
+WHERE hits = need
+ORDER BY numero;
+$$;
+
+
+

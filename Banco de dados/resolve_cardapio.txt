@@ -1,0 +1,34 @@
+  DROP FUNCTION IF EXISTS public.resolve_cardapio(p_empresa_id integer, p_texto text, p_topn integer DEFAULT 5, p_min_score numeric DEFAULT 0.35);
+
+CREATE OR REPLACE FUNCTION public.resolve_cardapio(p_empresa_id integer, p_texto text, p_topn integer DEFAULT 5, p_min_score numeric DEFAULT 0.35)
+ RETURNS TABLE(numero integer, nome text, score numeric)
+ LANGUAGE sql
+ STABLE
+AS $function$
+WITH q AS (SELECT unaccent(lower(coalesce(p_texto,''))) AS t),
+alias_hit AS (
+  SELECT c.numero, c.nome, 1.0::numeric AS score
+  FROM q
+  JOIN cardapio_alias a
+    ON a.id_empresa = p_empresa_id AND unaccent(lower(a.alias)) = (SELECT t FROM q)
+  JOIN cardapio c
+    ON c.id_empresa = a.id_empresa AND c.numero = a.numero
+  LIMIT p_topn
+),
+fuzzy AS (
+  SELECT c.numero, c.nome,
+         similarity(unaccent(lower(c.nome)), (SELECT t FROM q)) AS score
+  FROM cardapio c
+  WHERE c.id_empresa = p_empresa_id
+  ORDER BY score DESC, c.numero
+  LIMIT p_topn
+)
+SELECT * FROM alias_hit
+UNION ALL
+SELECT * FROM fuzzy WHERE NOT EXISTS (SELECT 1 FROM alias_hit) AND score >= p_min_score
+ORDER BY score DESC, numero
+LIMIT p_topn;
+$function$
+
+
+GRANT EXECUTE ON FUNCTION public.resolve_cardapio(p_empresa_id integer, p_texto text, p_topn integer DEFAULT 5, p_min_score numeric DEFAULT 0.35) TO authenticated; |

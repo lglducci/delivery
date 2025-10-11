@@ -1,0 +1,155 @@
+       CREATE OR REPLACE FUNCTION atualizar_valores_itens_temp(
+  
+  p_user_id INTEGER,
+  p_pedido_id INTEGER ,
+  p_empresa_id INTEGER
+)
+RETURNS void AS $$
+ 
+BEGIN
+
+ UPDATE Item_pedido_temp AS i
+SET  
+  valor =  CASE
+    WHEN i.tamanho = 'grande' THEN c.preco_grande
+    WHEN i.tamanho = 'media'  THEN c.preco_medio
+    ELSE  c.preco_grande
+  END * quantidade ,
+  volume = c.volume,
+ nome =  '(' || i.numero::text || ') ' || c.nome 
+FROM cardapio AS c
+WHERE  i.status = 'inicio'
+  AND c.categoria  in (   'bebida'  ) 
+ and user_id =   p_user_id 
+and i.pedido_id =  p_pedido_id 
+AND i.fracionada = 'FALSE'
+and i.categoria  in (  'bebida'  )
+and i.numero <> 0   
+and  i.numero = c.numero
+and i.id_empresa = p_empresa_id 
+and i.id_empresa = c.id_empresa ;
+
+
+
+
+
+----  Pizza e esfirra 
+ UPDATE Item_pedido_temp AS i
+SET numero = c.numero
+FROM cardapio AS c
+WHERE  i.status = 'inicio'
+  AND c.categoria   in ( 'pizza' ,'esfirra' )
+ and  LOWER(  c.nome)   iLIKE '%' || LOWER(  i.nome) || '%'
+ and user_id =   p_user_id 
+and i.pedido_id =  p_pedido_id 
+AND i.fracionada = 'FALSE'
+and  i.categoria    in ( 'pizza' ,'esfirra' )
+and i.categoria = c.categoria 
+and i.numero = 0
+and i.id_empresa = p_empresa_id 
+and i.id_empresa = c.id_empresa  ;
+
+ 
+
+
+
+ UPDATE Item_pedido_temp AS i
+SET numero = c.numero,
+  valor =  CASE
+    WHEN i.tamanho = 'grande' THEN c.preco_grande
+    WHEN i.tamanho = 'media'  THEN c.preco_medio
+    ELSE  c.preco_grande
+  END * quantidade 
+FROM cardapio AS c
+WHERE  i.status = 'inicio'
+  AND c.categoria  in ( 'borda'  )
+ and  (   LOWER(  c.palavras_chave)   iLIKE '%' || LOWER(  i.nome) || '%' ) 
+ and user_id =   p_user_id 
+and i.pedido_id =  p_pedido_id 
+AND i.fracionada = 'FALSE'
+and i.categoria  in ( 'borda'   )
+and i.numero = 0  
+and i.id_empresa = p_empresa_id 
+and i.id_empresa = c.id_empresa ;
+
+
+
+ UPDATE Item_pedido_temp AS i
+SET numero = c.numero,
+  valor =  CASE
+    WHEN i.tamanho = 'grande' THEN c.preco_grande
+    WHEN i.tamanho = 'media'  THEN c.preco_medio
+    ELSE  c.preco_grande
+  END * quantidade 
+FROM cardapio AS c
+WHERE  i.status = 'inicio'
+  AND c.categoria  in (   'bebida'  )
+ AND ( c.palavras_chave ILIKE '%' || TRIM(i.nome) || '%' )
+ and user_id =   p_user_id 
+and i.pedido_id =  p_pedido_id 
+AND i.fracionada = 'FALSE'
+and i.categoria  in (  'bebida'  )
+  and   LOWER(trim(c.volume))  =   LOWER(trim(i.volume) )
+and i.numero = 0  
+and i.id_empresa = p_empresa_id 
+and i.id_empresa = c.id_empresa ;
+
+
+
+
+
+UPDATE item_pedido_temp 
+set tamanho = 'media'  
+  WHERE pedido_id = p_pedido_id and
+      user_id =  p_user_id 
+   and categoria = 'pizza' 
+   and  lower(tamanho) in ( 'médio', 'm','medio','média', 'médias')
+   and  status = 'inicio'
+and id_empresa = p_empresa_id  ;
+
+ UPDATE item_pedido_temp 
+set tamanho = 'grande'
+   WHERE pedido_id = p_pedido_id and
+      user_id =  p_user_id 
+   and categoria in( 'pizza' , 'borda') 
+   and  lower(tamanho)  ='g'
+   and status = 'inicio' 
+and  id_empresa = p_empresa_id ;
+
+  
+ UPDATE item_pedido_temp AS i
+  SET valor =  CASE
+    WHEN i.tamanho = 'grande' THEN c.preco_grande
+    WHEN i.tamanho = 'media'  THEN c.preco_medio
+    ELSE  c.preco_grande
+  END * quantidade,
+  nome =    '(' || c.numero::text || ') ' || c.nome,
+   valor_unitario =  CASE
+    WHEN i.tamanho = 'grande' THEN c.preco_grande
+    WHEN i.tamanho = 'media'  THEN c.preco_medio
+    ELSE  c.preco_grande
+  END  
+  FROM cardapio AS c
+  WHERE   i.numero = c.numero
+    AND i.user_id = p_user_id  
+    AND i.fracionada = 'false'
+   and  i.categoria   in ( 'pizza', 'item' ,'borda' ,'esfirra') 
+    AND i.pedido_id = p_pedido_id 
+   and c.categoria   in ( 'pizza', 'item','borda' ,'esfirra' ) 
+   and c.categoria = i.categoria
+    and i.status = 'inicio' 
+   and i.id_empresa = p_empresa_id 
+   and i.id_empresa = c.id_empresa  ; 
+
+
+END;
+$$ LANGUAGE plpgsql;
+
+GRANT EXECUTE ON FUNCTION atualizar_valores_itens_temp(  INTEGER, INTEGER, INTEGER) TO public;
+GRANT EXECUTE ON FUNCTION atualizar_valores_itens_temp(  INTEGER,INTEGER,INTEGER) TO authenticated;
+
+SELECT atualizar_valores_itens_temp( 82,1,1);
+
+
+ 
+ 

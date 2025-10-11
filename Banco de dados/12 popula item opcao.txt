@@ -1,0 +1,192 @@
+ CREATE OR REPLACE PROCEDURE popula_item_opcoes(
+  p_user_id     INT,
+  p_pedido_id   INT,
+  p_empresa_id  INT
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  -- Limpa opções antigas do mesmo pedido/empresa
+  DELETE FROM item_opcoes o
+  USING item_pedido_temp i
+  WHERE o.item_id   = i.item_id
+    AND i.user_id   = p_user_id
+    AND i.pedido_id = p_pedido_id
+    AND i.id_empresa = p_empresa_id;
+
+  /* =========================
+     1) PIZZAS INTEIRAS
+     ========================= */
+  INSERT INTO item_opcoes (item_id, numero, nome, descricao, preco, opcao, parte, id_empresa)
+  WITH cand AS (
+    SELECT DISTINCT
+      i2.item_id,
+      c.numero,
+      c.nome,
+      c.descricao,
+      c.preco_grande AS preco,
+      1 AS parte,
+      i2.id_empresa
+    FROM item_pedido_temp i2
+    JOIN cardapio c
+      ON c.categoria = 'pizza'
+     AND c.nome ILIKE '%' || TRIM(i2.nome) || '%'
+     AND c.id_empresa = p_empresa_id
+    WHERE i2.status     = 'opcoes'
+      AND i2.user_id    = p_user_id
+      AND i2.pedido_id  = p_pedido_id
+      AND i2.numero     = 0
+      AND i2.categoria  = 'pizza'
+      AND i2.id_empresa = p_empresa_id
+  ),
+  novos AS (
+    SELECT c.*
+    FROM cand c
+    WHERE NOT EXISTS (
+      SELECT 1
+      FROM item_opcoes io
+      WHERE io.item_id    = c.item_id
+        AND io.numero     = c.numero
+        AND io.id_empresa = p_empresa_id
+    )
+  ),
+  base AS (
+    SELECT item_id, id_empresa, COALESCE(MAX(opcao),0) AS max_opcao
+    FROM item_opcoes
+    WHERE item_id IN (SELECT item_id FROM novos)
+      AND id_empresa = p_empresa_id
+    GROUP BY item_id, id_empresa
+  )
+  SELECT
+    n.item_id,
+    n.numero,
+    n.nome,
+    n.descricao,
+    n.preco,
+    COALESCE(b.max_opcao,0) + ROW_NUMBER() OVER (PARTITION BY n.item_id ORDER BY n.numero) AS opcao,
+    n.parte,
+    n.id_empresa
+  FROM novos n
+  LEFT JOIN base b
+    ON b.item_id = n.item_id
+   AND b.id_empresa = n.id_empresa;
+
+  /* =========================
+     2) PIZZAS FRACIONADAS
+     ========================= */
+  INSERT INTO item_opcoes (item_id, numero, nome, descricao, preco, opcao, parte, id_empresa)
+  WITH cand AS (
+    SELECT DISTINCT
+      i2.item_id,
+      c.numero,
+      c.nome,
+      c.descricao,
+      c.preco_grande AS preco,
+      2 AS parte,
+      i2.id_empresa
+    FROM item_pedido_temp i2
+    JOIN cardapio c
+      ON c.categoria = 'pizza'
+     AND c.nome ILIKE '%' || TRIM(i2.nome_fracao) || '%'
+     AND c.id_empresa = p_empresa_id
+    WHERE i2.status       = 'opcoes'
+      AND i2.user_id      = p_user_id
+      AND i2.pedido_id    = p_pedido_id
+      AND i2.numero_fracao = 0
+      AND i2.categoria    = 'pizza'
+      AND i2.fracionada   = TRUE
+      AND i2.id_empresa   = p_empresa_id
+  ),
+  novos AS (
+    SELECT c.*
+    FROM cand c
+    WHERE NOT EXISTS (
+      SELECT 1
+      FROM item_opcoes io
+      WHERE io.item_id    = c.item_id
+        AND io.numero     = c.numero
+        AND io.id_empresa = p_empresa_id
+    )
+  ),
+  base AS (
+    SELECT item_id, id_empresa, COALESCE(MAX(opcao),0) AS max_opcao
+    FROM item_opcoes
+    WHERE item_id IN (SELECT item_id FROM novos)
+      AND id_empresa = p_empresa_id
+    GROUP BY item_id, id_empresa
+  )
+  SELECT
+    n.item_id,
+    n.numero,
+    n.nome,
+    n.descricao,
+    n.preco,
+    COALESCE(b.max_opcao,0) + ROW_NUMBER() OVER (PARTITION BY n.item_id ORDER BY n.numero) AS opcao,
+    n.parte,
+    n.id_empresa
+  FROM novos n
+  LEFT JOIN base b
+    ON b.item_id = n.item_id
+   AND b.id_empresa = n.id_empresa;
+
+  /* =========================
+     3) BEBIDAS E BORDAS
+     ========================= */
+  INSERT INTO item_opcoes (item_id, numero, nome, descricao, preco, opcao, parte, id_empresa)
+  WITH cand AS (
+    SELECT DISTINCT
+      i2.item_id,
+      c.numero,
+      c.nome,
+      c.descricao,
+      -- ajuste se bebidas/bordas usam outra coluna de preço
+      c.preco_grande AS preco,
+      1 AS parte,
+      i2.id_empresa
+    FROM item_pedido_temp i2
+    JOIN cardapio c
+      ON c.categoria IN ('bebida','borda')
+     AND c.palavras_chave ILIKE '%' || TRIM(i2.nome) || '%'
+     AND c.id_empresa = p_empresa_id
+    WHERE i2.status     = 'opcoes'
+      AND i2.user_id    = p_user_id
+      AND i2.pedido_id  = p_pedido_id
+      AND i2.numero     = 0
+      AND i2.categoria IN ('bebida','borda')
+      AND i2.fracionada = FALSE
+      AND i2.id_empresa = p_empresa_id
+  ),
+  novos AS (
+    SELECT c.*
+    FROM cand c
+    WHERE NOT EXISTS (
+      SELECT 1
+      FROM item_opcoes io
+      WHERE io.item_id    = c.item_id
+        AND io.numero     = c.numero
+        AND io.id_empresa = p_empresa_id
+    )
+  ),
+  base AS (
+    SELECT item_id, id_empresa, COALESCE(MAX(opcao),0) AS max_opcao
+    FROM item_opcoes
+    WHERE item_id IN (SELECT item_id FROM novos)
+      AND id_empresa = p_empresa_id
+    GROUP BY item_id, id_empresa
+  )
+  SELECT
+    n.item_id,
+    n.numero,
+    n.nome,
+    n.descricao,
+    n.preco,
+    COALESCE(b.max_opcao,0) + ROW_NUMBER() OVER (PARTITION BY n.item_id ORDER BY n.numero) AS opcao,
+    n.parte,
+    n.id_empresa
+  FROM novos n
+  LEFT JOIN base b
+    ON b.item_id = n.item_id
+   AND b.id_empresa = n.id_empresa;
+
+END;
+$$;

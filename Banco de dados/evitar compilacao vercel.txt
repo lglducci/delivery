@@ -1,0 +1,36 @@
+Isso é o limite diário da Vercel (free) — você já bateu o teto de deploys (prévias + produção). Não precisa “esperar”. Dá pra contornar agora e evitar repetir.
+
+O que fazer já
+
+Pausar deploy automático por push
+
+Vercel → Project → Settings → Git → Automatic Deployments: OFF
+(evita cada commit virar um deploy.)
+
+Ignorar builds que não tiverem tag no commit
+
+Vercel → Project → Settings → Git → Ignored Build Step
+
+Coloque:
+
+# só libera build quando o commit tiver [deploy]
+if git log -1 --pretty=%B | grep -qi '\[deploy\]'; then exit 1; else exit 0; fi
+
+
+(exit 0 = Vercel IGNORA o build; exit 1 = segue o build.)
+
+Desligar Previews (opcional, economiza muito)
+
+Vercel → Project → Settings → Git → Preview Deployments: OFF
+(Só fará deploy quando você mandar produção.)
+
+Quando quiser publicar de verdade
+
+Faça um commit com [deploy] na mensagem ou
+
+Deploy manual pelo CLI: npx vercel --prod
+(com os automáticos desligados, você controla quando conta o deploy.)
+
+Continue trabalhando local
+
+npm run dev pra testar tudo enquanto o deploy está bloqueado.

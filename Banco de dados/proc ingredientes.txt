@@ -1,0 +1,43 @@
+CREATE OR REPLACE FUNCTION atualiza_principais_ingredientes(p_id_empresa int)
+RETURNS void LANGUAGE plpgsql AS $$
+BEGIN
+  UPDATE principais_ingredientes pi
+  SET
+    qtd_pizzas = sub.qtd,
+    pizzas_relacionadas = sub.lista
+  FROM (
+    SELECT
+      pi2.id,
+      COUNT(c.numero)::int AS qtd,
+      COALESCE(string_agg('('||c.numero||') '||c.nome, ', ' ORDER BY c.numero), '') AS lista
+    FROM principais_ingredientes pi2
+    LEFT JOIN cardapio c
+      ON c.id_empresa = pi2.id_empresa
+     AND c.categoria = 'pizza'
+     AND unaccent(lower(c.descricao)) ILIKE '%'||unaccent(lower(pi2.nome))||'%'
+    WHERE pi2.id_empresa = p_id_empresa
+    GROUP BY pi2.id
+  ) sub
+  WHERE pi.id = sub.id AND pi.id_empresa = p_id_empresa;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION trg_cardapio_sync_pi()
+RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE v_emp int;
+BEGIN
+  IF (TG_OP = 'DELETE') THEN
+    v_emp := OLD.id_empresa;
+  ELSE
+    v_emp := NEW.id_empresa;
+  END IF;
+
+  PERFORM atualiza_principais_ingredientes(v_emp);
+  RETURN COALESCE(NEW, OLD);
+END;
+$$;
+
+DROP TRIGGER IF EXISTS cardapio_sync_pi ON cardapio;
+CREATE TRIGGER cardapio_sync_pi
+AFTER INSERT OR UPDATE OR DELETE ON cardapio
+FOR EACH STATEMENT EXECUTE FUNCTION trg_cardapio_sync_pi();

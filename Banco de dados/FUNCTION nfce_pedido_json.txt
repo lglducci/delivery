@@ -1,0 +1,47 @@
+  CREATE OR REPLACE FUNCTION nfce_pedido_json(p_pedido_id INT, p_id_empresa INT)
+RETURNS JSONB
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_json JSONB;
+BEGIN
+  SELECT jsonb_build_object(
+    'empresa', jsonb_build_object(
+      'id_empresa', e.id_empresa,
+      'nome',       e.nome,
+      'cnpj',       e.cnpj,
+      'ie',         e.ie
+    ),
+    'cliente', jsonb_build_object(
+      'user_id', u.user_id,
+      'nome',    u.nome,
+      'cpf',     u.cpf
+    ),
+    'pedido', jsonb_build_object(
+      'pedido_id', p.pedido_id
+      -- se você tiver colunas tipo forma_pagamento / valor_total
+      -- pode acrescentar aqui
+    ),
+    'itens', (
+      SELECT jsonb_agg(jsonb_build_object(
+        'numero',       i.numero,
+        'descricao',    i.nome,
+        'quantidade',   i.quantidade,
+        'valor_unit',   i.valor_unitario,
+        'valor_total',    (i.quantidade * i.valor_unitario)::numeric(10,2)
+      ) ORDER BY i.numero)
+      FROM item_pedido i
+      WHERE i.pedido_id = p.pedido_id
+        AND i.id_empresa = e.id_empresa
+        AND i.user_id = u.user_id
+    )
+  )
+  INTO v_json
+  FROM empresas e
+  JOIN pedidos  p ON p.id_empresa = e.id_empresa AND p.pedido_id = p_pedido_id
+  JOIN usuario  u ON u.user_id = p.user_id AND u.id_empresa = e.id_empresa
+  WHERE e.id_empresa = p_id_empresa;
+
+  RETURN v_json;
+END;
+$$;

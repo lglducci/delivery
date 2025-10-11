@@ -1,0 +1,59 @@
+  -- ✅ grava pizza simples a partir de intencao_opcao
+CREATE OR REPLACE FUNCTION grava_pizza_simples(
+  p_user_id int,
+  p_pedido_id int,
+  p_empresa_id int
+)
+RETURNS void AS $$
+BEGIN
+  INSERT INTO item_pedido_temp (
+    user_id,
+    pedido_id,
+    id_empresa,
+    categoria,
+    numero,
+    nome,
+    tamanho,
+    quantidade,
+    valor_unitario,
+    valor,
+    fracionada 
+  )
+  SELECT
+    p_user_id,
+    p_pedido_id,
+    p_empresa_id,
+    i.categoria,
+    i.numero,
+    i.nome,
+    i.tamanho,
+    i.quantidade,
+    i.valor,
+    i.valor* i.quantidade AS valor ,
+    false AS fracionada 
+  FROM intencao_opcao i
+  WHERE i.id_empresa = p_empresa_id
+    AND i.categoria = 'pizza'
+    AND coalesce(i.fracionada,false) = false 
+   and i.pedido_id =  p_pedido_id
+  and i.user_id = p_user_id 
+  and  i.processada = false ;
+
+
+
+
+ update  intencao_opcao  
+set processada = true
+  WHERE id_empresa = p_empresa_id
+    AND categoria = 'pizza'
+    AND coalesce(fracionada,false) = false 
+   and pedido_id =  p_pedido_id
+  and  user_id = p_user_id 
+  and  processada = false ;
+ 
+
+
+END;
+$$ LANGUAGE plpgsql;
+
+GRANT EXECUTE ON FUNCTION grava_pizza_simples(int,int,int) TO authenticated;

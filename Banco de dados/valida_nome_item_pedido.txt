@@ -1,0 +1,80 @@
+ DROP PROCEDURE IF EXISTS valida_nome_item_pedido(INT, INT, INT);
+CREATE OR REPLACE PROCEDURE valida_nome_item_pedido(p_user INT, p_pedido INT, p_empresa_id INT)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  r RECORD;
+  v_nome TEXT;
+  v_categoria TEXT;
+  v_tipo TEXT;
+  v_numero INT;
+  v_score NUMERIC;
+  v_ct INT;
+  v_status TEXT;
+BEGIN
+  FOR r IN 
+    SELECT item_id, nome, categoria
+    FROM item_pedido_temp
+    WHERE status = 'inicio'
+      AND user_id = p_user
+      AND pedido_id = p_pedido
+      AND id_empresa = p_empresa_id
+      AND numero = 0
+  LOOP
+    -- 🔎 busca fuzzy e count direto no cardápio
+    WITH hits AS (
+      SELECT 
+        c.numero, c.nome, c.categoria, c.tipo,
+        similarity(unaccent(lower(c.nome)), unaccent(lower(TRIM(r.nome)))) AS score
+      FROM cardapio c
+      WHERE c.id_empresa = p_empresa_id
+        AND (r.categoria IS NULL OR lower(c.categoria) = lower(r.categoria))
+        AND unaccent(lower(c.nome)) ILIKE '%' || unaccent(lower(TRIM(r.nome))) || '%'
+      ORDER BY score DESC
+      LIMIT 3
+    )
+    SELECT COUNT(*) INTO v_ct FROM hits;
+
+    IF v_ct = 0 THEN
+      v_status := 'rejeitado';
+
+    ELSIF v_ct = 1 THEN
+      -- 🎯 acerto único — atualiza número, categoria e tipo
+      SELECT h.numero, h.nome, h.categoria, h.tipo, h.score
+        INTO v_numero, v_nome, v_categoria, v_tipo, v_score
+      FROM hits h LIMIT 1;
+
+      UPDATE item_pedido_temp i
+         SET status = 'opcoes',
+             numero = v_numero,
+             categoria = v_categoria,
+             tipo = v_tipo
+       WHERE i.item_id = r.item_id;
+
+      CONTINUE; -- já tratou esse item
+
+    ELSE
+      -- múltiplos matches → pega o melhor (score mais alto)
+      SELECT h.numero, h.nome, h.categoria, h.tipo, h.score
+        INTO v_numero, v_nome, v_categoria, v_tipo, v_score
+      FROM hits h
+      ORDER BY score DESC
+      LIMIT 1;
+
+      IF v_score >= 0.35 THEN
+        v_status := 'opcoes';
+      ELSE
+        v_status := 'rejeitado';
+      END IF;
+    END IF;
+
+    -- 🧾 atualização final de status
+    UPDATE item_pedido_temp
+       SET status = v_status
+     WHERE item_id = r.item_id;
+
+  END LOOP;
+END;
+$$;
+
+GRANT EXECUTE ON PROCEDURE valida_nome_item_pedido(INT, INT, INT) TO anon, authenticated, service_role;
