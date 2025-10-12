@@ -1,0 +1,11 @@
+drop table  pizza_modelo 
+
+CREATE TABLE IF NOT EXISTS pizza_modelo (
+  id_referencia SERIAL PRIMARY KEY,
+  nome_grupo TEXT NOT NULL,
+  descricao TEXT,
+  margem_min NUMERIC(5,2),
+  margem_max NUMERIC(5,2),
+  ativo BOOLEAN DEFAULT TRUE,
+ id_empresa int
+);
