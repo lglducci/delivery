@@ -1,0 +1,109 @@
+ CREATE OR REPLACE FUNCTION public.kpi_termometro_dia(
+  p_id_empresa  INT,
+  p_data        DATE DEFAULT (now() AT TIME ZONE 'America/Sao_Paulo')::date,
+  p_taxa_entrega NUMERIC DEFAULT 3.00
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+STABLE
+AS $$
+DECLARE
+  result JSONB;
+BEGIN
+  WITH base_p AS (
+    SELECT
+      p.pedido_id,
+      (p.create_at AT TIME ZONE 'America/Sao_Paulo') AS ts,
+      CASE
+        WHEN lower(coalesce(p.tipo_entrega,'retirada')) IN ('entrega','delivery') THEN 'entrega'
+        ELSE 'retirada'
+      END AS tipo,
+      COALESCE(p.valor,0)::numeric AS valor_pedido
+    FROM pedidos p
+    WHERE p.id_empresa = p_id_empresa
+      AND (p.create_at AT TIME ZONE 'America/Sao_Paulo')::date = p_data
+  ),
+  itens AS (
+    SELECT i.pedido_id, i.numero, COALESCE(i.valor,0)::numeric AS valor_item
+    FROM item_pedido i
+    JOIN base_p p ON p.pedido_id = i.pedido_id
+  ),
+  totais AS (
+    SELECT
+      p.pedido_id,
+      COALESCE(SUM(i.valor), p.valor) AS total,
+      p.tipo,
+      date_part('hour', p.ts)::int AS hora
+    FROM base_p p
+    LEFT JOIN itens i ON i.pedido_id = p.pedido_id
+    GROUP BY p.pedido_id, p.tipo, p.ts, p.valor_pedido
+  ),
+  kpi AS (
+    SELECT
+      COUNT(*)::int                                         AS pedidos,
+      COALESCE(SUM(total),0)::numeric                       AS receita_bruta,
+      SUM(CASE WHEN tipo='entrega' THEN 1 ELSE 0 END)::int  AS entrega_qtd,
+      SUM(CASE WHEN tipo='retirada' THEN 1 ELSE 0 END)::int AS retirada_qtd,
+      COALESCE(MAX(total),0)::numeric                       AS pedido_max,
+      COALESCE(MIN(total),0)::numeric                       AS pedido_min
+    FROM totais
+  ),
+  hora_agg AS (
+    SELECT hora, COUNT(*)::int AS pedidos, COALESCE(SUM(total),0)::numeric AS total
+    FROM totais
+    GROUP BY hora
+    ORDER BY hora
+  ),
+  item_stats AS (
+    SELECT
+      COALESCE(MAX(i.valor),0)::numeric AS item_max,
+      COALESCE(MIN(i.valor),0)::numeric AS item_min
+    FROM itens i
+  ),
+  top_itens AS (
+    SELECT
+      COALESCE(c.nome, 'Item '||i.numero::text) AS nome,
+      COUNT(*)::int                              AS qtd,
+      COALESCE(SUM(i.valor),0)::numeric    AS total
+    FROM itens i
+    LEFT JOIN cardapio c
+      ON c.numero = i.numero AND c.id_empresa = p_id_empresa
+    GROUP BY 1
+    ORDER BY total DESC
+    LIMIT 5
+  )
+  SELECT jsonb_build_object(
+    'pedidos',                k.pedidos,
+    'receita_bruta',          round(k.receita_bruta, 2),
+    'entrega_qtd',            k.entrega_qtd,
+    'retirada_qtd',           k.retirada_qtd,
+    'entrega_taxa_total',     round((k.entrega_qtd * p_taxa_entrega)::numeric, 2), -- EX: 60,00
+    'receita_liquida',        round((k.receita_bruta - (k.entrega_qtd * p_taxa_entrega))::numeric, 2),
+    'ticket_medio_liquido',   round(CASE WHEN k.pedidos>0
+                                         THEN (k.receita_bruta - (k.entrega_qtd * p_taxa_entrega))/k.pedidos
+                                         ELSE 0 END, 2),
+    'pedido_max',             round(k.pedido_max, 2),
+    'pedido_min',             round(k.pedido_min, 2),
+    'item_max',               round(s.item_max, 2),  -- pega do pedido_itens
+    'item_min',               round(s.item_min, 2),  -- pega do pedido_itens
+    'vendas_hora', COALESCE((
+      SELECT jsonb_agg(jsonb_build_object(
+        'hora', hora, 'pedidos', pedidos, 'total', round(total,2)
+      ) ORDER BY hora)
+      FROM hora_agg
+    ), '[]'::jsonb),
+    'top_itens', COALESCE((
+      SELECT jsonb_agg(jsonb_build_object(
+        'nome', nome, 'qtd', qtd, 'total', round(total,2)
+      ) ORDER BY total DESC)
+      FROM top_itens
+    ), '[]'::jsonb),
+    'observacoes', jsonb_build_object(
+      'regra', 'receita_liquida = receita_bruta - (taxa_entrega * qtd_entrega)'
+    )
+  ) INTO result
+  FROM kpi k CROSS JOIN item_stats s;
+
+  RETURN result;
+END;
+$$;
