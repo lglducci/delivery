@@ -1,108 +1,85 @@
- CREATE OR REPLACE FUNCTION BuscaPizzaSabor(
+ DROP FUNCTION IF EXISTS BuscaPizzaSabor(text, integer);
+
+CREATE OR REPLACE FUNCTION BuscaPizzaSabor(
   p_texto      text,
-  p_id_empresa int,
-  p_user_id    int,
-  p_pedido_id  int
+  p_id_empresa int
 )
 RETURNS TABLE(
-  numero        int,
+  numero        bigint,
   nome          text,
-  descricao     text,
-  preco_grande  numeric(12,2),
-  preco_medio   numeric(12,2),
-  preco_pequena numeric(12,2)
+  categoria     text,
+  tipo          text,
+  preco_grande  real,
+  preco_medio   real,
+  preco_pequena real,
+  descricao     text
 )
 LANGUAGE plpgsql
 AS $$
 DECLARE
-  v_terms int;
-  v_qtd   int;
+  v_p1 text;
+  v_p2 text;
+  v_p3 text;
+  v_termos text[];
+  v_qtde int;
 BEGIN
-  -- Conta termos computáveis
-  WITH tokens AS (
-    SELECT DISTINCT unaccent(lower(trim(t))) AS token
-    FROM regexp_split_to_table(p_texto, '\s+|,') AS t
-    WHERE length(trim(t)) > 1
-  ),
-  validos_pi AS (
-    SELECT pi.nome AS pi_nome
-    FROM principais_ingredientes pi
-    JOIN tokens tk
-      ON unaccent(lower(pi.nome)) = tk.token
-    WHERE pi.id_empresa = p_id_empresa
-  ),
-  termos_busca AS (
-    SELECT unaccent(lower(vp.pi_nome)) AS termo FROM validos_pi vp
-    UNION
-    SELECT tk.token FROM tokens tk
-  ),
-  contagem_termos AS (
-    SELECT COUNT(*)::int AS cnt FROM termos_busca
-  )
-  SELECT ct.cnt INTO v_terms FROM contagem_termos ct;
+  -- Divide o texto em até 3 palavras
+  v_termos := regexp_split_to_array(unaccent(lower(trim(p_texto))), '\s+');
+  v_p1 := COALESCE(v_termos[1], '');
+  v_p2 := COALESCE(v_termos[2], '');
+  v_p3 := COALESCE(v_termos[3], '');
 
-  IF v_terms > 0 THEN
-    -- Match por termos (aceita pelo menos 1 batida)
+  -- Conta quantas linhas existem pela descrição
+  SELECT COUNT(*) INTO v_qtde
+  FROM cardapio c
+  WHERE c.id_empresa = p_id_empresa
+    AND unaccent(lower(c.categoria)) = 'pizza'
+    AND (
+      (v_p1 <> '' AND unaccent(lower(c.descricao)) ILIKE '%' || v_p1 || '%')
+      AND (v_p2 = '' OR unaccent(lower(c.descricao)) ILIKE '%' || v_p2 || '%')
+      AND (v_p3 = '' OR unaccent(lower(c.descricao)) ILIKE '%' || v_p3 || '%')
+    );
+
+  -- Se encontrou algo na descrição
+  IF v_qtde > 0 THEN
     RETURN QUERY
-    WITH tokens AS (
-      SELECT DISTINCT unaccent(lower(trim(t))) AS token
-      FROM regexp_split_to_table(p_texto, '\s+|,') AS t
-      WHERE length(trim(t)) > 1
-    ),
-    validos_pi AS (
-      SELECT pi.nome AS pi_nome
-      FROM principais_ingredientes pi
-      JOIN tokens tk
-        ON unaccent(lower(pi.nome)) = tk.token
-      WHERE pi.id_empresa = p_id_empresa
-    ),
-    termos_busca AS (
-      SELECT unaccent(lower(vp.pi_nome)) AS termo FROM validos_pi vp
-      UNION
-      SELECT tk.token FROM tokens tk
-    ),
-    match AS (
-      SELECT
-        c.numero::int                                   AS numero,
-        c.nome                                          AS nome_item,
-        c.descricao                                     AS desc_item,
-        c.preco_grande::numeric(12,2)                   AS p_grande,
-        c.preco_medio::numeric(12,2)                    AS p_medio,
-        c.preco_pequena::numeric(12,2)                  AS p_pequena,
-        COUNT(*)                                        AS hits,
-        (SELECT COUNT(*) FROM termos_busca)             AS need
-      FROM cardapio c
-      JOIN termos_busca tb
-        ON unaccent(lower(c.descricao)) ILIKE '%' || tb.termo || '%'
-      WHERE c.id_empresa = p_id_empresa
-        AND c.categoria = 'pizza'
-      GROUP BY c.numero, c.nome, c.descricao, c.preco_grande, c.preco_medio, c.preco_pequena
-    )
-    SELECT m.numero, m.nome_item, m.desc_item, m.p_grande, m.p_medio, m.p_pequena
-    FROM match m
-    WHERE m.hits >= 1
-    ORDER BY m.numero;
-  ELSE
-    -- Fallback: ILIKE no texto bruto
-    RETURN QUERY
-    SELECT
-      c.numero::int,
+    SELECT 
+      c.numero,
       c.nome,
-      c.descricao,
-      c.preco_grande::numeric(12,2),
-      c.preco_medio::numeric(12,2),
-      c.preco_pequena::numeric(12,2)
+      c.categoria,
+      c.tipo,
+      c.preco_grande,
+      c.preco_medio,
+      c.preco_pequena,
+      c.descricao
     FROM cardapio c
     WHERE c.id_empresa = p_id_empresa
-      AND c.categoria = 'pizza'
-      AND unaccent(lower(c.descricao)) ILIKE '%' || unaccent(lower(p_texto)) || '%'
+      AND unaccent(lower(c.categoria)) = 'pizza'
+      AND (
+        (v_p1 <> '' AND unaccent(lower(c.descricao)) ILIKE '%' || v_p1 || '%')
+        AND (v_p2 = '' OR unaccent(lower(c.descricao)) ILIKE '%' || v_p2 || '%')
+        AND (v_p3 = '' OR unaccent(lower(c.descricao)) ILIKE '%' || v_p3 || '%')
+      )
+    ORDER BY c.numero;
+
+  -- Caso contrário, busca pelo nome
+  ELSE
+    RETURN QUERY
+    SELECT 
+      c.numero,
+      c.nome,
+      c.categoria,
+      c.tipo,
+      c.preco_grande,
+      c.preco_medio,
+      c.preco_pequena,
+      c.descricao
+    FROM cardapio c
+    WHERE c.id_empresa = p_id_empresa
+      AND unaccent(lower(c.categoria)) = 'pizza'
+      AND unaccent(lower(c.nome)) ILIKE '%' || unaccent(lower(p_texto)) || '%'
     ORDER BY c.numero;
   END IF;
-
-  -- Loga quantidade retornada
-  GET DIAGNOSTICS v_qtd = ROW_COUNT;
-  INSERT INTO log_debug (etapa, comando, retorno, user_id, pedido_id, id_empresa)
-  VALUES ('BuscaPizzaSabor', p_texto, CONCAT('Retornou ', v_qtd, ' linha(s)'), p_user_id, p_pedido_id, p_id_empresa);
 
 END;
 $$;
