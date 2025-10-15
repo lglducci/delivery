@@ -90,19 +90,27 @@ BEGIN
       '👤 Cliente: '   || COALESCE(v_nome,'(não cadastrado)') || E'\n' ||
       '🏠 Endereço: '  || COALESCE(v_endereco,'(sem endereço)') || ' – ' || COALESCE(v_bairro,'(sem bairro)');
 
-  -- Insere itens finais
+ 
+
+-- Insere itens finais
   INSERT INTO public.item_pedido (
     numero, user_id, quantidade, tamanho, fracionada, tipo,
     categoria, numero_fracao, nome, volume, status, valor,
-    valor_fracao, pedido_id, valor_unitario, id_empresa
+    valor_fracao, pedido_id, valor_unitario, id_empresa, id_pizza_pai
   )
   SELECT numero, user_id, quantidade, tamanho, fracionada, tipo,
          categoria, numero_fracao, nome, volume, status, valor,
-         valor_fracao, v_pedido_id, valor_unitario, id_empresa
+         valor_fracao, v_pedido_id, valor_unitario, id_empresa, id_pizza_pai
     FROM public.item_pedido_temp
    WHERE user_id   = p_user_id
      AND pedido_id = p_pedido_id 
-       and    id_empresa = p_id_empresa ;
+     AND id_empresa = p_id_empresa;
+
+
+
+
+
+
 
   -- Move comentários
   INSERT INTO public.comentario_pedido (user_id,pedido_id,comentario, id_empresa)
