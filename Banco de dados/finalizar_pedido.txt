@@ -90,17 +90,26 @@ BEGIN
       '👤 Cliente: '   || COALESCE(v_nome,'(não cadastrado)') || E'\n' ||
       '🏠 Endereço: '  || COALESCE(v_endereco,'(sem endereço)') || ' – ' || COALESCE(v_bairro,'(sem bairro)');
 
- 
+ update item_pedido_temp as p 
+set id_pizza_pai = f.id_pizza_pai 
+from item_pedido as f 
+ WHERE f.id_pizza_pai = p.item_id
+  AND p.user_id   = p_user_id
+  AND p.pedido_id = p_pedido_id 
+  AND p.id_empresa = p_id_empresa 
+   and  p.id_empresa  = f.id_empresa
+ and   p.pedido_id = f.pedido_id
+AND p.user_id   =  f.user_id ;
 
 -- Insere itens finais
   INSERT INTO public.item_pedido (
     numero, user_id, quantidade, tamanho, fracionada, tipo,
     categoria, numero_fracao, nome, volume, status, valor,
-    valor_fracao, pedido_id, valor_unitario, id_empresa, id_pizza_pai
+    valor_fracao, pedido_id, valor_unitario, id_empresa, id_pizza_pai, ordem_item
   )
   SELECT numero, user_id, quantidade, tamanho, fracionada, tipo,
          categoria, numero_fracao, nome, volume, status, valor,
-         valor_fracao, v_pedido_id, valor_unitario, id_empresa, id_pizza_pai
+         valor_fracao, v_pedido_id, valor_unitario, id_empresa, id_pizza_pai, ordem_item
     FROM public.item_pedido_temp
    WHERE user_id   = p_user_id
      AND pedido_id = p_pedido_id 

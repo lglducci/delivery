@@ -1,4 +1,4 @@
- CREATE OR REPLACE FUNCTION visualizarcozinha( 
+  CREATE OR REPLACE FUNCTION visualizarcozinha( 
   p_id_empresa INT,
   p_pedido_id  INT
 )
@@ -17,58 +17,84 @@ RETURNS TABLE (
 LANGUAGE sql
 AS $$
   -- Itens principais (pizza, bebida etc.) + descrição do cardápio
+  WITH base AS (
+    SELECT i.*
+    FROM item_pedido i
+    WHERE i.id_empresa = p_id_empresa
+      AND i.pedido_id  = p_pedido_id
+      AND i.categoria NOT IN ('item','borda','bebida')
+  )
+
+  -- 1) NÃO FRACIONADA
   SELECT
     i.numero,
     i.nome,
-    /* Descrição: se fracionada, concatena as metades; senão usa a descrição do item */
-    CASE 
-      WHEN lower(coalesce(i.fracionada,'false')) IN ('true','t','1','sim') 
-           AND i.numero_fracao IS NOT NULL
-        THEN
-          trim(
-            BOTH ' / ' FROM
-            coalesce('Metade 1: ' || c1.descricao, '') ||
-            CASE WHEN c2.descricao IS NOT NULL THEN ' / Metade 2: ' || c2.descricao ELSE '' END
-          )
-      ELSE c1.descricao
-    END AS descricao,
+    c1.descricao AS descricao,
     i.quantidade,
     i.tamanho,
-    i.fracionada,
+    i.fracionada::text,
     i.tipo,
     i.categoria,
     NULL::INT  AS numero_pai,
     NULL::TEXT AS nome_pai
-  FROM item_pedido i
-  /* descrição pela referência do número do item e, se fracionada, do número_fracao */
-  LEFT JOIN cardapio c1 ON c1.numero = i.numero
-  LEFT JOIN cardapio c2 ON c2.numero = i.numero_fracao
-  WHERE i.id_empresa = p_id_empresa
-    AND i.pedido_id  = p_pedido_id
-    AND i.categoria NOT IN ('item', 'borda')
+  FROM base i
+  LEFT JOIN cardapio c1
+    ON c1.numero = i.numero
+   AND c1.id_empresa = i.id_empresa
+  WHERE COALESCE(i.fracionada, false) = false
 
   UNION ALL
 
-  -- Itens filhos (borda, adicionais etc.) com referência ao pai + descrição do cardápio
+  -- 2) FRACIONADA: metade 1
   SELECT
-    f.numero,
-    f.nome,
-    cf.descricao AS descricao,
-    f.quantidade,
-    f.tamanho,
-    f.fracionada,
-    f.tipo,
-    f.categoria,
-    p.numero AS numero_pai,
-    p.nome   AS nome_pai
+    i.numero,
+    i.nome || ' (1/2)' AS nome,
+    c1.descricao AS descricao,
+    i.quantidade,
+    i.tamanho,
+    i.fracionada::text,
+    i.tipo,
+    i.categoria,
+    NULL::INT  AS numero_pai,
+    NULL::TEXT AS nome_pai
+  FROM base i
+  LEFT JOIN cardapio c1
+    ON c1.numero = i.numero
+   AND c1.id_empresa = i.id_empresa
+  WHERE COALESCE(i.fracionada, false) = true
+
+  UNION ALL
+
+ 
+
+  -- 3) FILHAS (borda, item) com rótulo do PAI
+  SELECT
+    f.numero                             AS numero,
+    f.nome                               AS nome,
+    cf.descricao                         AS descricao,
+    f.quantidade                         AS quantidade,
+    f.tamanho                            AS tamanho,
+    f.fracionada::text                   AS fracionada,
+    f.tipo                               AS tipo,
+    f.categoria                          AS categoria,
+    p.numero                             AS numero_pai,
+    '(' || p.numero::text || ') ' || p.nome AS nome_pai
   FROM item_pedido f
   JOIN item_pedido p
-    ON p.item_id   = f.id_pizza_pai
-   AND p.user_id   = f.user_id
-   AND p.id_empresa= f.id_empresa
-   AND p.pedido_id = f.pedido_id
-  LEFT JOIN cardapio cf ON cf.numero = f.numero
+    ON p.id_pizza_pai = f.id_pizza_pai
+   AND p.user_id      = f.user_id
+   AND p.id_empresa   = f.id_empresa
+   AND p.pedido_id    = f.pedido_id
+   AND p.categoria    = 'pizza'
+  LEFT JOIN cardapio cf
+    ON cf.numero = f.numero
+   AND cf.id_empresa = f.id_empresa
   WHERE f.id_empresa = p_id_empresa
     AND f.pedido_id  = p_pedido_id
-    AND f.categoria IN ('item', 'borda');
+    AND f.categoria IN ('item','borda')
+  GROUP BY
+    f.numero, f.nome, cf.descricao, f.quantidade, f.tamanho,
+    f.fracionada, f.tipo, f.categoria, p.numero, p.nome
+  ORDER BY numero;
+
 $$;

@@ -19,11 +19,11 @@ SET
  nome =  '(' || i.numero::text || ') ' || c.nome 
 FROM cardapio AS c
 WHERE  i.status = 'inicio'
-  AND c.categoria  in (   'bebida'  ) 
+  AND c.categoria  in (   'bebida'   ) 
  and user_id =   p_user_id 
 and i.pedido_id =  p_pedido_id 
 AND i.fracionada = 'FALSE'
-and i.categoria  in (  'bebida'  )
+and i.categoria  in (  'bebida'   )
 and i.numero <> 0   
 and  i.numero = c.numero
 and i.id_empresa = p_empresa_id 

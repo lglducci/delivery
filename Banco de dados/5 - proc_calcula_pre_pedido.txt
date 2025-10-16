@@ -58,7 +58,7 @@ BEGIN
 
   -- Monta o resumo
   v_resumo :=
-      '🛒 Carinho:' || ' '|| E'\n' ||
+      '🛒 Carrinho:' || ' '|| E'\n' ||
       '📋 Resumo:'    || COALESCE(v_itens, '') || E'\n' ||
     --  '💳 Forma de pagamento: ' || COALESCE(v_pagto, 'não informado') || E'\n' ||
       '📦 Entrega:                                      R$  3.00' || E'\n' ||
