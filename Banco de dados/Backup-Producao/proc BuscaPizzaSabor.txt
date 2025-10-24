@@ -81,5 +81,21 @@ BEGIN
     ORDER BY c.numero;
   END IF;
 
+IF NOT FOUND THEN
+  RETURN QUERY
+  SELECT 
+    NULL::bigint AS numero,
+    'NAO_ENCONTRADO'::text AS nome,
+    'pizza'::text AS categoria,
+    NULL::text AS tipo,
+    0::real AS preco_grande,
+    0::real AS preco_medio,
+    0::real AS preco_pequena,
+    'Sabor não encontrado no cardápio'::text AS descricao;
+END IF;
+
+
+
+ 
 END;
 $$;
