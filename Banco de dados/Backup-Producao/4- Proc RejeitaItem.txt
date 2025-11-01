@@ -28,6 +28,7 @@ WHERE user_id   = p_user_id
    AND pedido_id  = p_pedido_id
    AND  status ='inicio' 
     and id_empresa = p_empresa_id ;  
+
   -- Rejeita itens sem valor
   UPDATE item_pedido_temp
   SET status = 'rejeitado'
