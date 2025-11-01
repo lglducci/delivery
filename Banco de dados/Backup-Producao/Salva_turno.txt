@@ -1,0 +1,48 @@
+ CREATE OR REPLACE FUNCTION salvar_opcoes_turno (
+  p_user_id INT,
+  p_id_empresa INT,
+  p_json_opcoes JSONB
+)
+RETURNS TABLE (
+  posicao INT,
+  numero INT,
+  nome TEXT,
+  categoria TEXT,
+  descricao TEXT,
+  preco_grande NUMERIC,
+  preco_medio NUMERIC,
+  preco_pequena NUMERIC
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  -- 🧹 limpa antes de salvar
+  DELETE FROM turno_opcoes
+  WHERE id_empresa = p_id_empresa
+    AND user_id = p_user_id;
+
+  -- 💾 salva e retorna as novas opções
+  RETURN QUERY
+  INSERT INTO turno_opcoes (
+    id_empresa, user_id, posicao, numero, nome, categoria, descricao,
+    preco_grande, preco_medio, preco_pequena
+  )
+  SELECT
+    p_id_empresa,
+    p_user_id,
+    row_number() OVER (),                      -- gera posição automática
+    (elem->>'numero')::INT,
+    elem->>'nome',
+    elem->>'categoria',
+    elem->>'descricao',
+    (elem->>'preco_grande')::NUMERIC,
+    (elem->>'preco_medio')::NUMERIC,
+    (elem->>'preco_pequena')::NUMERIC
+  FROM jsonb_array_elements(p_json_opcoes) AS elem
+  RETURNING posicao, numero, nome, categoria, descricao,
+            preco_grande, preco_medio, preco_pequena;
+END;
+$$;
+ 
+
+

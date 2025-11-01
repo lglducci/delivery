@@ -1,0 +1,30 @@
+CREATE OR REPLACE FUNCTION resolver_posicao_turno(
+  p_user_id      integer,
+  p_pedido_id    bigint,
+  p_id_empresa   int,
+  p_contexto     text,
+  p_posicao      int
+)
+RETURNS TABLE(
+  numero  int,
+  nome    text,
+  payload jsonb
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT t.numero, t.nome, t.payload
+    FROM turno_opcoes t
+   WHERE t.user_id    = p_user_id
+     AND t.pedido_id  = p_pedido_id
+     AND t.id_empresa = p_id_empresa
+     AND t.contexto   = p_contexto
+     AND t.posicao    = p_posicao
+     AND t.expires_at > now();
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Posição inválida ou expirada';
+  END IF;
+END;
+$$;
