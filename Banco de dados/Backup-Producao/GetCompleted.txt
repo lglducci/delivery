@@ -1,0 +1,155 @@
+ CREATE OR REPLACE FUNCTION get_completed(
+  p_user_id int,
+  p_id_empresa int,
+   p_msgusuario text
+) RETURNS jsonb
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  r turno_opcoes%ROWTYPE;
+  v_ready boolean := false;
+  v_etapa text := '';
+  v_msg text := '';
+  v_cmd text := '';
+BEGIN
+  -- Busca o registro ativo (não precisa ser escolhido = true)
+  SELECT *
+  INTO r
+  FROM turno_opcoes
+  WHERE user_id = p_user_id
+    AND id_empresa = p_id_empresa
+  ORDER BY updated_at DESC
+  LIMIT 1;
+
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object(
+      'status', 'empty',
+      'categoria', NULL,
+      'etapa', 'falta_numero',
+      'mensagem', 'Qual opção você quer (1–N)?',
+      'comando', NULL
+    );
+  END IF;
+
+  --------------------------------------------------------------------
+  -- 🍕 PIZZA (inteira ou fracionada)
+  --------------------------------------------------------------------
+  IF r.categoria = 'pizza' THEN
+    IF r.numero IS NULL THEN
+      v_etapa := 'falta_numero';
+      v_msg := 'Qual sabor de pizza você quer (1–N)?';
+    ELSIF r.fracionado IS TRUE THEN
+      IF r.numero_fracao IS NULL THEN
+        v_etapa := 'falta_sabor2';
+        v_msg := 'Qual o segundo sabor da pizza fracionada (1–N)?';
+      ELSE
+        v_ready := true;
+        v_etapa := 'pronto';
+        v_msg := 'Pizza fracionada completa — pode gravar.';
+        v_cmd := '1 pizza 1/2 ' || r.numero || ' e 1/2 ' || r.numero_fracao || ' grande';
+      END IF;
+    ELSIF r.tamanho IS NULL OR r.tamanho = '' THEN
+      v_etapa := 'falta_tamanho';
+      v_msg := 'Qual tamanho da pizza? (pequena, média ou grande)';
+    ELSIF r.quantidade IS NULL OR r.quantidade <= 0 THEN
+      v_etapa := 'falta_quantidade';
+      v_msg := 'Quantas pizzas você quer? (digite um número)';
+    ELSE
+      v_ready := true;
+      v_etapa := 'pronto';
+      v_msg := 'Pizza completa — pode gravar.';
+      v_cmd := r.quantidade || ' pizza ' || r.numero || ' ' || r.tamanho;
+    END IF;
+
+  --------------------------------------------------------------------
+  -- 🥤 BEBIDA
+  --------------------------------------------------------------------
+  ELSIF r.categoria = 'bebida' THEN
+    IF r.numero IS NULL THEN
+      v_etapa := 'falta_numero';
+      v_msg := 'Qual opção de bebida você quer (1–N)?';
+    ELSIF r.quantidade IS NULL OR r.quantidade <= 0 THEN
+      v_etapa := 'falta_quantidade';
+      v_msg := 'Quantas bebidas você quer? (digite um número)';
+    ELSE
+      v_ready := true;
+      v_etapa := 'pronto';
+      v_msg := 'Bebida completa — pode gravar.';
+      v_cmd := r.quantidade || ' bebida ' || r.numero;
+    END IF;
+
+  --------------------------------------------------------------------
+  -- 🥟 ESFIRRA
+  --------------------------------------------------------------------
+  ELSIF r.categoria = 'esfirra' THEN
+    IF r.numero IS NULL THEN
+      v_etapa := 'falta_numero';
+      v_msg := 'Qual sabor de esfirra você quer (1–N)?';
+    ELSIF r.quantidade IS NULL OR r.quantidade <= 0 THEN
+      v_etapa := 'falta_quantidade';
+      v_msg := 'Quantas esfirras você quer? (digite um número)';
+    ELSE
+      v_ready := true;
+      v_etapa := 'pronto';
+      v_msg := 'Esfirra completa — pode gravar.';
+      v_cmd := r.quantidade || ' esfirra ' || r.numero;
+    END IF;
+
+  --------------------------------------------------------------------
+  -- 🧀 BORDA
+  --------------------------------------------------------------------
+  ELSIF r.categoria = 'borda' THEN
+    IF r.numero IS NULL THEN
+      v_etapa := 'falta_numero';
+      v_msg := 'Qual borda você quer (1–N)?';
+    ELSE
+      v_ready := true;
+      v_etapa := 'pronto';
+      IF r.numero_fracao IS NULL THEN
+        v_msg := 'Borda selecionada — pode gravar.';
+        v_cmd := '1 borda ' || r.numero;
+      ELSE
+        v_msg := 'Borda vinculada — pode gravar.';
+        v_cmd := '1 borda ' || r.numero || ' para item ' || r.numero_fracao;
+      END IF;
+    END IF;
+
+  --------------------------------------------------------------------
+  -- 🍳 ITEM EXTRA
+  --------------------------------------------------------------------
+  ELSIF r.categoria = 'item' THEN
+    IF r.numero IS NULL THEN
+      v_etapa := 'falta_numero';
+      v_msg := 'Qual item adicional você quer (1–N)?';
+    ELSE
+      v_ready := true;
+      v_etapa := 'pronto';
+      IF r.numero_fracao IS NULL THEN
+        v_msg := 'Item extra selecionado — pode gravar.';
+        v_cmd := '1 item ' || r.numero;
+      ELSE
+        v_msg := 'Item vinculado — pode gravar.';
+        v_cmd := '1 item ' || r.numero || ' para item ' || r.numero_fracao;
+      END IF;
+    END IF;
+
+  --------------------------------------------------------------------
+  -- ⚙️ CATEGORIA DESCONHECIDA
+  --------------------------------------------------------------------
+  ELSE
+    v_etapa := 'falta_numero';
+    v_msg := 'Qual opção você quer (1–N)?';
+  END IF;
+
+  --------------------------------------------------------------------
+  -- RETORNO FINAL JSON
+  --------------------------------------------------------------------
+  RETURN jsonb_build_object(
+    'status', CASE WHEN v_ready THEN 'ready' ELSE 'pending' END,
+    'categoria', r.categoria,
+    'etapa', v_etapa,
+    'mensagem', v_msg,
+    'comando', v_cmd
+  );
+END;
+$$;

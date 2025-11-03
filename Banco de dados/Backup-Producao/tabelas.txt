@@ -1,24 +1,30 @@
- -- Só precisa do pgcrypto se for usar gen_random_uuid(); aqui não usamos.
+   -- Só precisa do pgcrypto se for usar gen_random_uuid(); aqui não usamos.
 -- CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
-CREATE TABLE IF NOT EXISTS turno_opcoes (
-  user_id       INTEGER      NOT NULL,
-  id_empresa    INTEGER      NOT NULL,
-  categoria     TEXT         NOT NULL,  -- ex: 'pizza', 'bebida', 'borda_vinculo'
-  posicao       INTEGER      NOT NULL,  -- 1..N mostradas ao cliente
-  numero        INTEGER      NOT NULL,  -- código real do cardápio
-  nome          TEXT         NOT NULL,
-  descricao     TEXT         NOT NULL,
-  preco_grande  NUMERIC,
-  preco_medio   NUMERIC,
-  preco_pequena NUMERIC,
-  created_at    TIMESTAMPTZ  NOT NULL DEFAULT now(),
-  PRIMARY KEY (user_id, id_empresa, categoria, posicao)
+ CREATE TABLE IF NOT EXISTS turno_opcoes (
+  user_id      integer NOT NULL,
+  id_empresa   integer NOT NULL,
+  categoria    text NOT NULL,     -- pizza, bebida, borda, etc.
+  numero       integer,           -- código real do item
+  nome         text,
+  descricao    text,
+  preco_grande numeric,
+  preco_medio  numeric,
+  preco_pequena numeric,
+  tamanho      text,              -- pequeno, médio, grande
+  volume       text,              -- ex: 600ml, 2L
+  fracionado   boolean default false,
+  quantidade   integer,
+  escolhido     boolean default false,     
+ posicao  integer,        
+  numero_fracao  integer , 
+  updated_at   timestamp default now(), 
+  PRIMARY KEY (user_id, id_empresa, categoria, numero)
 );
 
 -- Índices úteis (opcionais)
 CREATE INDEX IF NOT EXISTS idx_turno_opcoes_lookup
-  ON turno_opcoes (user_id, id_empresa, categoria);
+  ON turno_opcoes (user_id, id_empresa, categoria, numero);
 
 CREATE INDEX IF NOT EXISTS idx_turno_opcoes_numero
   ON turno_opcoes (numero);

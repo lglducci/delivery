@@ -1,30 +1,33 @@
-CREATE OR REPLACE FUNCTION resolver_posicao_turno(
-  p_user_id      integer,
-  p_pedido_id    bigint,
-  p_id_empresa   int,
-  p_contexto     text,
-  p_posicao      int
+ CREATE OR REPLACE FUNCTION buscar_numero_por_posicao(
+  p_user_id     integer,
+  p_id_empresa  integer,
+  p_posicao     integer
 )
-RETURNS TABLE(
-  numero  int,
-  nome    text,
-  payload jsonb
-)
+RETURNS integer
 LANGUAGE plpgsql
 AS $$
+DECLARE
+  v_numero integer;
 BEGIN
-  RETURN QUERY
-  SELECT t.numero, t.nome, t.payload
-    FROM turno_opcoes t
-   WHERE t.user_id    = p_user_id
-     AND t.pedido_id  = p_pedido_id
-     AND t.id_empresa = p_id_empresa
-     AND t.contexto   = p_contexto
-     AND t.posicao    = p_posicao
-     AND t.expires_at > now();
+  -- Marca a posição escolhida e captura o numero real do cardápio
+  UPDATE turno_opcoes
+     SET escolhido = true
+   WHERE user_id    = p_user_id
+     AND id_empresa = p_id_empresa
+     AND posicao    = p_posicao
+  RETURNING numero INTO v_numero;
 
-  IF NOT FOUND THEN
+  IF v_numero IS NULL THEN
     RAISE EXCEPTION 'Posição inválida ou expirada';
   END IF;
+
+  -- Limpa as demais posições não escolhidas
+  DELETE FROM turno_opcoes
+   WHERE user_id    = p_user_id
+     AND id_empresa = p_id_empresa
+     AND posicao   <> p_posicao
+     AND COALESCE(escolhido,false) = false;
+
+  RETURN v_numero;
 END;
 $$;

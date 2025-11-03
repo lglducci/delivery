@@ -1,0 +1,30 @@
+CREATE OR REPLACE FUNCTION GravaQuantidade(
+  p_user_id     integer,
+  p_id_empresa  integer, 
+  p_quantidade  integer
+)
+RETURNS void
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_rows integer;
+BEGIN
+  -- valida
+  IF p_quantidade IS NULL OR p_quantidade <= 0 THEN
+    RAISE EXCEPTION 'Quantidade inválida (%). Deve ser inteiro > 0.', p_quantidade;
+  END IF;
+
+  -- atualiza somente a linha da posição escolhida
+  UPDATE turno_opcoes
+     SET quantidade = p_quantidade
+   WHERE user_id    = p_user_id
+     AND id_empresa = p_id_empresa ;
+
+  GET DIAGNOSTICS v_rows = ROW_COUNT;
+
+  IF v_rows = 0 THEN
+    RAISE EXCEPTION 'Nenhum registro encontrado para user_id=%, id_empresa=%, posicao=%',
+      p_user_id, p_id_empresa, p_posicao;
+  END IF;
+END;
+$$;

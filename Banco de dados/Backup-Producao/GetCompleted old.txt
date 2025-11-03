@@ -1,0 +1,112 @@
+CREATE OR REPLACE FUNCTION get_completed(
+  p_user_id int,
+  p_id_empresa int
+) RETURNS jsonb
+LANGUAGE plpgsql AS $$
+DECLARE
+  r turno_opcoes%ROWTYPE;
+  v_ready boolean := false;
+  v_needs text[] := ARRAY[]::text[];
+  v_next_prompt text := '';
+  v_action text := 'ask';  -- ask | execute
+  v_command text := null;
+BEGIN
+  -- Seleciona apenas o registro "ativo" (escolhido = true)
+  SELECT * INTO r
+  FROM turno_opcoes
+  WHERE user_id = p_user_id
+    AND id_empresa = p_id_empresa
+    AND escolhido = true
+  LIMIT 1;
+
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object(
+      'status', 'empty',
+      'next_action', 'ask',
+      'needs', jsonb_build_array('numero'),
+      'next_prompt', 'Qual OPÇÃO da lista você quer (1–N)?'
+    );
+  END IF;
+
+  -- Lógica de decisão
+  IF r.categoria = 'bebida' THEN
+    IF r.numero IS NULL THEN
+      v_needs := v_needs || 'numero';
+      v_next_prompt := 'Qual OPÇÃO da lista você quer (1–N)?';
+    ELSIF r.quantidade IS NULL OR r.quantidade <= 0 THEN
+      v_needs := v_needs || 'quantidade';
+      v_next_prompt := 'Quantas unidades você quer? (digite um número)';
+    ELSE
+      v_ready := true;
+      v_action := 'execute';
+      v_command := r.quantidade || ' bebida ' || r.numero;
+    END IF;
+
+  ELSIF r.categoria = 'pizza' THEN
+    IF r.numero IS NULL THEN
+      v_needs := v_needs || 'numero';
+      v_next_prompt := 'Qual OPÇÃO da lista você quer (1–N)?';
+    ELSIF r.tamanho IS NULL OR r.tamanho = '' THEN
+      v_needs := v_needs || 'tamanho';
+      v_next_prompt := 'Qual tamanho você quer? (pequena, média ou grande)';
+    ELSIF r.quantidade IS NULL OR r.quantidade <= 0 THEN
+      v_needs := v_needs || 'quantidade';
+      v_next_prompt := 'Quantas pizzas você quer? (digite um número)';
+    ELSE
+      v_ready := true;
+      v_action := 'execute';
+      v_command := r.quantidade || ' pizza ' || r.numero || ' ' || COALESCE(r.tamanho,'');
+    END IF;
+
+  ELSIF r.categoria = 'esfirra' THEN
+    IF r.numero IS NULL THEN
+      v_needs := v_needs || 'numero';
+      v_next_prompt := 'Qual OPÇÃO da lista você quer (1–N)?';
+    ELSIF r.quantidade IS NULL OR r.quantidade <= 0 THEN
+      v_needs := v_needs || 'quantidade';
+      v_next_prompt := 'Quantas esfirras você quer? (digite um número)';
+    ELSE
+      v_ready := true;
+      v_action := 'execute';
+      v_command := r.quantidade || ' esfirra ' || r.numero;
+    END IF;
+
+  ELSIF r.categoria = 'borda' THEN
+    IF r.numero IS NULL THEN
+      v_needs := v_needs || 'numero';
+      v_next_prompt := 'Qual OPÇÃO de borda você quer (1–N)?';
+    ELSE
+      v_ready := true;
+      v_action := 'execute';
+      v_command := '1 borda ' || r.numero;
+    END IF;
+
+  ELSE
+    -- categoria desconhecida ou genérica
+    IF r.numero IS NULL THEN
+      v_needs := v_needs || 'numero';
+      v_next_prompt := 'Qual OPÇÃO da lista você quer (1–N)?';
+    ELSE
+      v_ready := true;
+      v_action := 'execute';
+      v_command := '1 item ' || r.numero;
+    END IF;
+  END IF;
+
+  -- Retorno JSON consolidado
+  RETURN jsonb_build_object(
+    'status', CASE WHEN v_ready THEN 'ready' ELSE 'pending' END,
+    'have', jsonb_build_object(
+      'categoria', r.categoria,
+      'numero', r.numero IS NOT NULL,
+      'tamanho', r.tamanho IS NOT NULL,
+      'quantidade', r.quantidade IS NOT NULL AND r.quantidade > 0,
+      'escolhido', r.escolhido
+    ),
+    'needs', to_jsonb(v_needs),
+    'next_action', v_action,
+    'next_prompt', v_next_prompt,
+    'command', v_command
+  );
+END;
+$$;
