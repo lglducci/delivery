@@ -1,30 +1,51 @@
-CREATE OR REPLACE FUNCTION GravaQuantidade(
+  CREATE OR REPLACE FUNCTION GravaQuantidade(
   p_user_id     integer,
-  p_id_empresa  integer, 
-  p_quantidade  integer
+  p_id_empresa  integer,
+  p_quantidade         integer
 )
-RETURNS void
+
+ p_user_id int,
+  p_id_empresa int,
+  p_qtd int
+) RETURNS text
 LANGUAGE plpgsql
 AS $$
 DECLARE
-  v_rows integer;
+  v_categoria text;
+  v_etapa text;
 BEGIN
-  -- valida
-  IF p_quantidade IS NULL OR p_quantidade <= 0 THEN
-    RAISE EXCEPTION 'Quantidade inválida (%). Deve ser inteiro > 0.', p_quantidade;
+  IF coalesce(p_qtd,0) <= 0 THEN
+    RETURN 'erro:qtd_invalida';
   END IF;
 
-  -- atualiza somente a linha da posição escolhida
+  -- Descobre a categoria do item escolhido
+  SELECT categoria INTO v_categoria
+  FROM turno_opcoes
+  WHERE user_id = p_user_id
+    AND id_empresa = p_id_empresa
+    AND escolhido = true
+  LIMIT 1;
+
+  IF NOT FOUND THEN
+    RETURN 'erro:sem_escolha';
+  END IF;
+
+  -- Define etapa conforme a categoria
+  IF v_categoria = 'pizza' THEN
+    v_etapa := 'falta_tamanho';
+  ELSE
+    v_etapa := 'ready';
+  END IF;
+
   UPDATE turno_opcoes
-     SET quantidade = p_quantidade
-   WHERE user_id    = p_user_id
-     AND id_empresa = p_id_empresa ;
+     SET quantidade = p_quantidade  ,
+         etapa = v_etapa,
+         updated_at = now()
+   WHERE user_id = p_user_id
+     AND id_empresa = p_id_empresa
+     AND escolhido = true;
 
-  GET DIAGNOSTICS v_rows = ROW_COUNT;
-
-  IF v_rows = 0 THEN
-    RAISE EXCEPTION 'Nenhum registro encontrado para user_id=%, id_empresa=%, posicao=%',
-      p_user_id, p_id_empresa, p_posicao;
-  END IF;
+  RETURN 'ok';
 END;
 $$;
+

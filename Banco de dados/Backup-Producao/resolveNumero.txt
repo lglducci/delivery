@@ -3,31 +3,22 @@
   p_id_empresa  integer,
   p_posicao     integer
 )
-RETURNS integer
+RETURNS text
 LANGUAGE plpgsql
 AS $$
-DECLARE
-  v_numero integer;
 BEGIN
-  -- Marca a posição escolhida e captura o numero real do cardápio
   UPDATE turno_opcoes
-     SET escolhido = true
+     SET escolhido = true,etapa = 'falta_qtd'
    WHERE user_id    = p_user_id
      AND id_empresa = p_id_empresa
-     AND posicao    = p_posicao
-  RETURNING numero INTO v_numero;
+     AND posicao    = p_posicao;
 
-  IF v_numero IS NULL THEN
-    RAISE EXCEPTION 'Posição inválida ou expirada';
-  END IF;
-
-  -- Limpa as demais posições não escolhidas
   DELETE FROM turno_opcoes
    WHERE user_id    = p_user_id
      AND id_empresa = p_id_empresa
      AND posicao   <> p_posicao
      AND COALESCE(escolhido,false) = false;
 
-  RETURN v_numero;
+  RETURN 'ok';
 END;
 $$;

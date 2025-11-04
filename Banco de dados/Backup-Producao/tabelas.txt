@@ -18,7 +18,8 @@
   escolhido     boolean default false,     
  posicao  integer,        
   numero_fracao  integer , 
-  updated_at   timestamp default now(), 
+  updated_at   timestamp default now(),
+  etapa   text default  'falta_posicao', 
   PRIMARY KEY (user_id, id_empresa, categoria, numero)
 );
 

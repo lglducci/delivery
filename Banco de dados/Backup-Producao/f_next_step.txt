@@ -1,0 +1,46 @@
+ CREATE OR REPLACE FUNCTION f_next_step(
+  p_user_id int, p_id_empresa int
+) RETURNS jsonb
+LANGUAGE plpgsql AS $$
+DECLARE r turno_opcoes%ROWTYPE;
+BEGIN
+  SELECT * INTO r
+  FROM turno_opcoes
+  WHERE user_id=p_user_id AND id_empresa=p_id_empresa
+  ORDER BY updated_at DESC LIMIT 1;
+
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('acao','nenhum','mensagem','Diga o que deseja do cardápio.');
+  END IF;
+
+  -- 1) Sem escolha feita ainda → pedir posição
+  IF r.etapa = 'falta_posicao' THEN
+    RETURN jsonb_build_object(
+      'acao','pedir_posicao',
+      'mensagem','Qual OPÇÃO da lista você quer (1–N)?'
+    );
+  END IF;
+
+  -- 2) Tem escolha mas falta quantidade → pedir quantidade
+  IF r.etapa = 'falta_qtd' OR r.quantidade IS NULL OR r.quantidade <= 0 THEN
+    RETURN jsonb_build_object(
+      'acao','pedir_qtd',
+      'mensagem','Quantas unidades você quer?'
+    );
+  END IF;
+
+  -- 3) Pronto para gravar intenção
+  IF r.etapa = 'ready' AND r.quantidade > 0 AND r.escolhido THEN
+    RETURN jsonb_build_object(
+      'acao','gravar_intencao',
+      'categoria', r.categoria,
+      'numero', r.numero,
+      'qtd', r.quantidade,
+      'mensagem_confirm','Perfeito! Registrando seu item.'
+    );
+  END IF;
+
+  -- fallback
+  RETURN jsonb_build_object('acao','nenhum','mensagem','Vamos continuar: qual opção (1–N)?');
+END;
+$$;

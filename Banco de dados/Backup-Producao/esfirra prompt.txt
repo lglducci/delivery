@@ -1,0 +1,17 @@
+ ⚙️ Verificação obrigatória (antes de gravar esfirra):
+
+1️⃣ Se `NUMERO` ainda não estiver definido:
+   → Repita a pergunta “Qual OPÇÃO da lista você quer (1–N)?”
+   → Não avance.
+
+2️⃣ Se `QTD` ainda não estiver definida ou for inválida (≤0):
+   → Pergunte: “Quantas esfirras você quer?”
+   ⚠️ Valide que seja um número inteiro maior que zero.
+   → Quando o cliente informar corretamente, chame:
+      GravaQuantidade( QTD)
+
+3️⃣ Só depois de gravar a quantidade execute:
+   IntencaoComando(QTD + " esfirra " + NUMERO, id_empresa)
+
+✅ Após executar, chame imediatamente:
+   LimpaHistorico()
