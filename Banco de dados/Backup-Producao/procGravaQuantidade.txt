@@ -2,11 +2,7 @@
   p_user_id     integer,
   p_id_empresa  integer,
   p_quantidade         integer
-)
-
- p_user_id int,
-  p_id_empresa int,
-  p_qtd int
+ 
 ) RETURNS text
 LANGUAGE plpgsql
 AS $$
@@ -14,7 +10,7 @@ DECLARE
   v_categoria text;
   v_etapa text;
 BEGIN
-  IF coalesce(p_qtd,0) <= 0 THEN
+  IF coalesce(p_quantidade,0) <= 0 THEN
     RETURN 'erro:qtd_invalida';
   END IF;
 

@@ -1,8 +1,10 @@
  CREATE OR REPLACE FUNCTION f_next_step(
-  p_user_id int, p_id_empresa int
+  p_user_id int,
+  p_id_empresa int
 ) RETURNS jsonb
 LANGUAGE plpgsql AS $$
-DECLARE r turno_opcoes%ROWTYPE;
+DECLARE 
+  r turno_opcoes%ROWTYPE;
 BEGIN
   SELECT * INTO r
   FROM turno_opcoes
@@ -21,11 +23,19 @@ BEGIN
     );
   END IF;
 
-  -- 2) Tem escolha mas falta quantidade → pedir quantidade
+  -- 2) Falta quantidade
   IF r.etapa = 'falta_qtd' OR r.quantidade IS NULL OR r.quantidade <= 0 THEN
     RETURN jsonb_build_object(
       'acao','pedir_qtd',
       'mensagem','Quantas unidades você quer?'
+    );
+  END IF;
+
+  -- 🟡 NOVO BLOCO: Falta tamanho (somente pizza)
+  IF r.etapa = 'falta_tamanho' THEN
+    RETURN jsonb_build_object(
+      'acao','pedir_tamanho',
+      'mensagem','Qual tamanho da pizza você quer? (média ou grande)'
     );
   END IF;
 
