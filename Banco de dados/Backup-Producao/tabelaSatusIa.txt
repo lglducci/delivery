@@ -1,8 +1,0 @@
-CREATE TABLE estado_ia (
-  id serial primary key,
-  user_id text not null,
-  categoria text,
-  step text,
-  mapa jsonb,
-  updated_at timestamp default now()
-);

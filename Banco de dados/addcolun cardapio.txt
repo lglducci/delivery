@@ -1,1 +1,0 @@
-  ALTER TABLE cardapio ADD COLUMN id_referencia INT REFERENCES  pizza_modelo (id_referencia);
