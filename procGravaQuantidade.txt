@@ -1,0 +1,47 @@
+  CREATE OR REPLACE FUNCTION GravaQuantidade(
+  p_user_id     integer,
+  p_id_empresa  integer,
+  p_quantidade         integer
+ 
+) RETURNS text
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_categoria text;
+  v_etapa text;
+BEGIN
+  IF coalesce(p_quantidade,0) <= 0 THEN
+    RETURN 'erro:qtd_invalida';
+  END IF;
+
+  -- Descobre a categoria do item escolhido
+  SELECT categoria INTO v_categoria
+  FROM turno_opcoes
+  WHERE user_id = p_user_id
+    AND id_empresa = p_id_empresa
+    AND escolhido = true
+  LIMIT 1;
+
+  IF NOT FOUND THEN
+    RETURN 'erro:sem_escolha';
+  END IF;
+
+  -- Define etapa conforme a categoria
+  IF v_categoria = 'pizza' THEN
+    v_etapa := 'falta_tamanho';
+  ELSE
+    v_etapa := 'ready';
+  END IF;
+
+  UPDATE turno_opcoes
+     SET quantidade = p_quantidade  ,
+         etapa = v_etapa,
+         updated_at = now()
+   WHERE user_id = p_user_id
+     AND id_empresa = p_id_empresa
+     AND escolhido = true;
+
+  RETURN 'ok';
+END;
+$$;
+
