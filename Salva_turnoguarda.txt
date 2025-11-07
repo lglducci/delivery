@@ -7,12 +7,20 @@ CREATE OR REPLACE FUNCTION salva_turno(
   p_tamanho       text,
   p_json_opcoes   jsonb
 )
-  RETURNS SETOF jsonb
+RETURNS TABLE (
+  posicao         int,
+  numero          int,
+  nome            text,
+  categoria       text,
+  descricao       text,
+  preco_grande    numeric,
+  preco_medio     numeric,
+  preco_pequena   numeric,
+  tamanho         text,
+  quantidade      int
+)
 LANGUAGE plpgsql
 AS $$
-DECLARE
-  v_atualizado jsonb;
-
 BEGIN
   -- 1) Zera opções anteriores do usuário/empresa
   DELETE FROM turno_opcoes
@@ -45,12 +53,15 @@ BEGIN
   -- 3) Avança etapa (AGORA funciona, porque não teve RETURN antes)
   PERFORM adianta_etapa(p_user_id, p_id_empresa);
 
- RETURN QUERY
-SELECT row_to_json(t.*)::jsonb
-FROM turno_opcoes t
-WHERE t.user_id = p_user_id
-  AND t.id_empresa = p_id_empresa;
-
-  
+  -- 4) Retorna a visão atual já com etapa ajustada
+  RETURN QUERY
+  SELECT
+    t.posicao, t.numero, t.nome, t.categoria, t.descricao,
+    t.preco_grande, t.preco_medio, t.preco_pequena,
+    t.tamanho, t.quantidade
+  FROM turno_opcoes as t
+  WHERE t.id_empresa = p_id_empresa
+    AND t.user_id    = p_user_id
+  ORDER BY t.posicao;
 END;
 $$;

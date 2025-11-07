@@ -1,55 +1,49 @@
+  
+
  CREATE OR REPLACE FUNCTION buscar_numero_por_posicao(
   p_user_id     integer,
   p_id_empresa  integer,
   p_posicao     integer
 )
-RETURNS text
+RETURNS jsonb
 LANGUAGE plpgsql
 AS $$
-
 DECLARE
-  v_item RECORD;
-  v_msg TEXT;
-
-
+  v_row jsonb;
 BEGIN
+  -- Marca o item escolhido nessa posição
   UPDATE turno_opcoes
-     SET escolhido = true,etapa = 'falta_qtd'
+     SET escolhido = true
    WHERE user_id    = p_user_id
      AND id_empresa = p_id_empresa
      AND posicao    = p_posicao;
 
+  -- Elimina outras opções não escolhidas
   DELETE FROM turno_opcoes
    WHERE user_id    = p_user_id
      AND id_empresa = p_id_empresa
      AND posicao   <> p_posicao
      AND COALESCE(escolhido,false) = false;
 
-PERFORM adianta_etapa(p_user_id, p_id_empresa);
+  -- Avança a etapa conforme tua regra centralizada
+  PERFORM adianta_etapa(p_user_id, p_id_empresa);
 
+  -- Retorna o registro ATUALIZADO dessa posição
+  SELECT row_to_json(t.*)::jsonb
+    INTO v_row
+    FROM turno_opcoes t
+   WHERE t.user_id = p_user_id
+     AND t.id_empresa = p_id_empresa
+     AND t.posicao = p_posicao
+   LIMIT 1;
 
-SELECT numero, nome, tamanho, quantidade
-  INTO v_item
-  FROM turno_opcoes
-  WHERE user_id = p_user_id
-    AND id_empresa = p_id_empresa
-    AND posicao = p_posicao
-  LIMIT 1;
-
-  IF NOT FOUND THEN
-    RETURN FORMAT('⚠️ Nenhum item encontrado na posição %s.', p_posicao);
+  IF v_row IS NULL THEN
+    RETURN jsonb_build_object('erro','nenhum_item','posicao',p_posicao);
   END IF;
 
-  -- se quantidade ou tamanho estão nulos, monta mensagem específica
-  IF v_item.quantidade IS NULL THEN
-    v_msg := FORMAT('🍕 %s selecionado com sucesso! Agora informe a quantidade desejada.', v_item.nome);
-  ELSIF v_item.tamanho IS NULL THEN
-    v_msg := FORMAT('🍕 %s selecionado com sucesso! Qual tamanho você quer? (média ou grande)', v_item.nome);
-  ELSE
-    v_msg := FORMAT('🍕 %s (%s) selecionado com sucesso! Quantidade: %s', v_item.nome, v_item.tamanho, v_item.quantidade);
-  END IF;
-
-  RETURN v_msg;
- 
+  RETURN v_row;
 END;
 $$;
+
+
+

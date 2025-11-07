@@ -1,17 +1,24 @@
  CREATE OR REPLACE FUNCTION GravaTamanho(
   p_user_id     integer,
   p_id_empresa  integer,
-  p_tamanho        text
+  p_tamanho     text
 )
-RETURNS text
+RETURNS jsonb
 LANGUAGE plpgsql
 AS $$
 BEGIN
   UPDATE turno_opcoes
-     SET tamanho = p_tamanho        
+     SET tamanho = p_tamanho,
+         etapa   = 'ready',  -- 🔹 já sinaliza etapa final
+         updated_at = now()
    WHERE user_id    = p_user_id
-     AND id_empresa = p_id_empresa;
+     AND id_empresa = p_id_empresa
+     AND escolhido  = true;
 
-  RETURN 'ok';
+  -- 🔹 Sensibiliza a IA: devolve ação explícita
+  RETURN jsonb_build_object(
+    'acao','GravaIntencao',
+    'mensagem','Perfeito! Gravando sua escolha...'
+  );
 END;
 $$;

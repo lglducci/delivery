@@ -1,9 +1,9 @@
-  CREATE OR REPLACE FUNCTION GravaQuantidade(
+ CREATE OR REPLACE FUNCTION GravaQuantidade(
   p_user_id     integer,
   p_id_empresa  integer,
-  p_quantidade         integer
- 
-) RETURNS text
+  p_quantidade  integer
+)
+RETURNS jsonb
 LANGUAGE plpgsql
 AS $$
 DECLARE
@@ -11,10 +11,9 @@ DECLARE
   v_etapa text;
 BEGIN
   IF coalesce(p_quantidade,0) <= 0 THEN
-    RETURN 'erro:qtd_invalida';
+    RETURN jsonb_build_object('acao','erro','mensagem','Quantidade inválida');
   END IF;
 
-  -- Descobre a categoria do item escolhido
   SELECT categoria INTO v_categoria
   FROM turno_opcoes
   WHERE user_id = p_user_id
@@ -23,10 +22,9 @@ BEGIN
   LIMIT 1;
 
   IF NOT FOUND THEN
-    RETURN 'erro:sem_escolha';
+    RETURN jsonb_build_object('acao','erro','mensagem','Nenhum item selecionado');
   END IF;
 
-  -- Define etapa conforme a categoria
   IF v_categoria = 'pizza' THEN
     v_etapa := 'falta_tamanho';
   ELSE
@@ -34,14 +32,24 @@ BEGIN
   END IF;
 
   UPDATE turno_opcoes
-     SET quantidade = p_quantidade  ,
+     SET quantidade = p_quantidade,
          etapa = v_etapa,
          updated_at = now()
    WHERE user_id = p_user_id
      AND id_empresa = p_id_empresa
      AND escolhido = true;
 
-  RETURN 'ok';
+  -- 🔹 retorno orientado à IA
+  IF v_etapa = 'falta_tamanho' THEN
+    RETURN jsonb_build_object(
+      'acao','pedir_tamanho',
+      'mensagem','Qual tamanho da pizza você quer? (média ou grande)'
+    );
+  ELSE
+    RETURN jsonb_build_object(
+      'acao','gravaintencao',
+      'mensagem','Beleza, anotado! Gravando sua escolha...'
+    );
+  END IF;
 END;
 $$;
-

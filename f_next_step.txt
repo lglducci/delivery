@@ -8,7 +8,8 @@ DECLARE
 BEGIN
   SELECT * INTO r
   FROM turno_opcoes
-  WHERE user_id=p_user_id AND id_empresa=p_id_empresa
+  WHERE user_id=p_user_id 
+       AND id_empresa=p_id_empresa 
   ORDER BY updated_at DESC LIMIT 1;
 
   IF NOT FOUND THEN
@@ -16,7 +17,7 @@ BEGIN
   END IF;
 
   -- 1) Sem escolha feita ainda → pedir posição
-  IF r.etapa = 'falta_posicao' THEN
+  IF r.etapa = 'pedir_posicao' THEN
     RETURN jsonb_build_object(
       'acao','pedir_posicao',
       'mensagem','Qual OPÇÃO da lista você quer (1–N)?'
@@ -31,13 +32,17 @@ BEGIN
     );
   END IF;
 
-  -- 🟡 NOVO BLOCO: Falta tamanho (somente pizza)
-  IF r.etapa = 'falta_tamanho' THEN
+ -- 🟡 Falta tamanho (somente pizza)
+IF lower(btrim(coalesce(r.categoria,''))) = 'pizza' THEN
+  IF r.etapa = 'falta_tamanho'
+     OR r.tamanho IS NULL
+     OR btrim(coalesce(r.tamanho,'')) = '' THEN
     RETURN jsonb_build_object(
       'acao','pedir_tamanho',
       'mensagem','Qual tamanho da pizza você quer? (média ou grande)'
     );
   END IF;
+END IF;
 
   -- 3) Pronto para gravar intenção
   IF r.etapa = 'ready' AND r.quantidade > 0 AND r.escolhido THEN
