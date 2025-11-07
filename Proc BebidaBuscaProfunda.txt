@@ -1,0 +1,74 @@
+CREATE OR REPLACE FUNCTION public.busca_bebida_profundo(
+  p_id_empresa INT,
+  p_categoria TEXT,
+  p_nome_limpo TEXT,
+  p_volume TEXT DEFAULT ''
+)
+RETURNS TABLE (
+  total INTEGER,
+  resultados JSON
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_total INT;
+  v_resultados JSON;
+BEGIN
+  -- 1️⃣ Primeira tentativa (com volume, se informado)
+  WITH base AS (
+    SELECT 
+      numero,
+      nome,
+      categoria,
+      tipo,
+      preco_grande,
+      preco_medio,
+      preco_pequena,
+      descricao,
+      volume
+    FROM cardapio
+    WHERE id_empresa = p_id_empresa
+      AND unaccent(lower(categoria)) = unaccent(lower(p_categoria))
+      AND unaccent(lower(palavras_chave)) ILIKE '%' || unaccent(lower(trim(p_nome_limpo))) || '%'
+      AND (
+        p_volume = '' 
+        OR volume ILIKE '%' || p_volume || '%'
+      )
+    ORDER BY numero
+  )
+  SELECT 
+    COUNT(*)::INT, 
+    COALESCE(json_agg(base), '[]'::json)
+  INTO v_total, v_resultados
+  FROM base;
+
+  -- 2️⃣ Se nada foi encontrado E o volume foi informado → tenta novamente SEM o volume
+  IF v_total = 0 AND p_volume <> '' THEN
+    WITH base_sem_volume AS (
+      SELECT 
+        numero,
+        nome,
+        categoria,
+        tipo,
+        preco_grande,
+        preco_medio,
+        preco_pequena,
+        descricao,
+        volume
+      FROM cardapio
+      WHERE id_empresa = p_id_empresa
+        AND unaccent(lower(categoria)) = unaccent(lower(p_categoria))
+        AND unaccent(lower(palavras_chave)) ILIKE '%' || unaccent(lower(trim(p_nome_limpo))) || '%'
+      ORDER BY numero
+    )
+    SELECT 
+      COUNT(*)::INT, 
+      COALESCE(json_agg(base_sem_volume), '[]'::json)
+    INTO v_total, v_resultados
+    FROM base_sem_volume;
+  END IF;
+
+  -- 3️⃣ Retorna o total e o JSON final (sempre)
+  RETURN QUERY SELECT v_total, v_resultados;
+END;
+$$;

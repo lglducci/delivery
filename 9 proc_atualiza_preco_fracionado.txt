@@ -1,0 +1,72 @@
+  CREATE OR REPLACE FUNCTION AtualizaValorFracionado(p_user INTEGER,   p_pedido_id INTEGER,   p_empresa_id INTEGER)
+RETURNS void AS $$
+
+BEGIN
+  -- 1. Atualiza numero
+  UPDATE item_pedido_temp i
+  SET numero = c.numero
+  FROM cardapio c
+  WHERE i.status = 'inicio'
+    AND c.categoria = 'pizza'
+    AND c.nome ILIKE '%' || i.nome || '%'
+    AND i.user_id = p_user
+    AND i.pedido_id = p_pedido_id
+    AND ( i.numero = 0  ) 
+     AND i.fracionada = 'true'
+   and i.id_empresa =    p_empresa_id
+    and i.id_empresa =    c.id_empresa ;
+
+  -- 2. Atualiza numero_fracao
+  UPDATE item_pedido_temp i
+  SET numero_fracao = c.numero
+  FROM cardapio c
+  WHERE i.status = 'inicio'
+    AND c.categoria = 'pizza'
+    AND LOWER(c.nome) ILIKE '%' || LOWER(i.nome_fracao) || '%'
+    AND i.user_id = p_user
+    AND i.pedido_id = p_pedido_id
+    AND (  i.numero_fracao = 0 )
+    AND i.fracionada = 'true'
+    and i.id_empresa =    p_empresa_id
+    and i.id_empresa =    c.id_empresa ;
+
+  -- 3. Atualiza valor da primeira metade
+  UPDATE item_pedido_temp i
+  SET valor = c.preco_grande,
+      valor_unitario = c.preco_grande,
+      nome = '1/2 (' || i.numero::text || ') ' || c.nome
+  FROM cardapio c
+  WHERE i.numero = c.numero
+    AND i.user_id = p_user
+    AND i.pedido_id = p_pedido_id
+    AND i.fracionada = 'true'
+    AND i.categoria = 'pizza' 
+     and i.id_empresa =    p_empresa_id
+    and i.id_empresa =    c.id_empresa ;
+
+  -- 4. Atualiza valor_fracao
+  UPDATE item_pedido_temp i
+  SET valor_fracao = c.preco_grande,
+      nome = i.nome || ' 1/2 (' || i.numero_fracao::text || ') ' || c.nome
+  FROM cardapio c
+  WHERE i.numero_fracao = c.numero
+    AND i.user_id = p_user
+    AND i.pedido_id = p_pedido_id
+    AND i.fracionada = 'true'
+    AND i.categoria = 'pizza'
+   and i.id_empresa =    p_empresa_id
+    and i.id_empresa =    c.id_empresa ;
+
+  -- 5. Mantém maior valor
+  UPDATE item_pedido_temp i
+  SET valor = CASE WHEN i.valor < i.valor_fracao THEN i.valor_fracao ELSE i.valor END * quantidade
+  WHERE i.user_id = p_user
+    AND i.pedido_id = p_pedido_id
+    AND i.fracionada = 'true'
+    AND i.categoria = 'pizza'
+    and i.id_empresa =    p_empresa_id ;
+END;
+$$ LANGUAGE plpgsql;
+
+
+GRANT EXECUTE ON PROCEDURE valida_nome_item_pedido(INT, INT, INT ) TO seu_usuario;
