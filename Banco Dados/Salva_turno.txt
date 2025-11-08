@@ -1,0 +1,91 @@
+    
+
+CREATE OR REPLACE FUNCTION salva_turno(
+  p_user_id       int,
+  p_id_empresa    int,
+  p_quantidade    int,
+  p_tamanho       text, 
+  p_json_opcoes   jsonb
+) 
+  RETURNS SETOF jsonb
+LANGUAGE plpgsql
+AS $$
+DECLARE 
+  v_etapa text;
+  v_count int;
+
+BEGIN
+  -- 1) Zera opções anteriores do usuário/empresa
+  DELETE FROM turno_opcoes
+   WHERE id_empresa = p_id_empresa
+     AND user_id    = p_user_id;
+
+  -- 2) Insere as novas opções (SEM RETURNING!)
+  INSERT INTO turno_opcoes (
+    id_empresa, user_id, posicao, numero, nome, categoria, descricao,
+    preco_grande, preco_medio, preco_pequena, escolhido, updated_at,
+    tamanho, quantidade, volume
+  )
+  SELECT
+    p_id_empresa,
+    p_user_id,
+    ROW_NUMBER() OVER () AS posicao,
+    (elem->>'numero')::int,
+    elem->>'nome',
+    elem->>'categoria',
+    elem->>'descricao',
+    NULLIF(elem->>'preco_grande','')::numeric,
+    NULLIF(elem->>'preco_medio','')::numeric,
+    NULLIF(elem->>'preco_pequena','')::numeric,
+    false,
+    now(),
+    p_tamanho,
+    p_quantidade,
+    elem->>'volume' 
+  FROM jsonb_array_elements(p_json_opcoes) AS elem;
+
+  -- 3) Avança etapa (AGORA funciona, porque não teve RETURN antes)
+  PERFORM adianta_etapa(p_user_id, p_id_empresa);
+
+
+  -- 4️⃣ Conta e identifica a etapa atual
+  SELECT COUNT(*)
+    INTO v_count
+    FROM turno_opcoes
+   WHERE user_id = p_user_id
+     AND id_empresa = p_id_empresa;
+
+  -- se já estiver tudo pronto, etapa = 'ready'
+  v_etapa := CASE 
+               WHEN v_count = 1 THEN 'ready'
+               ELSE 'escolher'
+             END;
+
+
+  -- 5️⃣ Retorna com mensagem adequada
+  RETURN QUERY
+  SELECT
+    row_to_json(t.*)::jsonb ||
+    jsonb_build_object(
+      'etapa', v_etapa,
+      'mensagem',
+      CASE
+        WHEN v_etapa = 'ready' AND v_count = 1
+          THEN format('Item pronto para gravação. Confirma %s unidade%s? (Digite 1)',
+                      COALESCE(t.quantidade,1),
+                      CASE WHEN COALESCE(t.quantidade,1)>1 THEN 's' ELSE '' END)
+        WHEN v_etapa = 'ready' AND v_count > 1
+          THEN format('Encontrei %s opções, qual você quer? (1–%s)', v_count, v_count)
+        ELSE NULL
+      END
+    )
+  FROM turno_opcoes t
+  WHERE t.user_id = p_user_id
+    AND t.id_empresa = p_id_empresa;
+END;
+$$;
+
+  
+END;
+$$;
+

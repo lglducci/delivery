@@ -1,0 +1,31 @@
+   -- Só precisa do pgcrypto se for usar gen_random_uuid(); aqui não usamos.
+-- CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+ CREATE TABLE IF NOT EXISTS turno_opcoes (
+  user_id      integer NOT NULL,
+  id_empresa   integer NOT NULL,
+  categoria    text NOT NULL,     -- pizza, bebida, borda, etc.
+  numero       integer,           -- código real do item
+  nome         text,
+  descricao    text,
+  preco_grande numeric,
+  preco_medio  numeric,
+  preco_pequena numeric,
+  tamanho      text,              -- pequeno, médio, grande
+  volume       text,              -- ex: 600ml, 2L
+  fracionado   boolean default false,
+  quantidade   integer,
+  escolhido     boolean default false,     
+ posicao  integer,        
+  numero_fracao  integer , 
+  updated_at   timestamp default now(),
+  etapa   text default  'falta_posicao', 
+  PRIMARY KEY (user_id, id_empresa, categoria, numero)
+);
+
+-- Índices úteis (opcionais)
+CREATE INDEX IF NOT EXISTS idx_turno_opcoes_lookup
+  ON turno_opcoes (user_id, id_empresa, categoria, numero);
+
+CREATE INDEX IF NOT EXISTS idx_turno_opcoes_numero
+  ON turno_opcoes (numero);

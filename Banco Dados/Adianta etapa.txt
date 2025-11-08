@@ -1,0 +1,64 @@
+ CREATE OR REPLACE FUNCTION adianta_etapa(
+  p_user_id INT,
+  p_id_empresa INT
+)
+RETURNS text
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_count INT;
+  v_turno RECORD;
+BEGIN
+  -- 🔹 1️⃣ Se há várias opções, pedir posição
+  SELECT COUNT(*) INTO v_count
+  FROM turno_opcoes
+  WHERE user_id = p_user_id
+    AND id_empresa = p_id_empresa;
+
+  IF v_count > 1 THEN
+    UPDATE turno_opcoes
+       SET etapa = 'pedir_posicao'
+     WHERE user_id = p_user_id AND id_empresa = p_id_empresa;
+    RETURN 'pedir_posicao';
+  END IF;
+
+  -- 🔹 2️⃣ Se não há nenhuma, nada a fazer
+  IF v_count = 0 THEN
+    RETURN '';
+  END IF;
+
+  -- 🔹 3️⃣ Busca o item atual
+  SELECT *
+  INTO v_turno
+  FROM turno_opcoes
+  WHERE user_id = p_user_id
+    AND id_empresa = p_id_empresa
+  LIMIT 1;
+
+  -- 🔹 4️⃣ Falta quantidade → pedir_qtd
+  IF v_turno.quantidade IS NULL
+     AND lower(v_turno.categoria) IN ('pizza','bebida','esfirra') THEN
+    UPDATE turno_opcoes
+       SET etapa = 'pedir_qtd'
+     WHERE user_id = p_user_id AND id_empresa = p_id_empresa;
+    RETURN 'pedir_qtd';
+  END IF;
+
+  -- 🔹 5️⃣ Pizza sem tamanho → pedir_tamanho
+  IF lower(v_turno.categoria) = 'pizza'
+     AND (v_turno.tamanho IS NULL OR btrim(v_turno.tamanho) = '') THEN
+    UPDATE turno_opcoes
+       SET etapa = 'pedir_tamanho'
+     WHERE user_id = p_user_id AND id_empresa = p_id_empresa;
+    RETURN 'pedir_tamanho';
+  END IF;
+
+  -- 🔹 6️⃣ Se nada disso, está pronto
+  UPDATE turno_opcoes
+     SET etapa = 'ready'
+   WHERE user_id = p_user_id 
+         AND id_empresa = p_id_empresa
+     and escolhido = true ;
+  RETURN 'ready';
+END;
+$$;

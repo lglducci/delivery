@@ -1,0 +1,67 @@
+  
+
+ CREATE OR REPLACE FUNCTION buscar_numero_por_posicao(
+  p_user_id     integer,
+  p_id_empresa  integer,
+  p_posicao     integer
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_row jsonb;
+BEGIN
+  -- Marca o item escolhido nessa posição
+  UPDATE turno_opcoes
+     SET escolhido = true
+   WHERE user_id    = p_user_id
+     AND id_empresa = p_id_empresa
+     AND posicao    = p_posicao;
+
+  -- Elimina outras opções não escolhidas
+  DELETE FROM turno_opcoes
+   WHERE user_id    = p_user_id
+     AND id_empresa = p_id_empresa
+     AND posicao   <> p_posicao
+     AND COALESCE(escolhido,false) = false;
+
+  -- Avança a etapa conforme tua regra centralizada
+  PERFORM adianta_etapa(p_user_id, p_id_empresa);
+
+  -- Retorna o registro ATUALIZADO dessa posição
+  SELECT row_to_json(t.*)::jsonb
+    INTO v_row
+    FROM turno_opcoes t
+   WHERE t.user_id = p_user_id
+     AND t.id_empresa = p_id_empresa
+     AND t.posicao = p_posicao
+   LIMIT 1;
+ 
+IF v_row IS NULL THEN
+  RETURN jsonb_build_object('erro','nenhum_item','posicao',p_posicao);
+END IF;
+
+-- 🔹 Detecta se a escolha já fecha o ciclo (quantidade + tamanho ok, ou categoria ≠ pizza)
+IF (
+     (lower(v_row->>'categoria') = 'pizza'
+       AND length(btrim(coalesce(v_row->>'tamanho',''))) > 0
+       AND (v_row->>'quantidade') IS NOT NULL)
+     OR
+     (lower(v_row->>'categoria') <> 'pizza'
+       AND (v_row->>'quantidade') IS NOT NULL)
+   ) THEN
+  RETURN jsonb_build_object(
+    'acao', 'GravaIntencao',
+    'mensagem', 'Perfeito! Item completo, pronto para gravação. 🍕',
+    'item', v_row
+  );
+END IF;
+
+-- 🔹 Caso contrário, apenas devolve o item escolhido
+RETURN v_row;
+ 
+END;
+$$;
+
+
+
