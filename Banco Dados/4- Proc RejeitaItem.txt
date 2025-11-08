@@ -1,0 +1,111 @@
+     CREATE OR REPLACE FUNCTION public.rejeita_item(p_user_id INTEGER, p_pedido_id INTEGER , p_empresa_id INTEGER)
+RETURNS VOID AS $$
+BEGIN
+  -- Rejeita itens sem número
+  --UPDATE item_pedido_temp
+  --SET status = 'rejeitado'
+ -- WHERE user_id = p_user_id
+  --  AND numero IS NULL
+  -- AND pedido_id  = p_pedido_id 
+ -- AND  status ='inicio' ; 
+
+UPDATE item_pedido_temp
+SET status = 'rejeitado'
+WHERE user_id   = p_user_id
+  AND pedido_id = p_pedido_id
+  AND status    = 'inicio'
+  AND COALESCE(NULLIF(TRIM(numero::text), ''), '0') = '0'
+  and id_empresa = p_empresa_id ;
+
+
+
+  -- Rejeita bebidas sem volume
+  UPDATE item_pedido_temp
+  SET status = 'rejeitado'
+  WHERE user_id = p_user_id
+    AND categoria = 'bebida'
+    AND volume IS NULL 
+   AND pedido_id  = p_pedido_id
+   AND  status ='inicio' 
+    and id_empresa = p_empresa_id ;  
+
+  -- Rejeita itens sem valor
+  UPDATE item_pedido_temp
+  SET status = 'rejeitado'
+  WHERE user_id = p_user_id
+    AND valor IS NULL 
+   AND pedido_id  = p_pedido_id  
+  AND  status ='inicio'
+ and id_empresa = p_empresa_id ;
+
+ UPDATE item_pedido_temp
+SET status  = 'rejeitado',
+    tamanho = 'não informado'
+WHERE user_id   =  p_user_id
+  AND pedido_id =   p_pedido_id 
+  AND valor IS NOT NULL 
+  AND COALESCE(unaccent(lower(btrim(tamanho))), '') NOT IN ('media','medio','grande') 
+and lower(categoria) = 'pizza' 
+  AND  status ='inicio'
+ and id_empresa = p_empresa_id ;  
+  
+UPDATE public.item_pedido_temp AS b
+SET status = 'rejeitado'
+WHERE b.user_id   = p_user_id
+  AND b.pedido_id = p_pedido_id
+  AND lower(b.categoria) = 'borda' 
+  and   b.status  = 'inicio' 
+  and  b.id_empresa = p_empresa_id 
+  and id_pizza_pai 
+   NOT in (
+        SELECT item_id 
+        FROM public.item_pedido_temp AS p
+        WHERE p.user_id   = b.user_id
+          AND p.pedido_id = b.pedido_id 
+          AND lower(p.categoria) = 'pizza'
+         AND  p.status in ( 'inicio' ,'concluido') 
+          and  p.id_empresa = b.id_empresa  
+  );  
+
+
+UPDATE public.item_pedido_temp AS p
+SET status = 'rejeitado'
+WHERE p.user_id   = p_user_id
+  AND p.pedido_id = p_pedido_id
+  AND lower(p.categoria) = 'pizza'
+ and  p.id_empresa = p_empresa_id 
+  AND p.status IN ('inicio','concluido')
+  AND EXISTS (
+      SELECT 1
+      FROM public.item_pedido_temp AS b
+      WHERE b.user_id   = p.user_id
+        AND b.pedido_id = p.pedido_id
+        AND lower(b.categoria) = 'borda'
+        AND b.status in(  'opcoes') 
+        AND ( b.id_pizza_pai = p.item_id or p.pizza_referencia = b.pizza_referencia )
+        and  p.id_empresa = b.id_empresa 
+  );
+
+ UPDATE item_pedido_temp pai
+SET status = 'rejeitado'
+WHERE pai.item_id IN (
+    SELECT filho.id_pizza_pai
+    FROM item_pedido_temp filho
+    WHERE filho.status = 'rejeitado'
+      AND filho.id_pizza_pai IS NOT NULL
+      AND filho.user_id   = p_user_id
+      AND filho.pedido_id = p_pedido_id
+       and  filho.id_empresa =   p_empresa_id  
+)
+AND pai.status <> 'rejeitado'
+AND pai.user_id   = p_user_id
+AND pai.pedido_id = p_pedido_id
+ and pai.id_empresa = p_empresa_id ;
+
+
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+GRANT EXECUTE ON FUNCTION public.rejeita_item(INTEGER, INTEGER) TO anon;
+GRANT EXECUTE ON FUNCTION public.rejeita_item(INTEGER, INTEGER) TO authenticated;
+ 

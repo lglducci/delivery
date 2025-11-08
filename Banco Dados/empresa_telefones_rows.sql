@@ -1,0 +1,1 @@
+INSERT INTO "public"."empresa_telefones" ("id_telefone", "id_empresa", "telefone", "ativo") VALUES ('1', '1', '5516992971047', 'true'), ('2', '1', '5516993085473', 'true'), ('3', '1', '5516994066336', 'true'), ('4', '2', '5516991216319', 'true');

@@ -1,0 +1,51 @@
+ 
+CREATE OR REPLACE FUNCTION public.BuscaProduto(
+  p_texto      text,
+  p_id_empresa int,
+  p_categoria  text,
+  p_volume     text DEFAULT NULL
+)
+RETURNS TABLE(
+  numero         int,
+  nome           text,
+  categoria      text,
+  tipo           text,
+  preco_grande   numeric(12,2),
+  preco_medio    numeric(12,2),
+  preco_pequena  numeric(12,2),
+  descricao      text
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  IF lower(coalesce(p_categoria,'')) <> 'bebida' THEN
+    -- NÃO É BEBIDA → usa BuscaPizzaSabor
+    RETURN QUERY
+    SELECT
+      r.numero::int,
+      r.nome::text,
+      p_categoria::text                                        AS categoria,
+      COALESCE(NULLIF(r.tipo,''), NULL)::text                  AS tipo,             -- se houver "tipo" na função; senão fica NULL
+      COALESCE(r.preco_grande, 0)::numeric(12,2)               AS preco_grande,
+      COALESCE(r.preco_medio, 0)::numeric(12,2)                AS preco_medio,
+      COALESCE(r.preco_pequena, 0)::numeric(12,2)              AS preco_pequena,
+      COALESCE(r.descricao, '')::text                          AS descricao
+    FROM BuscaPizzaSabor(p_texto, p_id_empresa, p_categoria) r;
+
+  ELSE
+    -- É BEBIDA → usa busca_bebida_profundo
+    -- Mapeia campos comuns; se a função retornar "preco" único, ele preenche as três colunas com o mesmo valor.
+    RETURN QUERY
+    SELECT
+      r.numero::int,
+      r.nome::text,
+      p_categoria::text                                        AS categoria,
+      COALESCE(NULLIF(r.tipo,''), 'bebida')::text              AS tipo,
+      COALESCE(r.preco_grande, r.preco, r.valor, 0)::numeric(12,2)  AS preco_grande,
+      COALESCE(r.preco_medio,  r.preco, r.valor, 0)::numeric(12,2)  AS preco_medio,
+      COALESCE(r.preco_pequena,r.preco, r.valor, 0)::numeric(12,2)  AS preco_pequena,
+      COALESCE(r.descricao, '')::text                          AS descricao
+    FROM busca_bebida_profundo(p_id_empresa, p_categoria, p_texto, p_volume) r;
+  END IF;
+END;
+$$;
