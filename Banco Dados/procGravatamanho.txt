@@ -3,29 +3,70 @@
   p_id_empresa  integer,
   p_tamanho     text
 )
-RETURNS jsonb
+ RETURNS SETOF jsonb
 LANGUAGE plpgsql
 AS $$
+
+DECLARE
+  v_categoria text;
+  v_etapa     text;
+  v_quantidade  int;
+
 BEGIN
+
+
+  UPDATE turno_opcoes
+     SET tamanho = p_tamanho,
+         etapa   = 'pedir_qtd',  -- 🔹 já sinaliza etapa final
+         updated_at = now()
+   WHERE user_id    = p_user_id
+     AND id_empresa = p_id_empresa
+     AND escolhido  = true 
+      and   COALESCE(quantidade, 0) = 0  ;
+
+
   UPDATE turno_opcoes
      SET tamanho = p_tamanho,
          etapa   = 'ready',  -- 🔹 já sinaliza etapa final
          updated_at = now()
    WHERE user_id    = p_user_id
      AND id_empresa = p_id_empresa
-     AND escolhido  = true;
+     AND escolhido  = true 
+      and  quantidade  > 0 ;
 
-  -- 🔹 Sensibiliza a IA: devolve ação explícita
-  //RETURN jsonb_build_object(
-   // 'acao','GravaIntencao',
-  //  'mensagem','Perfeito! Gravando sua escolha...'
-//  );
+ 
+  SELECT categoria, COALESCE(quantidade, 0)
+    INTO v_categoria, v_quantidade
+  FROM turno_opcoes
+  WHERE user_id = p_user_id
+    AND id_empresa = p_id_empresa
+    AND escolhido = true
+  LIMIT 1;
 
+ 
+  IF  v_quantidade = 0  THEN
+    v_etapa := 'pedir_qtd';
+  ELSE
+    v_etapa := 'ready';
+  END IF;
 
-
-RETURN jsonb_build_object(
+   -- 🔹 retorno orientado à IA
+  IF v_etapa = 'pedir_qtd' THEN
+    RETURN NEXT jsonb_build_object(
+      'acao','pedir_qtd',
+      'mensagem','Qual a quantidade de pizza que você deseja?'
+    );
+    RETURN;
+  ELSE
+    -- 1) Confirma a gravação da pizza (mantém a ação como GravaIntencao)
+RETURN NEXT jsonb_build_object(
   'acao','GravaIntencao',
-  'texto', format('%s pizza %s %s', p_quantidade, v_numero, p_tamanho)  -- ajuste v_numero conforme seu select
+    'mensagem','Pizza gravada. Quer borda? Se sim, diga o sabor (ex.: cheddar). Se não, responda "sem" ou diga "finalizar".'
 );
+
+  END IF;
+ 
+RETURN;
+
 END;
 $$;

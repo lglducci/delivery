@@ -22,8 +22,16 @@ BEGIN
     RETURN 'pedir_posicao';
   END IF;
 
+  -- 🔹 2️⃣ Se  há um registro so , ele é o escolhido não precisa 
+  IF v_count = 1 THEN
+     UPDATE turno_opcoes
+       SET escolhido = true
+     WHERE user_id = p_user_id
+          AND id_empresa = p_id_empresa; 
+  END IF;
+
   -- 🔹 2️⃣ Se não há nenhuma, nada a fazer
-  IF v_count = 0 THEN
+  IF v_count = 0  THEN
     RETURN '';
   END IF;
 
@@ -52,6 +60,7 @@ BEGIN
      WHERE user_id = p_user_id AND id_empresa = p_id_empresa;
     RETURN 'pedir_tamanho';
   END IF;
+
 
   -- 🔹 6️⃣ Se nada disso, está pronto
   UPDATE turno_opcoes

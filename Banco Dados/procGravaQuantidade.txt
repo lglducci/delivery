@@ -46,19 +46,24 @@ BEGIN
      AND id_empresa = p_id_empresa
      AND escolhido  = true;
 
+ 
   -- 🔹 retorno orientado à IA
   IF v_etapa = 'pedir_tamanho' THEN
     RETURN NEXT jsonb_build_object(
       'acao','pedir_tamanho',
-      'mensagem','Qual tamanho da pizza você quer? (média ou grande)'
+      'mensagem','Qual o tamanho de  pizza você quer? (Media ou grande)?'
     );
     RETURN;
   ELSE
-    RETURN NEXT jsonb_build_object(
-      'acao','GravaIntencao',
-      'mensagem','Beleza, anotado! Gravando sua escolha...'
-    );
-    RETURN;
+    -- 1) Confirma a gravação da pizza (mantém a ação como GravaIntencao)
+RETURN NEXT jsonb_build_object(
+  'acao','GravaIntencao',
+    'mensagem','Pizza gravada. Quer borda? Se sim, diga o sabor (ex.: cheddar). Se não, responda "sem" ou diga "finalizar".'
+);
+
   END IF;
+ 
+RETURN;
+
 END;
 $$;
