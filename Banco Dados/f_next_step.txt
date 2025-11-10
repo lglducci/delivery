@@ -16,6 +16,26 @@ BEGIN
     RETURN jsonb_build_object('acao','nenhum','mensagem','Diga o que deseja do cardápio.');
   END IF;
 
+
+  -- 0) Sem escolha feita ainda → pedir posição
+  IF r.etapa = 'pedir_borda' THEN
+    RETURN jsonb_build_object(
+      'acao','pedir_borda',
+      'mensagem','Me diga qual borda você quer (ex.: cheddar, catupiry).' 
+    );
+  END IF;
+
+
+
+  -- 0) Sem escolha feita ainda → pedir posição
+  IF r.etapa = 'pedir_item' THEN
+    RETURN jsonb_build_object(
+      'acao','pedir_item',
+      'mensagem','Me diga qual item você quer (ex.: cheddar, catupiry, presunto, mussarela etc).' 
+    );
+  END IF;
+
+
   -- 1) Sem escolha feita ainda → pedir posição
   IF r.etapa = 'pedir_posicao' THEN
     RETURN jsonb_build_object(

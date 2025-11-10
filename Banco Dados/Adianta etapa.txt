@@ -5,6 +5,9 @@
 RETURNS text
 LANGUAGE plpgsql
 AS $$
+
+
+ 
 DECLARE
   v_count INT;
   v_turno RECORD;
@@ -70,4 +73,5 @@ BEGIN
      and escolhido = true ;
   RETURN 'ready';
 END;
+
 $$;

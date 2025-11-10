@@ -1,0 +1,73 @@
+ CREATE OR REPLACE FUNCTION CriaProximaOpcao(
+  p_user_id     integer,
+  p_id_empresa  integer,
+  p_categoria   text,
+  p_item_id     bigint DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_categoria_ins text;
+  v_etapa         text;
+  v_msg           text;
+BEGIN
+  -- Normaliza categoria recebida
+  p_categoria := lower(coalesce(p_categoria,''));
+
+  -- 🔸 Se for pizza → próxima é borda
+  IF p_categoria = 'pizza' THEN
+    v_categoria_ins := 'borda';
+    v_etapa         := 'pedir_borda';
+    v_msg           := 'Quer borda nessa pizza? Se sim, diga o sabor (ex.: cheddar). Se não, responda "sem".';
+
+    IF p_item_id IS NULL THEN
+      RETURN jsonb_build_object(
+        'acao','erro',
+        'mensagem','Item da pizza (item_id) não informado para vincular a borda.'
+      );
+    END IF;
+
+  -- 🔸 Se for borda → próxima é item
+  ELSIF p_categoria = 'borda' THEN
+    v_categoria_ins := 'item';
+    v_etapa         := 'pedir_item';
+    v_msg           := 'Quer adicionar algum item ou bebida junto? (sim/não)';
+
+  -- 🔸 Se for item → mantém categoria item, continua perguntando
+  ELSIF p_categoria = 'item' THEN
+    v_categoria_ins := 'item';
+    v_etapa         := 'pedir_item';
+    v_msg           := 'Quer adicionar outro item? (sim/não)';
+
+    -- grava o item atual como parte do pedido
+    INSERT INTO turno_opcoes (posciao, numero, 
+     , id_empresa, user_id, categoria, etapa, escolhido, item_id,   updated_at
+    )
+    VALUES (1,1,
+      p_id_empresa, p_user_id, 'item', 'ready', true, p_item_id,  now()
+    );
+
+  ELSE
+    -- Nenhuma ação prevista
+    RETURN jsonb_build_object(
+      'acao','ignorar',
+      'mensagem','Sem próxima etapa automatizada para esta categoria.'
+    );
+  END IF;
+
+  -- 🔹 Cria o novo registro (borda ou item)
+  INSERT INTO turno_opcoes (posicao, numero, 
+    id_empresa, user_id, categoria, etapa, escolhido, item_id,  updated_at 
+  )
+  VALUES (1,1, 
+    p_id_empresa, p_user_id, v_categoria_ins, v_etapa, true, p_item_id , now() 
+  );
+
+  -- 🔹 Retorno para sensibilizar a IA
+  RETURN jsonb_build_object(
+    'acao', v_etapa,
+    'mensagem', v_msg
+  );
+END;
+$$;

@@ -50,23 +50,35 @@ BEGIN
     v_etapa := 'ready';
   END IF;
 
-   -- 🔹 retorno orientado à IA
-  IF v_etapa = 'pedir_qtd' THEN
-    RETURN NEXT jsonb_build_object(
-      'acao','pedir_qtd',
-      'mensagem','Qual a quantidade de pizza que você deseja?'
-    );
-    RETURN;
-  ELSE
-    -- 1) Confirma a gravação da pizza (mantém a ação como GravaIntencao)
-RETURN NEXT jsonb_build_object(
-  'acao','GravaIntencao',
-    'mensagem','Pizza gravada. Quer borda? Se sim, diga o sabor (ex.: cheddar). Se não, responda "sem" ou diga "finalizar".'
-);
-
-  END IF;
+  
  
-RETURN;
+  -- Retorno no formato padrão do salva_turno
+  RETURN QUERY
+  SELECT
+    row_to_json(t.*)::jsonb ||
+    jsonb_build_object(
+      'etapa', v_etapa,
+      'mensagem',
+      CASE
+        WHEN v_etapa = 'pedir_qtd' THEN
+          'Qual a quantidade de pizza você quer?'
+        WHEN v_etapa = 'ready' THEN
+          format(
+            'Item pronto para gravação. Confirma %s unidade%s? (Sim/Não)',
+            COALESCE(t.quantidade,1),
+            CASE WHEN COALESCE(t.quantidade,1)>1 THEN 's' ELSE '' END
+          )
+        ELSE
+          'Etapa indefinida'
+      END,
+      'quantidade', t.quantidade,
+      'tamanho', t.tamanho
+    )
+  FROM turno_opcoes t
+  WHERE t.user_id = p_user_id
+    AND t.id_empresa = p_id_empresa
+    AND t.escolhido = true;
 
 END;
 $$;
+

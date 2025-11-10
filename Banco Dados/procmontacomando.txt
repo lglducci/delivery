@@ -30,13 +30,22 @@ where user_id = p_user_id
       saida := trim(both ' ' FROM format('%s pizza 1/2 %s 1/2 %s %s',
         r.quantidade, r.numero, r.numero_fraca, coalesce(r.tamanho,'')));
 
-    WHEN 'borda' THEN
-      saida := format('%s borda %s item_id %s',
-        r.quantidade, r.numero, r.item_id);
+   -- WHEN 'borda' THEN
+      --saida := format('%s borda %s item_id %s',
+    --    r.quantidade, r.numero, r.item_id);
 
-    WHEN 'item' THEN
-      saida := format('%s item %s item_id %s',
-        r.quantidade, r.numero, r.item_id);
+   -- WHEN 'item' THEN
+    --  saida := format('%s item %s item_id %s',
+    --    r.quantidade, r.numero, r.item_id);
+
+WHEN 'borda' THEN
+  saida := format('%s borda %s item_id = %s',
+    r.quantidade, r.numero, coalesce(r.item_id::text, ''));
+
+WHEN 'item' THEN
+  saida := format('%s item %s item_id = %s',
+    r.quantidade, r.numero, coalesce(r.item_id::text, ''));
+
 
     ELSE
       saida := trim(both ' ' FROM format('%s %s %s %s',

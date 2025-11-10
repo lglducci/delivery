@@ -20,6 +20,7 @@
   numero_fracao  integer , 
   updated_at   timestamp default now(),
   etapa   text default  'falta_posicao', 
+ item_id integer,
   PRIMARY KEY (user_id, id_empresa, categoria, numero)
 );
 
