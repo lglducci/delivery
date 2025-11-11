@@ -1,4 +1,5 @@
-      
+        
+       
 
 CREATE OR REPLACE FUNCTION salva_turno(
   p_user_id       int,
@@ -6,57 +7,31 @@ CREATE OR REPLACE FUNCTION salva_turno(
   p_quantidade    int,
   p_tamanho       text, 
   p_categoria       text ,
+  p_item_id  int, 
   p_json_opcoes   jsonb
 ) 
   RETURNS SETOF jsonb
 LANGUAGE plpgsql
 AS $$
-DECLARE 
+ DECLARE 
   v_etapa text;
   v_count int;
-  v_categoria text;  
-   v_tamanho text;
+  v_categoria text;   
    v_quantidade int;
-  v_item_id bigint; 
+   v_tamanho text;
+  
 BEGIN
   -- 1) Zera opções anteriores do usuário/empresa
   DELETE FROM turno_opcoes
    WHERE id_empresa = p_id_empresa
      AND user_id    = p_user_id;
 
- SELECT COALESCE(item_id, 0), COALESCE(tamanho, '')
-INTO v_item_id, v_tamanho
-FROM item_pedido_temp
-WHERE user_id = p_user_id
-  AND id_empresa = p_id_empresa 
-   and  categoria = 'pizza'
-ORDER BY item_id DESC
-LIMIT 1;
-
+ 
 -- fallback pra evitar nulos
-v_item_id := COALESCE(v_item_id, 0);
-v_tamanho := COALESCE(v_tamanho, '');
+p_item_id := COALESCE(p_item_id , 0);
+ 
 
-
- IF EXISTS (
-      SELECT 1
-      FROM item_pedido_temp
-      WHERE user_id = p_user_id
-        AND id_empresa = p_id_empresa
-        AND id_pizza_pai = v_item_id
-        AND categoria =  p_categoria 
-    ) THEN
-      RETURN QUERY SELECT jsonb_build_object(
-        'acao', 'erro',
-        'mensagem', format(
-          'A pizza já possui uma borda vinculada. Só é permitida uma borda por pizza (%s). Adicione uma nova pizza.',
-          v_item_id
-        ),
-        'item_id', v_item_id
-      );
-      RETURN;
-    END IF;
-
+ 
 
 
   -- 2) Insere as novas opções (SEM RETURNING!)
@@ -81,7 +56,7 @@ v_tamanho := COALESCE(v_tamanho, '');
     p_tamanho,
     p_quantidade,
     elem->>'volume' ,
-    v_item_id 
+    p_item_id 
   FROM jsonb_array_elements(p_json_opcoes) AS elem;
 
   -- 3) Avança etapa (AGORA funciona, porque não teve RETURN antes)
@@ -94,14 +69,7 @@ v_tamanho := COALESCE(v_tamanho, '');
     FROM turno_opcoes
    WHERE user_id = p_user_id
      AND id_empresa = p_id_empresa;
-
-    UPDATE turno_opcoes
-            SET    item_id =  v_item_id ,
-                      tamanho = v_tamanho 
-   WHERE user_id = p_user_id
-                 AND id_empresa = p_id_empresa
-              AND categoria IN ('borda','item');  -- ✅ restrição correta
-     
+ 
  
 -- 🔹 Se só há 1 registro, captura os valores reais da linha
 IF v_count = 1 THEN
@@ -120,7 +88,7 @@ IF v_count = 1 THEN
     v_etapa := 'ready';
   END IF;
 ELSE
-  v_etapa := 'escolher';
+  v_etapa := 'pedir_posicao';
 END IF;
 
     -- 5️⃣ Retorna com mensagem adequada (agora inclui pizza associada)
@@ -216,7 +184,6 @@ END IF;
 --  FROM turno_opcoes t
 --  WHERE t.user_id = p_user_id
  --   AND t.id_empresa = p_id_empresa;
-
  
   
 END;

@@ -1,11 +1,11 @@
-  
+   
 
  CREATE OR REPLACE FUNCTION buscar_numero_por_posicao(
   p_user_id     integer,
   p_id_empresa  integer,
   p_posicao     integer
 )
-RETURNS jsonb
+RETURNS SETOF jsonb
 LANGUAGE plpgsql
 AS $$
 DECLARE
@@ -36,29 +36,45 @@ BEGIN
      AND t.id_empresa = p_id_empresa
      AND t.posicao = p_posicao
    LIMIT 1;
+  
+ RETURN QUERY
+WITH b AS (
+  SELECT t.*,
+         COUNT(*)  OVER (PARTITION BY t.user_id, t.id_empresa) AS total,
+         SUM(CASE WHEN t.escolhido THEN 1 ELSE 0 END) OVER (PARTITION BY t.user_id, t.id_empresa) AS escolhidos
+  FROM turno_opcoes t
+  WHERE t.user_id = p_user_id
+    AND t.id_empresa = p_id_empresa
+),
+e AS (
+  SELECT b.*,
+         CASE
+           WHEN b.total > 1 AND COALESCE(b.escolhidos,0)=0 THEN 'pedir_posicao'
+           WHEN COALESCE(b.numero,0)=0 THEN 'pedir_numero'
+           WHEN b.categoria IN ('pizza','esfirra') AND (b.tamanho IS NULL OR b.tamanho='') THEN 'pedir_tamanho'
+           WHEN COALESCE(b.quantidade,0)=0 THEN 'pedir_qtd'
+           ELSE 'ready'
+         END AS etapa_calc
+  FROM b
+)
+SELECT
+  row_to_json(e.*)::jsonb ||
+  jsonb_build_object(
+    'etapa', e.etapa_calc,
+    'acao', e.etapa_calc,
+    'mensagem',
+      CASE
+        WHEN e.etapa_calc='pedir_posicao'  THEN 'Qual opção da lista você escolhe? (1–N)'
+        WHEN e.etapa_calc='pedir_numero'   THEN 'Digite o número do item desejado.'
+        WHEN e.etapa_calc='pedir_tamanho'  THEN 'Qual tamanho você quer? (média ou grande)'
+        WHEN e.etapa_calc='pedir_qtd'      THEN 'Quantas unidades você deseja desse item?'
+        WHEN e.etapa_calc='ready'          THEN 'Item pronto para gravação. Confirma? (Sim/Não)'
+        ELSE NULL
+      END
+  )
+FROM e;  -- ✅ aqui é o que faltava
+
  
-IF v_row IS NULL THEN
-  RETURN jsonb_build_object('erro','nenhum_item','posicao',p_posicao);
-END IF;
-
--- 🔹 Detecta se a escolha já fecha o ciclo (quantidade + tamanho ok, ou categoria ≠ pizza)
-IF (
-     (lower(v_row->>'categoria') = 'pizza'
-       AND length(btrim(coalesce(v_row->>'tamanho',''))) > 0
-       AND (v_row->>'quantidade') IS NOT NULL)
-     OR
-     (lower(v_row->>'categoria') <> 'pizza'
-       AND (v_row->>'quantidade') IS NOT NULL)
-   ) THEN
-  RETURN jsonb_build_object(
-    'acao', 'GravaIntencao',
-    'mensagem', 'Perfeito! Item completo, pronto para gravação. 🍕',
-    'item', v_row
-  );
-END IF;
-
--- 🔹 Caso contrário, apenas devolve o item escolhido
-RETURN v_row;
  
 END;
 $$;

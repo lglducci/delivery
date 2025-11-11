@@ -11,11 +11,13 @@ DECLARE
   v_etapa     text;
   v_tamanho   text;
 BEGIN
+  -- 🔹 validação básica
   IF coalesce(p_quantidade,0) <= 0 THEN
     RETURN NEXT jsonb_build_object('acao','erro','mensagem','Quantidade inválida');
     RETURN;
   END IF;
 
+  -- 🔹 obtém categoria e tamanho do item selecionado
   SELECT categoria, tamanho
     INTO v_categoria, v_tamanho
   FROM turno_opcoes
@@ -32,12 +34,14 @@ BEGIN
     v_tamanho   := btrim(coalesce(v_tamanho, ''));
   END IF;
 
+  -- 🔹 define a próxima etapa
   IF v_categoria = 'pizza' AND v_tamanho = '' THEN
     v_etapa := 'pedir_tamanho';
   ELSE
     v_etapa := 'ready';
   END IF;
 
+  -- 🔹 atualiza a quantidade
   UPDATE turno_opcoes
      SET quantidade = p_quantidade,
          etapa       = v_etapa,
@@ -46,24 +50,67 @@ BEGIN
      AND id_empresa = p_id_empresa
      AND escolhido  = true;
 
- 
-  -- 🔹 retorno orientado à IA
+  -- 🔹 retorno dinâmico orientado à IA
   IF v_etapa = 'pedir_tamanho' THEN
     RETURN NEXT jsonb_build_object(
       'acao','pedir_tamanho',
-      'mensagem','Qual o tamanho de  pizza você quer? (Media ou grande)?'
+      'mensagem','Qual o tamanho da pizza você quer? (média ou grande)?'
     );
     RETURN;
-  ELSE
-    -- 1) Confirma a gravação da pizza (mantém a ação como GravaIntencao)
-RETURN NEXT jsonb_build_object(
-  'acao','GravaIntencao',
-    'mensagem','Pizza gravada. Quer borda? Se sim, diga o sabor (ex.: cheddar). Se não, responda "sem" ou diga "finalizar".'
-);
-
   END IF;
- 
-RETURN;
 
+-- 🔹 lógica final — todas as categorias retornam etapa ready
+IF v_categoria = 'pizza' THEN
+  RETURN NEXT jsonb_build_object(
+    'acao','ready',
+    'mensagem','Pizza pronta para gravação. Confirma este pedido? (Sim/Não)'
+  );
+
+ELSIF v_categoria IN ('bebida','esfirra') THEN
+  RETURN NEXT jsonb_build_object(
+    'acao','ready',
+    'mensagem','Item pronto para gravação. Confirma este pedido? (Sim/Não)'
+  );
+
+ELSIF v_categoria = 'borda' THEN
+  RETURN NEXT jsonb_build_object(
+    'acao','ready',
+    'mensagem','Borda pronta para gravação. Confirma? (Sim/Não)'
+  );
+
+ELSE
+  RETURN NEXT jsonb_build_object(
+    'acao','ready',
+    'mensagem','Confirma este item? (Sim/Não)'
+  );
+END IF;
+
+
+
+
+  -- 🔹 lógica por categoria
+  --IF v_categoria = 'pizza' THEN
+--    RETURN NEXT jsonb_build_object(
+ --     'acao','GravaIntencao',
+ --     'mensagem','Pizza gravada. Quer borda? Se sim, diga o sabor (ex.: cheddar). Se não, responda "sem" ou diga "finalizar".'
+ --   );
+  --ELSIF v_categoria IN ('bebida','esfirra') THEN
+--    RETURN NEXT jsonb_build_object(
+  --    'acao','GravaIntencao',
+  --    'mensagem','Item gravado com sucesso. Quer adicionar mais alguma coisa?'
+  --  );
+ -- ELSIF v_categoria = 'borda' THEN
+  --  RETURN NEXT jsonb_build_object(
+ --     'acao','GravaIntencao',
+ --     'mensagem','Borda gravada com sucesso!'
+ --   );
+  --ELSE
+ --   RETURN NEXT jsonb_build_object(
+   --   'acao','GravaIntencao',
+   --   'mensagem','Item gravado com sucesso. Deseja incluir algo mais?'
+  --  );
+ -- END IF;
+
+  RETURN;
 END;
 $$;
