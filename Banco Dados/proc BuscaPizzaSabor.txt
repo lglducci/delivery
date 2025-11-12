@@ -38,7 +38,7 @@ BEGIN
       (v_p1 <> '' AND unaccent(lower(c.descricao)) ILIKE '%' || v_p1 || '%')
       AND (v_p2 = '' OR unaccent(lower(c.descricao)) ILIKE '%' || v_p2 || '%')
       AND (v_p3 = '' OR unaccent(lower(c.descricao)) ILIKE '%' || v_p3 || '%')
-    );
+    )  and disponivel = true ;
 
   -- Se encontrou algo na descrição
   IF v_qtde > 0 THEN
@@ -59,6 +59,7 @@ BEGIN
         (v_p1 <> '' AND unaccent(lower(c.descricao)) ILIKE '%' || v_p1 || '%')
         AND (v_p2 = '' OR unaccent(lower(c.descricao)) ILIKE '%' || v_p2 || '%')
         AND (v_p3 = '' OR unaccent(lower(c.descricao)) ILIKE '%' || v_p3 || '%')
+       and disponivel = true 
       )
     ORDER BY c.numero;
 
@@ -78,6 +79,7 @@ BEGIN
     WHERE c.id_empresa = p_id_empresa
       AND unaccent(lower(c.categoria)) = 'pizza'
       AND unaccent(lower(c.nome)) ILIKE '%' || unaccent(lower(p_texto)) || '%'
+     and disponivel = true 
     ORDER BY c.numero;
   END IF;
 

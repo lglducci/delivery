@@ -32,7 +32,7 @@ BEGIN
       AND unaccent(lower(palavras_chave)) ILIKE '%' || unaccent(lower(trim(p_nome_limpo))) || '%'
       AND (
         p_volume = '' 
-        OR volume ILIKE '%' || p_volume || '%'
+        OR volume ILIKE '%' || p_volume || '%' and disponivel = true 
       )
     ORDER BY numero
   )
@@ -59,6 +59,7 @@ BEGIN
       WHERE id_empresa = p_id_empresa
         AND unaccent(lower(categoria)) = unaccent(lower(p_categoria))
         AND unaccent(lower(palavras_chave)) ILIKE '%' || unaccent(lower(trim(p_nome_limpo))) || '%'
+      and disponivel = true 
       ORDER BY numero
     )
     SELECT 

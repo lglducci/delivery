@@ -33,7 +33,7 @@ BEGIN
       AND (v_p2 = '' OR unaccent(lower(c.descricao)) ILIKE '%' || v_p2 || '%')
       AND (v_p3 = '' OR unaccent(lower(c.descricao)) ILIKE '%' || v_p3 || '%')
       AND (v_p4 = '' OR unaccent(lower(c.descricao)) ILIKE '%' || v_p4 || '%')
-    );
+    )  and disponivel = true  ;
 
   -- Se não achou nada, faz o select pelo nome e atualiza v_qtd
   IF v_qtd = 0 THEN
