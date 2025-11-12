@@ -50,8 +50,8 @@ e AS (
   SELECT b.*,
          CASE
            WHEN b.total > 1 AND COALESCE(b.escolhidos,0)=0 THEN 'pedir_posicao'
-           WHEN COALESCE(b.numero,0)=0 THEN 'pedir_numero'
-           WHEN b.categoria IN ('pizza','esfirra') AND (b.tamanho IS NULL OR b.tamanho='') THEN 'pedir_tamanho'
+           WHEN COALESCE(b.numero,0)=0 THEN 'pedir_numero' 
+           WHEN b.categoria IN ('pizza','esfirra') AND ( ( b.tamanho IS NULL OR b.tamanho='') and b.quantidade > 0) THEN 'pedir_tamanho'
            WHEN COALESCE(b.quantidade,0)=0 THEN 'pedir_qtd'
            ELSE 'ready'
          END AS etapa_calc
@@ -66,8 +66,8 @@ SELECT
       CASE
         WHEN e.etapa_calc='pedir_posicao'  THEN 'Qual opção da lista você escolhe? (1–N)'
         WHEN e.etapa_calc='pedir_numero'   THEN 'Digite o número do item desejado.'
-        WHEN e.etapa_calc='pedir_tamanho'  THEN 'Qual tamanho você quer? (média ou grande)'
-        WHEN e.etapa_calc='pedir_qtd'      THEN 'Quantas unidades você deseja desse item?'
+       WHEN e.etapa_calc='pedir_qtd'      THEN 'Quantas unidades você deseja desse item?'
+        WHEN e.etapa_calc='pedir_tamanho'  THEN 'Qual tamanho você quer? (média ou grande)' 
         WHEN e.etapa_calc='ready'          THEN 'Item pronto para gravação. Confirma? (Sim/Não)'
         ELSE NULL
       END
