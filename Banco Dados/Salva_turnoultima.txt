@@ -1,40 +1,31 @@
-        
-       
-
-CREATE OR REPLACE FUNCTION salva_turno(
+ CREATE OR REPLACE FUNCTION salva_turno(
   p_user_id       int,
   p_id_empresa    int,
   p_quantidade    int,
   p_tamanho       text, 
-  p_categoria       text ,
-  p_item_id  int, 
+  p_categoria     text,
+  p_item_id       int, 
   p_json_opcoes   jsonb
 ) 
-  RETURNS SETOF jsonb
+RETURNS SETOF jsonb
 LANGUAGE plpgsql
 AS $$
- DECLARE 
-  v_etapa text;
-  v_count int;
-  v_categoria text;   
-   v_quantidade int;
-   v_tamanho text;
-  
+DECLARE 
+  v_etapa      text;
+  v_count      int;
+  v_categoria  text;   
+  v_quantidade int;
+  v_tamanho    text;
 BEGIN
   -- 1) Zera opções anteriores do usuário/empresa
   DELETE FROM turno_opcoes
    WHERE id_empresa = p_id_empresa
      AND user_id    = p_user_id;
 
- 
--- fallback pra evitar nulos
-p_item_id := COALESCE(p_item_id , 0);
- 
+  -- fallback pra evitar nulos
+  p_item_id := COALESCE(p_item_id , 0);
 
- 
-
-
-  -- 2) Insere as novas opções (SEM RETURNING!)
+  -- 2) Insere as novas opções
   INSERT INTO turno_opcoes (
     id_empresa, user_id, posicao, numero, nome, categoria, descricao,
     preco_grande, preco_medio, preco_pequena, escolhido, updated_at,
@@ -55,13 +46,12 @@ p_item_id := COALESCE(p_item_id , 0);
     now(),
     p_tamanho,
     p_quantidade,
-    elem->>'volume' ,
+    elem->>'volume',
     p_item_id 
   FROM jsonb_array_elements(p_json_opcoes) AS elem;
 
-  -- 3) Avança etapa (AGORA funciona, porque não teve RETURN antes)
+  -- 3) Avança etapa
   PERFORM adianta_etapa(p_user_id, p_id_empresa);
-
 
   -- 4️⃣ Conta e identifica a etapa atual
   SELECT COUNT(*)
@@ -70,28 +60,27 @@ p_item_id := COALESCE(p_item_id , 0);
    WHERE user_id = p_user_id
      AND id_empresa = p_id_empresa;
  
- 
--- 🔹 Se só há 1 registro, captura os valores reais da linha
-IF v_count = 1 THEN
-  SELECT categoria, etapa, tamanho, quantidade
-    INTO v_categoria, v_etapa, v_tamanho, v_quantidade
-  FROM turno_opcoes
-  WHERE user_id = p_user_id
-    AND id_empresa = p_id_empresa  
-  LIMIT 1; 
-  -- Se ainda faltar quantidade ou tamanho, ajusta etapa conforme o caso
-  IF v_quantidade IS NULL THEN
-    v_etapa := 'pedir_qtd';
-  ELSIF v_categoria = 'pizza' AND (v_tamanho IS NULL OR btrim(v_tamanho) = '') THEN
-    v_etapa := 'pedir_tamanho';
-  ELSE
-    v_etapa := 'ready';
-  END IF;
-ELSE
-  v_etapa := 'pedir_posicao';
-END IF;
+  -- Se só há 1 registro, captura os valores reais da linha
+  IF v_count = 1 THEN
+    SELECT categoria, etapa, tamanho, quantidade
+      INTO v_categoria, v_etapa, v_tamanho, v_quantidade
+    FROM turno_opcoes
+    WHERE user_id    = p_user_id
+      AND id_empresa = p_id_empresa  
+    LIMIT 1; 
 
-    -- 5️⃣ Retorna com mensagem adequada (agora inclui pizza associada)
+    IF v_quantidade IS NULL THEN
+      v_etapa := 'pedir_qtd';
+    ELSIF v_categoria = 'pizza' AND (v_tamanho IS NULL OR btrim(v_tamanho) = '') THEN
+      v_etapa := 'pedir_tamanho';
+    ELSE
+      v_etapa := 'ready';
+    END IF;
+  ELSE
+    v_etapa := 'pedir_posicao';
+  END IF;
+
+  -- 5️⃣ Retorna com mensagem adequada (inclui pizza associada p/ borda/item)
   RETURN QUERY
   SELECT
     row_to_json(t.*)::jsonb ||
@@ -99,92 +88,68 @@ END IF;
       'etapa', v_etapa,
       'mensagem',
       CASE
-        WHEN v_etapa = 'ready' AND v_count = 1
-          THEN
-            CASE
+        WHEN v_etapa = 'ready' AND v_count = 1 THEN
+          CASE
+            WHEN t.categoria IN ('borda','item') THEN
+              format(
+                'O item "%s" foi vinculado à última pizza adicionada: (%s) %s (%s). Confirma %s unidade%s? (Sim/Não)',
+                t.nome,
+                COALESCE(p.numero::text, '?'),
+                COALESCE(p.nome, 'sem nome'),
+                COALESCE(p.tamanho, 'sem tamanho'),
+                COALESCE(t.quantidade,1),
+                CASE WHEN COALESCE(t.quantidade,1) > 1 THEN 's' ELSE '' END
+              )
+            ELSE
+              format(
+                'Item pronto para gravação. Confirma %s unidade%s? (Sim/Não)',
+                COALESCE(t.quantidade,1),
+                CASE WHEN COALESCE(t.quantidade,1) > 1 THEN 's' ELSE '' END
+              )
+          END
 
-       WHEN t.categoria IN ('borda','item') THEN
-  format(
-    'O item "%s" foi vinculado à última pizza adicionada: (%s) %s (%s). Confirma %s unidade%s? (Sim/Não)',
-    t.nome,
-    COALESCE(p.numero::text, '?'),
-    COALESCE(p.nome, 'sem nome'),
-    COALESCE(p.tamanho, 'sem tamanho'),
-    COALESCE(t.quantidade,1),
-    CASE WHEN COALESCE(t.quantidade,1)>1 THEN 's' ELSE '' END
-  ) 
-              ELSE
-                format(
-                  'Item pronto para gravação. Confirma %s unidade%s? (Sim/Não)',
-                  COALESCE(t.quantidade,1),
-                  CASE WHEN COALESCE(t.quantidade,1)>1 THEN 's' ELSE '' END
-                )
-            END
-        WHEN v_etapa = 'ready' AND v_count > 1
-          THEN format('Encontrei %s opções, qual você quer? (1–%s)', v_count, v_count)
-        WHEN v_etapa = 'pedir_qtd'
-          THEN 'Quantas unidades você deseja desse item?'
-        WHEN v_etapa = 'pedir_tamanho'
-          THEN 'Qual tamanho você quer? (média ou grande)'
-        WHEN v_etapa = 'pedir_posicao'
-          THEN 'Qual opção da lista você escolhe? (1–N)'
-        WHEN v_etapa = 'pedir_borda'
-          THEN 'Qual confirma esta borda? (Sim ou Não).'
-        WHEN v_etapa = 'pedir_item'
-          THEN 'Qual confirma este item? (Sim ou Não).'
+        -- 👇 AQUI É O PONTO QUE TE INCOMODAVA
+        WHEN v_etapa = 'ready' AND v_count > 1 THEN
+          format('Encontrei %s opções, qual você quer? (1–%s)', v_count, v_count)
+
+        WHEN v_etapa = 'pedir_qtd' THEN
+          'Quantas unidades você deseja desse item?'
+
+        WHEN v_etapa = 'pedir_tamanho' THEN
+          'Qual tamanho você quer? (média ou grande)'
+
+        WHEN v_etapa = 'pedir_posicao' THEN
+          CASE
+            WHEN t.categoria IN ('borda','item') THEN
+              format(
+                'Essas opções serão adicionadas à última pizza: (%s) %s (%s). Qual opção da lista você escolhe? (1–%s)',
+                COALESCE(p.numero::text, '?'),
+                COALESCE(p.nome, 'sem nome'),
+                COALESCE(p.tamanho, 'sem tamanho'),
+                v_count
+              )
+            ELSE
+              format('Qual opção da lista você escolhe? (1–%s)', v_count)
+          END
+
+        WHEN v_etapa = 'pedir_borda' THEN
+          'Qual confirma esta borda? (Sim ou Não).'
+
+        WHEN v_etapa = 'pedir_item' THEN
+          'Qual confirma este item? (Sim ou Não).'
+
         ELSE NULL
       END,
       'quantidade', t.quantidade,
-      'tamanho', t.tamanho
+      'tamanho',   t.tamanho
     )
   FROM turno_opcoes t
   LEFT JOIN item_pedido_temp p
-    ON p.item_id = t.item_id
-   AND p.user_id = t.user_id
+    ON p.item_id    = t.item_id
+   AND p.user_id    = t.user_id
    AND p.id_empresa = t.id_empresa
-  WHERE t.user_id = p_user_id
+  WHERE t.user_id    = p_user_id
     AND t.id_empresa = p_id_empresa;
 
-
-
-  -- 5️⃣ Retorna com mensagem adequada
--- RETURN QUERY
- -- SELECT
- --   row_to_json(t.*)::jsonb ||
- --   jsonb_build_object(
-  --    'etapa', v_etapa,
-  --    'mensagem',
-  --    CASE
-  --      WHEN v_etapa = 'ready' AND v_count = 1
---          THEN format(
- --           'Item pronto para gravação. Confirma %s unidade%s? (Sim/Não)',
- --           COALESCE(t.quantidade,1),
- --           CASE WHEN COALESCE(t.quantidade,1)>1 THEN 's' ELSE '' END
---          )
---        WHEN v_etapa = 'ready' AND v_count > 1
- --         THEN format(
- --           'Encontrei %s opções, qual você quer? (1–%s)',
- --           v_count, v_count
- --         )
- --       WHEN v_etapa = 'pedir_qtd'
---          THEN 'Quantas unidades você deseja desse item?'
---        WHEN v_etapa = 'pedir_tamanho'
---          THEN 'Qual tamanho você quer? (média ou grande)'
---        WHEN v_etapa = 'pedir_posicao'
---          THEN 'Qual opção da lista você escolhe? (1–N)'
---        WHEN v_etapa = 'pedir_borda'
---          THEN 'Qual confirma esta borda? (Sim ou Não ).? '
---      WHEN v_etapa = 'pedir_item'
---          THEN 'Qual confirma este item? (Sim ou Não ). '
---        ELSE NULL
---      END,
---      'quantidade', t.quantidade,
---      'tamanho', t.tamanho
---    )
---  FROM turno_opcoes t
---  WHERE t.user_id = p_user_id
- --   AND t.id_empresa = p_id_empresa;
- 
-  
 END;
 $$;
