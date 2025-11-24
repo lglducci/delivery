@@ -1,0 +1,57 @@
+CREATE OR REPLACE FUNCTION ff_registrar_receita(
+  p_empresa_id BIGINT,
+  p_conta_id  int,
+ p_categoria_id int,  
+  p_conta_nome TEXT,
+  p_categoria_nome TEXT,
+  p_valor NUMERIC,
+  p_descricao TEXT,
+  p_data DATE DEFAULT CURRENT_DATE
+)
+RETURNS BIGINT
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_conta_id BIGINT;
+  v_cat_id   BIGINT;
+  v_id       BIGINT;
+BEGIN
+    
+           IF p_conta_id IS NOT NULL AND p_conta_id > 0 THEN
+                           v_conta_id := p_conta_id;
+          ELSE
+                          v_conta_id := ff_get_conta_id(p_empresa_id, p_conta_nome);
+          END IF;
+ 
+         IF p_categoria_id IS NOT NULL AND p_categoria_id > 0 THEN
+               v_cat_id := p_categoria_id;
+          ELSE
+             v_cat_id := ff_get_categoria_id(p_empresa_id, p_categoria_nome, 'entrada');
+           END IF;
+
+
+  INSERT INTO transacoes (
+    empresa_id,
+    conta_id,
+    categoria_id,
+    tipo,
+    valor,
+    descricao,
+    data_movimento,
+    origem
+  )
+  VALUES (
+    p_empresa_id,
+    v_conta_id,
+    v_cat_id,
+    'entrada',
+    p_valor,
+    p_descricao,
+    p_data,
+    'zap'
+  )
+  RETURNING id INTO v_id;
+
+  RETURN v_id;
+END;
+$$;

@@ -1,0 +1,79 @@
+ CREATE OR REPLACE FUNCTION ff_consultar_saldo_periodo(
+  p_empresa_id BIGINT,
+  p_data_ini   DATE,
+  p_data_fim   DATE
+)
+RETURNS TABLE (
+  conta_id BIGINT,               -- ✅ ID adicionado
+  conta_nome TEXT,
+  nro_banco TEXT,
+  agencia TEXT,
+  conta TEXT,
+  conjunta BOOLEAN,
+  juridica BOOLEAN,
+  saldo_inicial NUMERIC,
+  entradas_periodo NUMERIC,
+  saídas_periodo NUMERIC,
+  saldo_final NUMERIC
+)
+LANGUAGE sql
+AS $$
+
+WITH contas AS (
+  SELECT
+    id,
+    nome,
+    nro_banco,
+    agencia,
+    conta,
+    conjunta,
+    juridica,
+    saldo_inicial
+  FROM contas_financeiras
+  WHERE empresa_id = p_empresa_id
+),
+
+mov_antes AS (
+  SELECT
+    t.conta_id,
+    SUM(CASE WHEN t.tipo = 'entrada' THEN t.valor ELSE 0 END) AS entradas_antes,
+    SUM(CASE WHEN t.tipo = 'saida'   THEN t.valor ELSE 0 END) AS saídas_antes
+  FROM transacoes t
+  WHERE t.empresa_id = p_empresa_id
+    AND t.data_movimento < p_data_ini
+  GROUP BY t.conta_id
+),
+
+mov_periodo AS (
+  SELECT
+    t.conta_id,
+    SUM(CASE WHEN t.tipo = 'entrada' THEN t.valor ELSE 0 END) AS entradas,
+    SUM(CASE WHEN t.tipo = 'saida'   THEN t.valor ELSE 0 END) AS saídas
+  FROM transacoes t
+  WHERE t.empresa_id = p_empresa_id
+    AND t.data_movimento BETWEEN p_data_ini AND p_data_fim
+  GROUP BY t.conta_id
+)
+
+SELECT
+  c.id AS conta_id,                    -- ✅ ESSA LINHA É A CORREÇÃO
+  c.nome AS conta_nome,
+  c.nro_banco,
+  c.agencia,
+  c.conta,
+  c.conjunta,
+  c.juridica,
+
+  (c.saldo_inicial + COALESCE(ma.entradas_antes, 0) - COALESCE(ma.saídas_antes, 0)) AS saldo_inicial,
+  COALESCE(mp.entradas, 0) AS entradas_periodo,
+  COALESCE(mp.saídas,   0) AS saídas_periodo,
+
+  (c.saldo_inicial + COALESCE(ma.entradas_antes, 0) - COALESCE(ma.saídas_antes, 0)
+                   + COALESCE(mp.entradas, 0) - COALESCE(mp.saídas, 0)) AS saldo_final
+
+FROM contas c
+LEFT JOIN mov_antes   ma ON ma.conta_id = c.id
+LEFT JOIN mov_periodo mp ON mp.conta_id = c.id
+ORDER BY c.nome;
+
+$$;

@@ -1,0 +1,62 @@
+CREATE OR REPLACE FUNCTION ff_consultar_resumo(
+  p_empresa_id BIGINT,
+  p_data_ini   DATE,
+  p_data_fim   DATE,
+  p_conta_nome TEXT DEFAULT NULL  -- NULL ou 'todas'
+)
+RETURNS TABLE (
+  conta_nome      TEXT,
+  saldo_inicial   NUMERIC,
+  total_entradas  NUMERIC,
+  total_saidas    NUMERIC,
+  saldo_periodo   NUMERIC,
+  saldo_final     NUMERIC
+)
+LANGUAGE sql
+AS $$
+  WITH contas_base AS (
+    SELECT
+      c.id,
+      c.nome,
+      c.saldo_inicial
+    FROM contas_financeiras c
+    WHERE c.empresa_id = p_empresa_id
+      AND (p_conta_nome IS NULL
+           OR lower(p_conta_nome) = 'todas'
+           OR lower(c.nome) = lower(p_conta_nome))
+  ),
+  mov_antes AS (
+    -- movimentos ANTES do período (pra compor saldo inicial)
+    SELECT
+      t.conta_id,
+      SUM(CASE WHEN t.tipo = 'entrada' THEN t.valor ELSE -t.valor END) AS mov
+    FROM transacoes t
+    WHERE t.empresa_id = p_empresa_id
+      AND t.data_movimento < p_data_ini
+    GROUP BY t.conta_id
+  ),
+  mov_periodo AS (
+    -- movimentos DENTRO do período
+    SELECT
+      t.conta_id,
+      SUM(CASE WHEN t.tipo = 'entrada' THEN t.valor ELSE 0 END) AS entradas,
+      SUM(CASE WHEN t.tipo = 'saida'   THEN t.valor ELSE 0 END) AS saidas
+    FROM transacoes t
+    WHERE t.empresa_id = p_empresa_id
+      AND t.data_movimento >= p_data_ini
+      AND t.data_movimento <= p_data_fim
+    GROUP BY t.conta_id
+  )
+  SELECT
+    cb.nome AS conta_nome,
+    cb.saldo_inicial + COALESCE(ma.mov, 0)                        AS saldo_inicial,
+    COALESCE(mp.entradas, 0)                                      AS total_entradas,
+    COALESCE(mp.saidas,   0)                                      AS total_saidas,
+    COALESCE(mp.entradas, 0) - COALESCE(mp.saidas, 0)             AS saldo_periodo,
+    cb.saldo_inicial + COALESCE(ma.mov, 0)
+      + (COALESCE(mp.entradas, 0) - COALESCE(mp.saidas, 0))       AS saldo_final
+  FROM contas_base cb
+  LEFT JOIN mov_antes  ma ON ma.conta_id = cb.id
+  LEFT JOIN mov_periodo mp ON mp.conta_id = cb.id
+  ORDER BY cb.nome;
+$$;

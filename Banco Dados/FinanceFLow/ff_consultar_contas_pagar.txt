@@ -1,0 +1,28 @@
+CREATE OR REPLACE FUNCTION ff_consultar_contas_pagar(
+  p_empresa_id  BIGINT,
+  p_status      TEXT DEFAULT NULL,  -- 'aberto','pago' ou NULL
+  p_data_ini    DATE DEFAULT NULL,
+  p_data_fim    DATE DEFAULT NULL
+)
+RETURNS TABLE (
+  id BIGINT,
+  descricao TEXT,
+  valor NUMERIC,
+  vencimento DATE,
+  status TEXT
+)
+LANGUAGE sql
+AS $$
+  SELECT
+    id,
+    descricao,
+    valor,
+    vencimento,
+    status
+  FROM contas_a_pagar
+  WHERE empresa_id = p_empresa_id
+    AND (p_status IS NULL OR status = p_status)
+    AND (p_data_ini IS NULL OR vencimento >= p_data_ini)
+    AND (p_data_fim IS NULL OR vencimento <= p_data_fim)
+  ORDER BY vencimento, id;
+$$;

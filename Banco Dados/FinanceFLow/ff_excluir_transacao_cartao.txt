@@ -1,0 +1,37 @@
+CREATE OR REPLACE FUNCTION ff_excluir_transacao_cartao(
+  p_empresa_id BIGINT,
+  p_transacao_id BIGINT
+)
+RETURNS TEXT
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_fatura_id BIGINT;
+  v_valor NUMERIC;
+  v_total_parcelas INT;
+BEGIN
+  -- 1) Buscar dados da transação
+  SELECT fatura_id, valor
+    INTO v_fatura_id, v_valor
+  FROM cartoes_transacoes
+  WHERE id = p_transacao_id
+    AND empresa_id = p_empresa_id;
+
+  IF v_fatura_id IS NULL THEN
+    RETURN 'TRANSACAO_NAO_ENCONTRADA';
+  END IF;
+
+  -- 2) Remover valor da fatura
+  UPDATE cartoes_faturas
+     SET valor_total = COALESCE(valor_total,0) - v_valor
+   WHERE id = v_fatura_id
+     AND empresa_id = p_empresa_id;
+
+  -- 3) Excluir transação
+  DELETE FROM cartoes_transacoes
+   WHERE id = p_transacao_id
+     AND empresa_id = p_empresa_id;
+
+  RETURN 'OK';
+END;
+$$;

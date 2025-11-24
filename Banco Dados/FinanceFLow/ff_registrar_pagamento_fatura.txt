@@ -1,0 +1,79 @@
+CREATE OR REPLACE FUNCTION ff_registrar_pagamento_fatura(
+  p_empresa_id   BIGINT,
+  p_cartao_nome  TEXT,
+  p_conta_nome   TEXT,
+  p_valor_pago   NUMERIC,
+  p_data_pagto   DATE DEFAULT CURRENT_DATE
+)
+RETURNS BIGINT
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_cartao_id   BIGINT;
+  v_fatura_id   BIGINT;
+  v_conta_id    BIGINT;
+  v_valor_fatura NUMERIC;
+  v_id_transacao BIGINT;
+BEGIN
+  SELECT id
+    INTO v_cartao_id
+  FROM cartoes
+  WHERE empresa_id = p_empresa_id
+    AND lower(nome) = lower(p_cartao_nome)
+  LIMIT 1;
+
+  IF v_cartao_id IS NULL THEN
+    RAISE EXCEPTION 'Cartão "%" não encontrado para empresa %', p_cartao_nome, p_empresa_id;
+  END IF;
+
+  -- fatura mais recente em aberto/fechada
+  SELECT id, valor_total
+    INTO v_fatura_id, v_valor_fatura
+  FROM cartoes_faturas
+  WHERE cartao_id = v_cartao_id
+    AND empresa_id = p_empresa_id
+    AND status IN ('aberta','fechada')
+  ORDER BY mes_referencia DESC
+  LIMIT 1;
+
+  IF v_fatura_id IS NULL THEN
+    RAISE EXCEPTION 'Nenhuma fatura em aberto/fechada encontrada para o cartão %', p_cartao_nome;
+  END IF;
+
+  IF p_valor_pago IS NULL OR p_valor_pago = 0 THEN
+    p_valor_pago := COALESCE(v_valor_fatura, 0);
+  END IF;
+
+  v_conta_id := ff_get_conta_id(p_empresa_id, p_conta_nome);
+
+  -- grava a saída na conta
+  INSERT INTO transacoes (
+    empresa_id,
+    conta_id,
+    categoria_id,
+    tipo,
+    valor,
+    descricao,
+    data_movimento,
+    origem
+  )
+  VALUES (
+    p_empresa_id,
+    v_conta_id,
+    NULL,
+    'saida',
+    p_valor_pago,
+    'Pagamento fatura ' || p_cartao_nome,
+    p_data_pagto,
+    'zap'
+  )
+  RETURNING id INTO v_id_transacao;
+
+  -- marca fatura como paga (simplesmente)
+  UPDATE cartoes_faturas
+     SET status = 'paga'
+   WHERE id = v_fatura_id;
+
+  RETURN v_id_transacao;
+END;
+$$;

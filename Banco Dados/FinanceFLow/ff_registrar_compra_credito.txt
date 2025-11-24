@@ -1,0 +1,61 @@
+ CREATE OR REPLACE FUNCTION ff_registrar_compra_credito(
+  p_empresa_id    BIGINT,
+  p_cartao_nome   TEXT,
+  p_descricao     TEXT,
+  p_valor_total   NUMERIC,
+  p_parcelas      INT DEFAULT 1,
+  p_data_compra   DATE DEFAULT CURRENT_DATE
+)
+RETURNS BIGINT
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_fatura_id   BIGINT;
+  v_parcela     INT;
+  v_valor_parc  NUMERIC;
+  v_id_ultima   BIGINT;
+  v_data_parcela DATE;
+BEGIN
+  IF p_parcelas IS NULL OR p_parcelas < 1 THEN
+    p_parcelas := 1;
+  END IF;
+
+  v_valor_parc := ROUND(p_valor_total / p_parcelas, 2);
+
+  v_fatura_id := ff_get_or_create_fatura(p_empresa_id, p_cartao_nome, p_data_compra);
+
+  FOR v_parcela IN 1..p_parcelas LOOP
+    
+    -- calcula a data da parcela correta -----------------------
+    v_data_parcela := ff_calcula_data_parcela(p_data_compra, v_parcela);
+    -----------------------------------------------------------
+
+    INSERT INTO cartoes_transacoes (
+      fatura_id,
+      empresa_id,
+      descricao,
+      valor,
+      parcela_num,
+      parcela_total,
+      data_parcela
+    )
+    VALUES (
+      v_fatura_id,
+      p_empresa_id,
+      p_descricao,
+      v_valor_parc,
+      v_parcela,
+      p_parcelas,
+      v_data_parcela
+    )
+    RETURNING id INTO v_id_ultima;
+
+  END LOOP;
+
+  UPDATE cartoes_faturas
+     SET valor_total = COALESCE(valor_total, 0) + p_valor_total
+   WHERE id = v_fatura_id;
+
+  RETURN v_id_ultima;
+END;
+$$;

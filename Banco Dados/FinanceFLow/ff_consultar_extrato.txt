@@ -1,0 +1,49 @@
+CREATE OR REPLACE FUNCTION ff_consultar_extrato(
+  p_empresa_id BIGINT,
+  p_conta_nome TEXT DEFAULT NULL,  -- NULL ou 'todas' = todas as contas
+  p_data_ini   DATE DEFAULT NULL,
+  p_data_fim   DATE DEFAULT NULL,
+  p_limite     INT  DEFAULT 50
+)
+RETURNS TABLE (
+  data_movimento DATE,
+  conta_nome     TEXT,
+  tipo           TEXT,
+  categoria_nome TEXT,
+  descricao      TEXT,
+  valor          NUMERIC
+)
+LANGUAGE sql
+AS $$
+  WITH base AS (
+    SELECT
+      t.data_movimento,
+      c.nome             AS conta_nome,
+      t.tipo,
+      cg.nome            AS categoria_nome,
+      t.descricao,
+      t.valor
+    FROM transacoes t
+    JOIN contas_financeiras c
+      ON c.id = t.conta_id
+     AND c.empresa_id = t.empresa_id
+    LEFT JOIN categorias_gerenciais cg
+      ON cg.id = t.categoria_id
+    WHERE t.empresa_id = p_empresa_id
+      AND (p_conta_nome IS NULL
+           OR lower(p_conta_nome) = 'todas'
+           OR lower(c.nome) = lower(p_conta_nome))
+      AND (p_data_ini IS NULL OR t.data_movimento >= p_data_ini)
+      AND (p_data_fim IS NULL OR t.data_movimento <= p_data_fim)
+  )
+  SELECT
+    data_movimento,
+    conta_nome,
+    tipo,
+    categoria_nome,
+    descricao,
+    valor
+  FROM base
+  ORDER BY data_movimento DESC, conta_nome, tipo
+  LIMIT p_limite;
+$$;

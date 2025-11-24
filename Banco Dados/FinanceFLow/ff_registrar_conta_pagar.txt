@@ -1,0 +1,49 @@
+CREATE OR REPLACE FUNCTION ff_registrar_conta_pagar(
+  p_empresa_id     BIGINT,
+  p_descricao      TEXT,
+  p_valor          NUMERIC,
+  p_vencimento     DATE,
+  p_categoria      TEXT DEFAULT NULL,
+  p_parcelas       INT DEFAULT 1
+)
+RETURNS BIGINT
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_categoria_id BIGINT;
+  v_id BIGINT;
+BEGIN
+  -- tenta buscar categoria
+  IF p_categoria IS NOT NULL THEN
+    SELECT id INTO v_categoria_id
+    FROM categorias_gerenciais
+    WHERE empresa_id = p_empresa_id
+      AND lower(nome) = lower(p_categoria)
+    LIMIT 1;
+  END IF;
+
+  INSERT INTO contas_a_pagar (
+      empresa_id,
+      descricao,
+      valor,
+      vencimento,
+      categoria_id,
+      parcelas,
+      parcela_num,
+      status
+  )
+  VALUES (
+      p_empresa_id,
+      p_descricao,
+      p_valor,
+      p_vencimento,
+      v_categoria_id,
+      p_parcelas,
+      1,
+      'aberto'
+  )
+  RETURNING id INTO v_id;
+
+  RETURN v_id;
+END;
+$$;
