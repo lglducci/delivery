@@ -11,10 +11,10 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
       "position": [
-        704,
-        1840
+        864,
+        128
       ],
-      "id": "36fa368a-4fc0-4dc0-9848-c54ded557bdc",
+      "id": "a5e77fd0-0d90-437b-af46-d7e1cab6d637",
       "name": "Respond to Webhook1"
     },
     {
@@ -70,10 +70,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        0,
-        2080
+        288,
+        1456
       ],
-      "id": "6e8555ab-07bf-4924-9de1-cd105d86fe44",
+      "id": "3b5aed96-d57a-4fd1-89b7-dba224ecc16f",
       "name": "Edit Fields"
     },
     {
@@ -104,10 +104,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        464,
-        2080
+        448,
+        1456
       ],
-      "id": "8b52639f-f593-4360-ba96-96d05172bb36",
+      "id": "8e1fc411-629d-424b-a771-5a5e5de9ed61",
       "name": "If"
     },
     {
@@ -120,10 +120,10 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
       "position": [
-        1328,
-        2496
+        224,
+        3760
       ],
-      "id": "2746ce37-cb17-4238-a679-aa30ad76b4d7",
+      "id": "8f281691-90ee-4222-89fc-16e3bbbf7563",
       "name": "Respond to Webhook2"
     },
     {
@@ -154,10 +154,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        464,
-        2496
+        -640,
+        3760
       ],
-      "id": "87f76d1e-25e3-4126-adf9-4a6559ea112b",
+      "id": "4f9e702b-fbcf-469a-bd66-97ba14b15e9c",
       "name": "If1"
     },
     {
@@ -165,10 +165,10 @@
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3.2,
       "position": [
-        1136,
-        2496
+        32,
+        3760
       ],
-      "id": "4946dd07-cbe6-4324-aa48-46a6d7bcb6cc",
+      "id": "2b458c74-6a59-4f20-9125-fa8dc3f5c21d",
       "name": "Merge1"
     },
     {
@@ -180,10 +180,10 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
       "position": [
-        16,
-        1840
+        144,
+        128
       ],
-      "id": "2f9bf1ca-7662-4a2d-8515-eff070481ebc",
+      "id": "f1cf5e82-1abe-4e27-8324-e9b4b6e9abb8",
       "name": "Lancamento",
       "webhookId": "77c2764f-3d24-48db-aef2-07b64e9ecdeb"
     },
@@ -197,30 +197,30 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
       "position": [
-        -208,
-        2080
+        96,
+        1456
       ],
-      "id": "e0a48329-2a61-43fe-8cc4-284d78a4b668",
+      "id": "7f389801-f2df-43a7-9e28-ea5c7c12d96d",
       "name": "NovoLancamento",
       "webhookId": "77c2764f-3d24-48db-aef2-07b64e9ecdeb"
     },
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "  select * from ff_registrar_despesa(\n   {{ $('Edit Fields').item.json.id_empresa }},\n  '{{ $('Edit Fields').item.json.conta }}',\n   '{{ $json.nome }}',\n    {{ $('Edit Fields').item.json.valor }},\n  '{{ $('Edit Fields').item.json.descricao }}'\n  ,'{{ $('Edit Fields').item.json.data }}' \n   \n)",
+        "query": "  select * from ff_registrar_despesa(\n   {{ $('Edit Fields').item.json.id_empresa }},\n  {{ $('Edit Fields').item.json.conta }},\n   {{ $json.categoria }},null, null,\n    {{ $('Edit Fields').item.json.valor }},\n  '{{ $('Edit Fields').item.json.descricao }}'\n  ,'{{ $('Edit Fields').item.json.data }}' \n   \n)",
         "options": {}
       },
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        720,
-        2000
+        640,
+        1376
       ],
-      "id": "be82f020-d088-4891-8481-38de7beb3959",
+      "id": "0638603b-77b4-4f88-9cfb-3b04a5d36d48",
       "name": "registrar_despesa",
       "credentials": {
         "postgres": {
-          "id": "ZQ9ZHzHwxVG4akbO",
+          "id": "MJtrOgYw7gXxfNLV",
           "name": "FinanceFlow"
         }
       }
@@ -228,20 +228,20 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "  select * from ff_registrar_receita( \n   {{ $('Edit Fields').item.json.id_empresa }},\n  '{{ $('Edit Fields').item.json.conta }}',\n   '{{ $json.nome }}',\n    {{ $('Edit Fields').item.json.valor }},\n  '{{ $('Edit Fields').item.json.descricao }}'\n  ,'{{ $('Edit Fields').item.json.data }}' \n   \n)",
+        "query": "  select * from ff_registrar_receita (\n   {{ $('Edit Fields').item.json.id_empresa }},\n  {{ $('Edit Fields').item.json.conta }},\n   {{ $json.categoria }},null, null,\n    {{ $('Edit Fields').item.json.valor }},\n  '{{ $('Edit Fields').item.json.descricao }}'\n  ,'{{ $('Edit Fields').item.json.data }}' \n   \n)",
         "options": {}
       },
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        720,
-        2192
+        640,
+        1568
       ],
-      "id": "d852f91e-1ea4-4e47-abed-268435e721ce",
+      "id": "b84c8158-ec45-496e-882e-aec7dae66bd0",
       "name": "registrar_receita",
       "credentials": {
         "postgres": {
-          "id": "ZQ9ZHzHwxVG4akbO",
+          "id": "MJtrOgYw7gXxfNLV",
           "name": "FinanceFlow"
         }
       }
@@ -255,14 +255,14 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        992,
-        2000
+        848,
+        1376
       ],
-      "id": "aa9a370a-bd8e-44fb-bcbb-c75a5c761ae4",
+      "id": "c9c63238-0ace-4770-b0a8-10f44ea72ce1",
       "name": "BuscaTransacao",
       "credentials": {
         "postgres": {
-          "id": "ZQ9ZHzHwxVG4akbO",
+          "id": "MJtrOgYw7gXxfNLV",
           "name": "FinanceFlow"
         }
       }
@@ -326,10 +326,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        256,
-        2496
+        -848,
+        3760
       ],
-      "id": "61335b91-75ff-43a5-ab09-8392134ac607",
+      "id": "9a116668-e47d-4d3e-b2a8-09f2da20d774",
       "name": "EditPagarReceber"
     },
     {
@@ -341,14 +341,14 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        688,
-        2416
+        -416,
+        3632
       ],
-      "id": "71974560-0815-4c31-be9a-112ddae6beab",
+      "id": "3b2eccfb-ba34-463b-a988-d93b70dd38aa",
       "name": "registrar_conta_pagar",
       "credentials": {
         "postgres": {
-          "id": "ZQ9ZHzHwxVG4akbO",
+          "id": "MJtrOgYw7gXxfNLV",
           "name": "FinanceFlow"
         }
       }
@@ -362,14 +362,14 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        688,
-        2608
+        -416,
+        3872
       ],
-      "id": "28141ac0-d666-452a-a3bb-aef1167a13cb",
+      "id": "53f4eccd-9e4c-4066-8945-abc660b2b164",
       "name": "registrar_conta_receber",
       "credentials": {
         "postgres": {
-          "id": "ZQ9ZHzHwxVG4akbO",
+          "id": "MJtrOgYw7gXxfNLV",
           "name": "FinanceFlow"
         }
       }
@@ -383,14 +383,14 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        880,
-        2416
+        -224,
+        3632
       ],
-      "id": "6f00d210-d041-4078-8cde-5fc4d3aeb5fc",
+      "id": "91316ee1-bc46-4321-9fcf-9af284e9985a",
       "name": "conta_a_pagar",
       "credentials": {
         "postgres": {
-          "id": "ZQ9ZHzHwxVG4akbO",
+          "id": "MJtrOgYw7gXxfNLV",
           "name": "FinanceFlow"
         }
       }
@@ -404,14 +404,14 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        896,
-        2608
+        -208,
+        3872
       ],
-      "id": "fc679ee0-4c98-47e7-aa77-dba440bdc42c",
+      "id": "385fd927-302d-4b27-846c-209e7bc866a9",
       "name": "conta_a_receber",
       "credentials": {
         "postgres": {
-          "id": "ZQ9ZHzHwxVG4akbO",
+          "id": "MJtrOgYw7gXxfNLV",
           "name": "FinanceFlow"
         }
       }
@@ -425,10 +425,10 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
       "position": [
-        48,
-        2496
+        -1056,
+        3760
       ],
-      "id": "0f73b314-b702-4f6c-9fbb-b4badcbe7508",
+      "id": "735ec045-f9d2-4b03-9ea2-17796473c288",
       "name": "novopagarreceber",
       "webhookId": "77c2764f-3d24-48db-aef2-07b64e9ecdeb"
     },
@@ -439,7 +439,7 @@
             {
               "id": "4616a119-9b3f-4dcd-b548-0be8d5f7a3b4",
               "name": "id_empresa",
-              "value": "={{ $json.query.id_empresa}}",
+              "value": "={{ $json.query.empresa_id}}",
               "type": "number"
             },
             {
@@ -453,6 +453,12 @@
               "name": "data_fim",
               "value": "={{ $json.query.data_fim}}",
               "type": "string"
+            },
+            {
+              "id": "dc56d54c-e41f-44da-a328-7e9abb3df615",
+              "name": "conta_id",
+              "value": "={{ $json.query.conta_id}}",
+              "type": "string"
             }
           ]
         },
@@ -461,30 +467,30 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        272,
-        1840
+        416,
+        128
       ],
-      "id": "f28e639c-0a89-4490-9fb4-44695466b007",
+      "id": "3124a695-5878-480e-a71d-f3497260d7d3",
       "name": "TransacaoEdit"
     },
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": " SELECT \n  t.id,\n  t.descricao,\n  c.nome AS categoria_nome,\n  f.nome AS conta_nome,\n  t.tipo,\n  t.data_movimento,\n  t.origem,\n  t.valor\nFROM transacoes t\nLEFT JOIN categorias_gerenciais c \n       ON c.id = t.categoria_id \n      AND c.empresa_id = t.empresa_id\nLEFT JOIN contas_financeiras f \n       ON f.id = t.conta_id\n      AND f.empresa_id = t.empresa_id\nWHERE t.empresa_id = {{ $json.id_empresa }}\n  AND t.data_movimento >= '{{ $json.data_ini }}'\n  AND t.data_movimento <= '{{ $json.data_fim }}'\nORDER BY t.data_movimento asc, t.id asc;\n",
+        "query": " SELECT \n  t.id,\n  t.descricao,\n  c.nome AS categoria_nome,\n  f.nome AS conta_nome,\n  t.tipo,\n  t.data_movimento,\n  t.origem,\n  t.valor\nFROM transacoes t\nLEFT JOIN categorias_gerenciais c \n       ON c.id = t.categoria_id \n      AND c.empresa_id = t.empresa_id\nLEFT JOIN contas_financeiras f \n       ON f.id = t.conta_id\n      AND f.empresa_id = t.empresa_id\nWHERE t.empresa_id = {{ $json.id_empresa }}\n  AND t.data_movimento >= '{{ $json.data_ini }}'\n  AND t.data_movimento <= '{{ $json.data_fim }}' \n  and t.conta_id = {{ $json.conta_id }}\nORDER BY t.data_movimento asc, t.id asc;\n",
         "options": {}
       },
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        480,
-        1840
+        640,
+        128
       ],
-      "id": "729ee3b4-8945-4837-82af-6da0c6837fbb",
+      "id": "c624ac13-e1da-4c96-9c43-ca17e981257c",
       "name": "Lancamentos",
       "alwaysOutputData": true,
       "credentials": {
         "postgres": {
-          "id": "ZQ9ZHzHwxVG4akbO",
+          "id": "MJtrOgYw7gXxfNLV",
           "name": "FinanceFlow"
         }
       }
@@ -499,11 +505,12 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
       "position": [
-        688,
-        1568
+        -704,
+        1328
       ],
-      "id": "694055f6-b63f-4905-a817-c30ded73b48b",
-      "name": "Respond to Webhook3"
+      "id": "380a5313-3ab1-43fd-8ccf-96125aaef446",
+      "name": "Respond to Webhook3",
+      "disabled": true
     },
     {
       "parameters": {
@@ -540,11 +547,12 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        256,
-        1568
+        -1088,
+        1328
       ],
-      "id": "6b34e92c-7287-4a4d-bddc-ffe8bcde9a75",
-      "name": "CartãoTransacaoEdit"
+      "id": "17123d1c-5440-4923-99b7-5a6bb10806e1",
+      "name": "CartãoTransacaoEdit",
+      "disabled": true
     },
     {
       "parameters": {
@@ -555,18 +563,19 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        464,
-        1568
+        -896,
+        1328
       ],
-      "id": "b58755a7-9fd6-4c0c-8ceb-0ff1f5496b58",
+      "id": "fa44cc6e-3e41-4b3d-9adc-d26b4da15b62",
       "name": "CartãoTransações",
       "alwaysOutputData": true,
       "credentials": {
         "postgres": {
-          "id": "ZQ9ZHzHwxVG4akbO",
+          "id": "MJtrOgYw7gXxfNLV",
           "name": "FinanceFlow"
         }
-      }
+      },
+      "disabled": true
     },
     {
       "parameters": {
@@ -577,12 +586,13 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
       "position": [
-        0,
-        1568
+        -1296,
+        1328
       ],
-      "id": "4bf7edfc-be23-460e-8121-90d1351bf4b8",
+      "id": "6c522053-2506-46fb-873e-49ec90f59e21",
       "name": "TrasacoesCartoes",
-      "webhookId": "77c2764f-3d24-48db-aef2-07b64e9ecdeb"
+      "webhookId": "77c2764f-3d24-48db-aef2-07b64e9ecdeb",
+      "disabled": true
     },
     {
       "parameters": {
@@ -594,10 +604,10 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
       "position": [
-        960,
-        1392
+        -448,
+        480
       ],
-      "id": "5c694b39-25ef-4b7a-8f06-e7de759857ba",
+      "id": "7eee2fa7-7ae5-48d5-ba31-44915d1066e7",
       "name": "Respond to Webhook4"
     },
     {
@@ -647,10 +657,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        240,
-        1392
+        -1104,
+        480
       ],
-      "id": "94a6eae9-9ce6-48c1-b959-5586d65b1cc0",
+      "id": "7ac53757-36e0-4056-8282-45a050581e2e",
       "name": "CartãoTransacaoEdit1"
     },
     {
@@ -662,34 +672,12 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
       "position": [
-        16,
-        1392
+        -1328,
+        480
       ],
-      "id": "21213ebe-044f-4232-a93f-bd3a761d7e1d",
+      "id": "149fa4d9-a490-47c5-b86f-7bf8057b349b",
       "name": "InseretransacaoCartão",
       "webhookId": "77c2764f-3d24-48db-aef2-07b64e9ecdeb"
-    },
-    {
-      "parameters": {
-        "operation": "executeQuery",
-        "query": "   select * from ff_registrar_compra_credito(\n   {{ $json.id_empresa }} ,\n  '{{ $json.nomecartao }}',\n   '{{ $json.descricao }}', \n    {{ $json.valor }},\n   {{ $json.parcelas }} ,\n   '{{ $json.data_compra }}' \n ) \n\n ",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.6,
-      "position": [
-        480,
-        1392
-      ],
-      "id": "af0fead0-2069-4a10-bec5-d81f43b9b11a",
-      "name": "InsereTransacaoCartao",
-      "alwaysOutputData": true,
-      "credentials": {
-        "postgres": {
-          "id": "ZQ9ZHzHwxVG4akbO",
-          "name": "FinanceFlow"
-        }
-      }
     },
     {
       "parameters": {
@@ -700,14 +688,14 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        688,
-        1392
+        -656,
+        480
       ],
-      "id": "095bd144-7a52-4603-83e5-57c258dc5d42",
+      "id": "095bcb2e-3811-48ee-9f3d-16e61a54888e",
       "name": "Execute a SQL query",
       "credentials": {
         "postgres": {
-          "id": "ZQ9ZHzHwxVG4akbO",
+          "id": "MJtrOgYw7gXxfNLV",
           "name": "FinanceFlow"
         }
       }
@@ -722,10 +710,10 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
       "position": [
-        704,
-        1184
+        896,
+        1008
       ],
-      "id": "fd7db3a8-8205-4538-b093-406bad0e35f8",
+      "id": "c760002f-d521-44ac-9403-7c811b323c1c",
       "name": "Respond to Webhook5"
     },
     {
@@ -737,10 +725,10 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
       "position": [
-        16,
-        1184
+        176,
+        1008
       ],
-      "id": "0c1194e3-84da-46ff-bf75-fe6c801ca4bb",
+      "id": "d444161b-fcc3-4964-b28c-8e3a5d2037ac",
       "name": "consultaSaldo",
       "webhookId": "77c2764f-3d24-48db-aef2-07b64e9ecdeb"
     },
@@ -765,6 +753,12 @@
               "name": "data_fim",
               "value": "={{ $json.query.fim}}",
               "type": "string"
+            },
+            {
+              "id": "6eaba913-882f-46c6-9675-66a4c22b3224",
+              "name": "conta_id",
+              "value": "={{ $json.query.conta_id}}",
+              "type": "string"
             }
           ]
         },
@@ -773,10 +767,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        272,
-        1184
+        432,
+        1008
       ],
-      "id": "33cbd48c-e986-4e10-a33d-78207632a4d6",
+      "id": "8e6723e8-4fda-49c4-9db7-f6b7202e8b03",
       "name": "SaldoEdit"
     },
     {
@@ -789,30 +783,30 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
       "position": [
-        704,
-        960
+        864,
+        2640
       ],
-      "id": "22c750b7-229e-4c2f-932a-83b418e6b515",
+      "id": "9464cb64-e0aa-47a4-9709-83d08d171dae",
       "name": "Respond to Webhook6"
     },
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "select * from   contas_financeiras where empresa_id = \n  {{ $json.id_empresa }} ;",
+        "query": "select * from   contas_financeiras where empresa_id = \n  {{ $json.id_empresa }}  ;",
         "options": {}
       },
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        480,
-        960
+        672,
+        2640
       ],
-      "id": "cb473fe1-357d-427f-9d21-d5cb7c2d02a2",
+      "id": "aa5ac34a-fe54-4512-bd9b-83b98531666b",
       "name": "ListaContas",
       "alwaysOutputData": true,
       "credentials": {
         "postgres": {
-          "id": "ZQ9ZHzHwxVG4akbO",
+          "id": "MJtrOgYw7gXxfNLV",
           "name": "FinanceFlow"
         }
       }
@@ -827,10 +821,10 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
       "position": [
-        720,
-        752
+        896,
+        2464
       ],
-      "id": "c8bdeaf0-cfb8-404d-9c37-95550721da1e",
+      "id": "d8ed7d44-4e67-4f9f-82b6-49f81f38a81f",
       "name": "Respond to Webhook7"
     },
     {
@@ -842,10 +836,10 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
       "position": [
-        16,
-        960
+        240,
+        2640
       ],
-      "id": "b5d36f78-71e6-476a-b5c1-3fcb84cfff61",
+      "id": "61288428-f6b1-4bfe-9be9-01a14d41150c",
       "name": "ListaContas2",
       "webhookId": "77c2764f-3d24-48db-aef2-07b64e9ecdeb"
     },
@@ -858,10 +852,10 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
       "position": [
-        32,
-        752
+        208,
+        2464
       ],
-      "id": "ca511712-fa2a-4fa7-b2d3-a3d57f41ab77",
+      "id": "d0fdf685-b6ac-47ae-a844-6135a4b9d02f",
       "name": "ListaCategoria",
       "webhookId": "77c2764f-3d24-48db-aef2-07b64e9ecdeb"
     },
@@ -874,15 +868,15 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        496,
-        752
+        672,
+        2464
       ],
-      "id": "2011d81a-39d7-4271-b5ab-6b3606948d13",
+      "id": "6ce0b6f7-d7c6-412d-aea5-e52c1b8877c0",
       "name": "categorias_gerenciais",
       "alwaysOutputData": true,
       "credentials": {
         "postgres": {
-          "id": "ZQ9ZHzHwxVG4akbO",
+          "id": "MJtrOgYw7gXxfNLV",
           "name": "FinanceFlow"
         }
       }
@@ -904,10 +898,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        288,
-        752
+        464,
+        2464
       ],
-      "id": "319b72f7-705a-461a-a75c-4182fde3bf4b",
+      "id": "ed323f8a-64b0-4ecc-babc-ebdebf1eaaa5",
       "name": "categoriaEdit"
     },
     {
@@ -927,10 +921,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        272,
-        960
+        448,
+        2640
       ],
-      "id": "9b4dc9a5-917d-443a-87bb-77cded3b3aa1",
+      "id": "3cdc4a78-8e04-4ee8-8501-cc337da43b53",
       "name": "ListaEdit"
     },
     {
@@ -943,87 +937,10 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
       "position": [
-        704,
-        544
+        -608,
+        2688
       ],
-      "id": "35c2aa41-0dab-4eb9-805c-73805700d78d",
-      "name": "Respond to Webhook8"
-    },
-    {
-      "parameters": {
-        "assignments": {
-          "assignments": [
-            {
-              "id": "4616a119-9b3f-4dcd-b548-0be8d5f7a3b4",
-              "name": "id_empresa",
-              "value": "={{ $json.query.id_empresa}}",
-              "type": "number"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        272,
-        544
-      ],
-      "id": "3b24c342-32d4-4f82-8e9e-0e9510212ff4",
-      "name": "cartoesEdit"
-    },
-    {
-      "parameters": {
-        "operation": "executeQuery",
-        "query": "select * from   cartoes  where empresa_id = {{ $json.query.id_empresa}};",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.6,
-      "position": [
-        480,
-        544
-      ],
-      "id": "f76e9e16-86f3-4025-a080-c41fc7c5d930",
-      "name": "Cartoes",
-      "alwaysOutputData": true,
-      "credentials": {
-        "postgres": {
-          "id": "ZQ9ZHzHwxVG4akbO",
-          "name": "FinanceFlow"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "path": "cartoes",
-        "responseMode": "responseNode",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 2.1,
-      "position": [
-        16,
-        544
-      ],
-      "id": "9f1c7850-8590-4c16-8220-b765d9002bf6",
-      "name": "ListaCartões",
-      "webhookId": "77c2764f-3d24-48db-aef2-07b64e9ecdeb"
-    },
-    {
-      "parameters": {
-        "respondWith": "allIncomingItems",
-        "options": {
-          "responseCode": 200
-        }
-      },
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.4,
-      "position": [
-        672,
-        368
-      ],
-      "id": "73b929e8-a68c-471d-a620-32feedc66262",
+      "id": "3d4030b8-5503-489b-a4fe-d9c3af13ffa1",
       "name": "Respond to Webhook9"
     },
     {
@@ -1109,10 +1026,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        272,
-        368
+        -1008,
+        2688
       ],
-      "id": "2f95f1db-311a-46f2-bcb5-90d8da2e72b9",
+      "id": "d771a2f3-68dd-4dce-af20-71ce5614f5f4",
       "name": "SaldoEdit1"
     },
     {
@@ -1125,10 +1042,10 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
       "position": [
-        16,
-        368
+        -1264,
+        2688
       ],
-      "id": "8793db5e-2f1e-4be1-894f-0a8c393fd9c5",
+      "id": "94ef13bc-4570-44c9-85e9-c87614a4d2bd",
       "name": "ContaFinanceira",
       "webhookId": "77c2764f-3d24-48db-aef2-07b64e9ecdeb"
     },
@@ -1187,14 +1104,14 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        480,
-        368
+        -800,
+        2688
       ],
-      "id": "d4b413d2-2792-4789-9a42-fe17b52e4a64",
+      "id": "b0a6fab1-78cf-4a38-8ed7-6af4309fe76e",
       "name": "CriaConta",
       "credentials": {
         "supabaseApi": {
-          "id": "FihwQDBaUGhQ2Ms2",
+          "id": "FHa5RDfMmxUg7TuM",
           "name": "FinanceFlow"
         }
       }
@@ -1209,10 +1126,10 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
       "position": [
-        688,
-        176
+        -592,
+        2496
       ],
-      "id": "3913fab5-f8a4-4680-94a1-c56286c01054",
+      "id": "6793847d-a16f-43e0-80c2-a1fe7dc64aed",
       "name": "Respond to Webhook10"
     },
     {
@@ -1304,10 +1221,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        272,
-        176
+        -1008,
+        2496
       ],
-      "id": "ba947fc0-1ab1-471b-9e61-0568e59a339e",
+      "id": "9d02a9c3-6b1b-4c30-8d6c-25c76a648d9f",
       "name": "SaldoEdit2"
     },
     {
@@ -1320,10 +1237,10 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
       "position": [
-        32,
-        176
+        -1248,
+        2496
       ],
-      "id": "aa09a27f-ead9-4fa7-b481-89d28ddfd96f",
+      "id": "4621dff5-23ac-4314-9752-4ad500ca21c9",
       "name": "UpdateContaFinanceira",
       "webhookId": "77c2764f-3d24-48db-aef2-07b64e9ecdeb"
     },
@@ -1392,14 +1309,14 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        480,
-        176
+        -800,
+        2496
       ],
-      "id": "b983586f-6cb5-4532-a923-33aa35ae2864",
+      "id": "f475bed2-d0c0-421d-a89d-92981b75d434",
       "name": "UpdateConta",
       "credentials": {
         "supabaseApi": {
-          "id": "FihwQDBaUGhQ2Ms2",
+          "id": "FHa5RDfMmxUg7TuM",
           "name": "FinanceFlow"
         }
       }
@@ -1414,10 +1331,10 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
       "position": [
-        688,
-        0
+        896,
+        848
       ],
-      "id": "c7734027-45a8-4c17-a537-c53f3c9ece89",
+      "id": "18cbc140-6656-4ae4-a984-fcbc889345dd",
       "name": "Respond to Webhook11"
     },
     {
@@ -1443,10 +1360,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        256,
-        0
+        432,
+        848
       ],
-      "id": "9e0758c4-1bbd-4521-ad64-2223b94316c8",
+      "id": "e537674b-9d99-49a3-9bb2-cda5ed3b20a1",
       "name": "SaldoEdit3"
     },
     {
@@ -1458,14 +1375,14 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        480,
-        0
+        656,
+        848
       ],
-      "id": "f60a1eb4-ae1f-47de-8419-8e710faa2c9d",
+      "id": "756f941f-1488-4c0b-97a5-78ead521864a",
       "name": "ContasFinanceiras",
       "credentials": {
         "postgres": {
-          "id": "ZQ9ZHzHwxVG4akbO",
+          "id": "MJtrOgYw7gXxfNLV",
           "name": "FinanceFlow"
         }
       }
@@ -1473,21 +1390,21 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "select * from  ff_consultar_saldo_periodo(\n  {{ $json.id_empresa }},\n  '{{ $json.data_ini }}',\n '{{ $json.data_fim }}'\n)",
+        "query": "select * from  ff_consultar_saldo_periodo(\n  {{ $json.id_empresa }},\n  '{{ $json.data_ini }}',\n '{{ $json.data_fim }}',\n  {{ $json.conta_id }}\n)",
         "options": {}
       },
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        480,
-        1184
+        656,
+        1008
       ],
-      "id": "f8e99c4f-b55a-49bc-9944-363cc177c372",
+      "id": "94b829be-338f-44e5-89db-e7876555e8e7",
       "name": "consultar_saldo_periodo",
       "alwaysOutputData": true,
       "credentials": {
         "postgres": {
-          "id": "ZQ9ZHzHwxVG4akbO",
+          "id": "MJtrOgYw7gXxfNLV",
           "name": "FinanceFlow"
         }
       }
@@ -1499,10 +1416,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        896,
-        -688
+        -240,
+        3120
       ],
-      "id": "81b8c86c-1b1a-4124-9d11-7f5daef85137",
+      "id": "60e523e9-8251-4d41-92c8-703db4d3a217",
       "name": "Sim"
     },
     {
@@ -1512,10 +1429,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        880,
-        -416
+        -256,
+        3376
       ],
-      "id": "788b3a42-a893-4967-81b2-ce527ee55ac7",
+      "id": "df634d8c-ee29-4778-9e9e-832fdf14a470",
       "name": "Não"
     },
     {
@@ -1538,15 +1455,15 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        304,
-        -560
+        -832,
+        3232
       ],
-      "id": "54c1418a-e7a0-4a54-9b4f-0aa1b986cd57",
+      "id": "0dfed972-398a-40b6-9648-28ebde96b963",
       "name": "DadosUsuario",
       "alwaysOutputData": true,
       "credentials": {
         "supabaseApi": {
-          "id": "FihwQDBaUGhQ2Ms2",
+          "id": "FHa5RDfMmxUg7TuM",
           "name": "FinanceFlow"
         }
       }
@@ -1560,14 +1477,14 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        1472,
-        -576
+        336,
+        3216
       ],
-      "id": "cbeaffa1-a2d7-4886-8f67-0e4d0d4e4994",
+      "id": "117f06ad-2e9f-4cb8-8986-3d7e831dccf4",
       "name": "DadosEmpresa",
       "credentials": {
         "postgres": {
-          "id": "ZQ9ZHzHwxVG4akbO",
+          "id": "MJtrOgYw7gXxfNLV",
           "name": "FinanceFlow"
         }
       }
@@ -1582,10 +1499,10 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
       "position": [
-        -128,
-        -560
+        -1264,
+        3232
       ],
-      "id": "06e974d8-1f2f-41e4-b723-0e8e1c51627f",
+      "id": "cb61b92a-34cd-48f6-b9b8-20d351e80f1e",
       "name": "Login",
       "webhookId": "77c2764f-3d24-48db-aef2-07b64e9ecdeb"
     },
@@ -1627,10 +1544,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        576,
-        -560
+        -560,
+        3232
       ],
-      "id": "c03be1bd-0087-4306-9e3e-b5ded3988269",
+      "id": "e464324e-6a0d-401c-ba80-28831ab6aeb2",
       "name": "If2"
     },
     {
@@ -1638,10 +1555,10 @@
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3.2,
       "position": [
-        1200,
-        -576
+        64,
+        3216
       ],
-      "id": "294c3c76-8ea3-4a18-81ce-03eb16e29c43",
+      "id": "3d8f4af5-87f6-46d5-8900-7ca3d8cab5eb",
       "name": "Merge2"
     },
     {
@@ -1653,41 +1570,11 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
       "position": [
-        1744,
-        -576
+        560,
+        3216
       ],
-      "id": "4a2da86b-0e18-435d-822e-828cd461f5a8",
+      "id": "3c9ba8a8-bc5c-4536-ad4e-8ed9cac5ed4a",
       "name": "Respond to Webhook12"
-    },
-    {
-      "parameters": {
-        "assignments": {
-          "assignments": [
-            {
-              "id": "807e4143-d55c-420c-b026-90bb242e057f",
-              "name": "email",
-              "value": "=luis@uol.com",
-              "type": "string"
-            },
-            {
-              "id": "f3078e1c-88ef-46e0-8681-76c60898ac50",
-              "name": "password",
-              "value": "=rei",
-              "type": "string"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        -304,
-        -848
-      ],
-      "id": "bf9788e7-084d-4a1a-abf9-6bfca618d426",
-      "name": "sdd",
-      "disabled": true
     },
     {
       "parameters": {
@@ -1712,10 +1599,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        80,
-        -560
+        -1056,
+        3232
       ],
-      "id": "4637b709-1ef4-4ee5-9c9c-459aa8b17045",
+      "id": "8b99677f-3854-4758-86d4-ff9245f290e6",
       "name": "Usuario"
     },
     {
@@ -1727,10 +1614,10 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
       "position": [
-        0,
-        0
+        176,
+        848
       ],
-      "id": "3fef139e-0e25-4dff-80ab-350a42dd20a6",
+      "id": "6f7ee43e-1911-46e8-b297-7694878c23d2",
       "name": "RetrieveContaFInanc",
       "webhookId": "77c2764f-3d24-48db-aef2-07b64e9ecdeb"
     },
@@ -1744,10 +1631,10 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
       "position": [
-        1248,
-        2064
+        1104,
+        1440
       ],
-      "id": "c2e50c34-16e6-42dd-9c5c-30130c40ada7",
+      "id": "d2a72427-be9d-48da-984f-e9f501ec16ca",
       "name": "Respond to Webhook13"
     },
     {
@@ -1759,14 +1646,717 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        992,
-        2192
+        848,
+        1568
       ],
-      "id": "31ca85e4-e2e3-41b0-a2f1-1f7e9d9d2065",
+      "id": "b7d2f918-6d4d-4e65-b43a-433f4ec6404a",
       "name": "BuscaTransacao1",
       "credentials": {
         "postgres": {
-          "id": "ZQ9ZHzHwxVG4akbO",
+          "id": "MJtrOgYw7gXxfNLV",
+          "name": "FinanceFlow"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        880,
+        672
+      ],
+      "id": "e34f82ad-620c-473c-b522-347d42bfeb8d",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": " SELECT \n  t.id,\n  t.conta_id, \n  t.categoria_id,\n   t.descricao, \n  t.tipo,\n  t.data_movimento,\n  t.origem,\n  t.valor\nFROM transacoes t\n \nWHERE t.empresa_id = {{ $json.id_empresa }}\n  AND t.id = {{ $json.id }} \n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        656,
+        672
+      ],
+      "id": "0053b75a-8bdf-471b-a8c4-7a61b71136dd",
+      "name": "Lancamentos1",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "MJtrOgYw7gXxfNLV",
+          "name": "FinanceFlow"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "path": "editlancto",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        192,
+        672
+      ],
+      "id": "a26a0701-d128-444d-9602-b344a5e8b5d9",
+      "name": "EditarLancto",
+      "webhookId": "77c2764f-3d24-48db-aef2-07b64e9ecdeb"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4616a119-9b3f-4dcd-b548-0be8d5f7a3b4",
+              "name": "id_empresa",
+              "value": "={{ $json.query.id_empresa}}",
+              "type": "number"
+            },
+            {
+              "id": "fce9f8e0-ff39-4e73-9ab4-7d8570f51007",
+              "name": "id",
+              "value": "={{ $json.query.id}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        416,
+        672
+      ],
+      "id": "32312db2-7fc8-4486-989c-3d78a2b2ff53",
+      "name": "EditLancto"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        864,
+        496
+      ],
+      "id": "14c16db1-6229-45dd-8460-8c25435db68e",
+      "name": "Respond to Webhook14"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": " delete \nFROM transacoes   \nWHERE empresa_id = {{ $json.id_empresa }}\n  AND id = {{ $json.id }} \n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        640,
+        496
+      ],
+      "id": "ae1937a4-c10f-437f-a839-0e776007cd02",
+      "name": "Lancamentos2",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "MJtrOgYw7gXxfNLV",
+          "name": "FinanceFlow"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "path": "deleteancto",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        176,
+        496
+      ],
+      "id": "e84e0c3b-9215-4d0c-b28f-06de6a6533b3",
+      "name": "DeliteLancto",
+      "webhookId": "77c2764f-3d24-48db-aef2-07b64e9ecdeb"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4616a119-9b3f-4dcd-b548-0be8d5f7a3b4",
+              "name": "id_empresa",
+              "value": "={{ $json.query.id_empresa}}",
+              "type": "number"
+            },
+            {
+              "id": "fce9f8e0-ff39-4e73-9ab4-7d8570f51007",
+              "name": "id",
+              "value": "={{ $json.query.id}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        400,
+        496
+      ],
+      "id": "a3090860-dc8b-4ace-abd2-b57fda9b56b0",
+      "name": "Deletelancto"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        864,
+        336
+      ],
+      "id": "9a875e19-eeed-4ed0-8f96-a4cd9f8e87fd",
+      "name": "Respond to Webhook15"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "updatelancto",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        176,
+        336
+      ],
+      "id": "b651fc3a-e055-4f1b-8bd9-ce67bf558818",
+      "name": "UpdateLancto",
+      "webhookId": "77c2764f-3d24-48db-aef2-07b64e9ecdeb"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "transacoes",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $json.id}} "
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "empresa_id",
+              "fieldValue": "={{ $json.id_empresa}} "
+            },
+            {
+              "fieldId": "conta_id",
+              "fieldValue": "={{ $json.conta_id}}"
+            },
+            {
+              "fieldId": "categoria_id",
+              "fieldValue": "={{ $json.categoria_id}}"
+            },
+            {
+              "fieldId": "tipo",
+              "fieldValue": "={{ $json.tipo}}"
+            },
+            {
+              "fieldId": "valor",
+              "fieldValue": "={{ $json.valor}}"
+            },
+            {
+              "fieldId": "descricao",
+              "fieldValue": "={{ $json.descricao}}"
+            },
+            {
+              "fieldId": "data_movimento",
+              "fieldValue": "={{ $json.data_movimento}}"
+            },
+            {
+              "fieldId": "origem",
+              "fieldValue": "={{ $json.origem}}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        640,
+        336
+      ],
+      "id": "3065a449-9c5a-429b-a098-14a588915df0",
+      "name": "UpdateLancto1",
+      "credentials": {
+        "supabaseApi": {
+          "id": "FHa5RDfMmxUg7TuM",
+          "name": "FinanceFlow"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4616a119-9b3f-4dcd-b548-0be8d5f7a3b4",
+              "name": "id_empresa",
+              "value": "={{ $json.body.empresa_id}}",
+              "type": "number"
+            },
+            {
+              "id": "5f3336f9-247a-4886-8eb8-3d7b4986eea8",
+              "name": "conta_id",
+              "value": "={{ $json.body.conta_id}}",
+              "type": "string"
+            },
+            {
+              "id": "49a5a239-cb38-4ead-8965-5ea655900d3c",
+              "name": "categoria_id",
+              "value": "={{ $json.body.categoria_id}}",
+              "type": "string"
+            },
+            {
+              "id": "dd4a2a9b-76e3-4e82-a3e3-d8d9a6b3b0f3",
+              "name": "tipo",
+              "value": "={{ $json.body.tipo}}",
+              "type": "string"
+            },
+            {
+              "id": "a2e92c4c-9f4d-434d-9b88-03ac77969ff6",
+              "name": "descricao",
+              "value": "={{ $json.body.descricao}}",
+              "type": "string"
+            },
+            {
+              "id": "0fbd6cd2-d457-4746-b457-c45b73fef4ec",
+              "name": "valor",
+              "value": "={{ $json.body.valor}}",
+              "type": "string"
+            },
+            {
+              "id": "37f90cdc-fd8e-4e63-93f4-965f853e64e5",
+              "name": "data_movimento",
+              "value": "={{ $json.body.data_movimento}}",
+              "type": "string"
+            },
+            {
+              "id": "965a678e-d4e3-4126-a08b-65193391b3a5",
+              "name": "origem",
+              "value": "={{ $json.body.origem}}",
+              "type": "string"
+            },
+            {
+              "id": "0f4e66fc-7279-4e4b-8fee-c9a2f2923c0c",
+              "name": "id",
+              "value": "={{ $json.body.id}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        384,
+        336
+      ],
+      "id": "0e8de1a5-1823-4058-831b-0367510c481c",
+      "name": "Editlanct"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -688,
+        1680
+      ],
+      "id": "25126c96-eabb-4d9b-8128-bcde66abad25",
+      "name": "Respond to Webhook16"
+    },
+    {
+      "parameters": {
+        "path": "transcaocartao",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1296,
+        1680
+      ],
+      "id": "111f44a6-7464-4565-8e6e-5a16ec6c0fde",
+      "name": "TransacaoCartao",
+      "webhookId": "77c2764f-3d24-48db-aef2-07b64e9ecdeb"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": " select *\nfrom ff_transacoes_fatura_cartao(\n  {{ $json.id_empresa }},\n  '{{ $json.nome }}',\n  '{{ $json.data }}'\n)\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -880,
+        1680
+      ],
+      "id": "96285d28-3ffb-49f8-9095-825422243617",
+      "name": "TransaCartão",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "MJtrOgYw7gXxfNLV",
+          "name": "FinanceFlow"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -624,
+        1856
+      ],
+      "id": "9347ce26-3c6a-46ae-a181-10aca2a35f12",
+      "name": "Respond to Webhook17"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "  \nSELECT \n    t.*,\n    c.nome AS cartao_nome,\n    c.bandeira AS cartao_bandeira\nFROM cartoes_transacoes t\nJOIN cartoes_faturas f \n      ON f.id = t.fatura_id\n     AND f.empresa_id = t.empresa_id\nJOIN cartoes c\n      ON c.id = f.cartao_id\n     AND c.empresa_id = t.empresa_id\nWHERE t.id = {{ $json.id }}\n  AND t.empresa_id = {{ $json.id_empresa }};\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -864,
+        1856
+      ],
+      "id": "e03cea48-c201-413e-bee5-c059a0be9a7a",
+      "name": "TransaCartão1",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "MJtrOgYw7gXxfNLV",
+          "name": "FinanceFlow"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "path": "retrivetranscaocartao",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1296,
+        1856
+      ],
+      "id": "6a34d14a-44e7-4f3a-8323-c9c37e5b98a5",
+      "name": "Edittranscartao",
+      "webhookId": "77c2764f-3d24-48db-aef2-07b64e9ecdeb"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4616a119-9b3f-4dcd-b548-0be8d5f7a3b4",
+              "name": "id_empresa",
+              "value": "={{ $json.query.id_empresa}}",
+              "type": "number"
+            },
+            {
+              "id": "fce9f8e0-ff39-4e73-9ab4-7d8570f51007",
+              "name": "id",
+              "value": "={{ $json.query.id_transacao}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1072,
+        1856
+      ],
+      "id": "745f97a1-a4a8-4e3c-9674-5d503bc46246",
+      "name": "EditarTranscartao"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -496,
+        1504
+      ],
+      "id": "0c033ce8-a06f-47b1-b091-e818bcb7b787",
+      "name": "Respond to Webhook19"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "novatranscartao",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1296,
+        1504
+      ],
+      "id": "7def26c9-2921-4552-aa79-37f49cb2c348",
+      "name": "InsereTransCartão",
+      "webhookId": "77c2764f-3d24-48db-aef2-07b64e9ecdeb"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select * from cartoes_transacoes where id = {{ $json.ff_registrar_compra_credito }} and empresa_id = {{ $('Edtranscartao').item.json.id_empresa }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -688,
+        1504
+      ],
+      "id": "be8d88aa-1111-4980-889c-aff6545e3755",
+      "name": "Execute a SQL query1",
+      "credentials": {
+        "postgres": {
+          "id": "MJtrOgYw7gXxfNLV",
+          "name": "FinanceFlow"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4616a119-9b3f-4dcd-b548-0be8d5f7a3b4",
+              "name": "empresa_id",
+              "value": "={{ $json.body.id_empresa}}",
+              "type": "number"
+            },
+            {
+              "id": "5f3336f9-247a-4886-8eb8-3d7b4986eea8",
+              "name": "cartao_nome",
+              "value": "={{ $json.body.cartao_nome}}",
+              "type": "string"
+            },
+            {
+              "id": "0fbd6cd2-d457-4746-b457-c45b73fef4ec",
+              "name": "valor",
+              "value": "={{ $json.body.valor_total}}",
+              "type": "string"
+            },
+            {
+              "id": "37f90cdc-fd8e-4e63-93f4-965f853e64e5",
+              "name": "parcela_num",
+              "value": "={{ $json.body.parcelas}}",
+              "type": "string"
+            },
+            {
+              "id": "965a678e-d4e3-4126-a08b-65193391b3a5",
+              "name": "parcela_total",
+              "value": "={{ $json.body.parcelas}}",
+              "type": "string"
+            },
+            {
+              "id": "0f4e66fc-7279-4e4b-8fee-c9a2f2923c0c",
+              "name": "data_parcela",
+              "value": "={{ $json.body.data_compra}}",
+              "type": "string"
+            },
+            {
+              "id": "15e950e4-e251-498f-b953-fc28eb8abe62",
+              "name": "descricao",
+              "value": "={{ $json.body.descricao}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1088,
+        1504
+      ],
+      "id": "028c2380-562b-4a35-92b4-3366c2fba64e",
+      "name": "Edtranscartao"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -640,
+        2048
+      ],
+      "id": "0cd16d45-acac-4d37-9261-ca1bf273b301",
+      "name": "Respond to Webhook18"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4616a119-9b3f-4dcd-b548-0be8d5f7a3b4",
+              "name": "id_empresa",
+              "value": "={{ $json.body.id_empresa}}",
+              "type": "number"
+            },
+            {
+              "id": "fce9f8e0-ff39-4e73-9ab4-7d8570f51007",
+              "name": "id",
+              "value": "={{ $json.body.id_transacao}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1088,
+        2048
+      ],
+      "id": "38ac61a7-5262-4171-b99c-2fdc59978a9a",
+      "name": "EditarTranscartao1"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "exclitranscartao",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1280,
+        2048
+      ],
+      "id": "7dd4be59-9e7d-4673-8f1f-33ad33c72da8",
+      "name": "Excluinscartao",
+      "webhookId": "77c2764f-3d24-48db-aef2-07b64e9ecdeb"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -608,
+        688
+      ],
+      "id": "6aa2c50f-66ec-441c-b873-cef5d9065be5",
+      "name": "Respond to Webhook20"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "novo_cartao",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1312,
+        688
+      ],
+      "id": "180cf038-9c25-4445-8eba-b0a51e1ef9ef",
+      "name": "NovoCartao",
+      "webhookId": "77c2764f-3d24-48db-aef2-07b64e9ecdeb"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "   select * from ff_registrar_compra_credito(\n   {{ $json.id_empresa }} ,\n  '{{ $json.nomecartao }}',\n   '{{ $json.descricao }}', \n    {{ $json.valor }},\n   {{ $json.parcelas }} ,\n   '{{ $json.data_compra }}' \n ) \n\n ",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -864,
+        480
+      ],
+      "id": "4171d3f4-affe-4268-a733-248220a7a419",
+      "name": "ff_registrar_compra_credito",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "MJtrOgYw7gXxfNLV",
           "name": "FinanceFlow"
         }
       }
@@ -1774,24 +2364,2807 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": " select nome from categorias_gerenciais where id = {{ $json.conta }} and empresa_id =   {{ $json.id_empresa }}",
+        "query": " SELECT *\n      \nFROM  ff_excluir_transacao_cartao( {{ $json.id_empresa }},   {{ $json.id }}) ;\n ",
         "options": {}
       },
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        208,
-        2080
+        -864,
+        2048
       ],
-      "id": "5a7e3671-7c64-428d-84f7-467ab236e7de",
-      "name": "Execute a SQL query1",
+      "id": "1c4d30a1-d462-42d0-b125-9258d82189a2",
+      "name": "ff_excluir_transacao_cartao",
       "alwaysOutputData": true,
       "credentials": {
         "postgres": {
-          "id": "ZQ9ZHzHwxVG4akbO",
+          "id": "MJtrOgYw7gXxfNLV",
           "name": "FinanceFlow"
         }
       }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": " select  * from ff_registrar_compra_credito(\n  {{ $json.empresa_id }} ,\n  '{{ $json.cartao_nome }}',\n '{{ $json.descricao }}' ,\n {{ $json.valor }}  ,\n  {{ $json.parcela_num }},\n '{{ $json.data_parcela }}'  \n)",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -880,
+        1504
+      ],
+      "id": "359e2ee4-9186-41af-87f5-fe6d5df781b2",
+      "name": "ff_registrar_compra_credito1",
+      "credentials": {
+        "postgres": {
+          "id": "MJtrOgYw7gXxfNLV",
+          "name": "FinanceFlow"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Carregar cópia de segurança\nDivida os arquivos JSON em lotes de 1, verifique se eles foram carregados no repositório antes. Se sim (true), carregue a nova versão do arquivo. Caso contrário (false) crie o arquivo no repositório.",
+        "height": 1148,
+        "width": 1312
+      },
+      "id": "bb8d1a26-f3d4-4f71-975d-f864cd4a3107",
+      "name": "Sticky Note4",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1456,
+        48
+      ]
+    },
+    {
+      "parameters": {
+        "path": "cartoes",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1328,
+        288
+      ],
+      "id": "114e0bfd-20bd-4286-8a7f-121255b82c41",
+      "name": "ListaCartões",
+      "webhookId": "77c2764f-3d24-48db-aef2-07b64e9ecdeb"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select * from   cartoes  where empresa_id = {{ $json.id_empresa }} ;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -864,
+        288
+      ],
+      "id": "b1cd608e-8b4a-4a16-99fb-df4cda29addf",
+      "name": "Cartoes",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "MJtrOgYw7gXxfNLV",
+          "name": "FinanceFlow"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4616a119-9b3f-4dcd-b548-0be8d5f7a3b4",
+              "name": "id_empresa",
+              "value": "={{ $json.query.id_empresa}} ",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1120,
+        288
+      ],
+      "id": "4e6f3dc5-3a5e-46ea-94f0-5e1c461cf123",
+      "name": "cartoesEdit"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -656,
+        288
+      ],
+      "id": "ac85c7c6-f5a0-47ab-92a6-d5da39b3e2cd",
+      "name": "Respond to Webhook8"
+    },
+    {
+      "parameters": {
+        "content": "## Carregar cópia de segurança\nDivida os arquivos JSON em lotes de 1, verifique se eles foram carregados no repositório antes. Se sim (true), carregue a nova versão do arquivo. Caso contrário (false) crie o arquivo no repositório.",
+        "height": 1068,
+        "width": 1328,
+        "color": 4
+      },
+      "id": "a52d1a7d-0f06-40f1-8453-a90edd83a56f",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1456,
+        1216
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Carregar cópia de segurança\nDivida os arquivos JSON em lotes de 1, verifique se eles foram carregados no repositório antes. Se sim (true), carregue a nova versão do arquivo. Caso contrário (false) crie o arquivo no repositório.",
+        "height": 1196,
+        "width": 1312,
+        "color": 3
+      },
+      "id": "9f486b04-9359-49a3-b2e1-706ad8ecf597",
+      "name": "Sticky Note5",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Carregar cópia de segurança\nDivida os arquivos JSON em lotes de 1, verifique se eles foram carregados no repositório antes. Se sim (true), carregue a nova versão do arquivo. Caso contrário (false) crie o arquivo no repositório.",
+        "height": 988,
+        "width": 1280,
+        "color": 5
+      },
+      "id": "fd714ae2-a7f0-42d5-814d-85d00c93da6d",
+      "name": "Sticky Note6",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        16,
+        1248
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4616a119-9b3f-4dcd-b548-0be8d5f7a3b4",
+              "name": "id_empresa",
+              "value": "={{ $json.query.id_empresa}}",
+              "type": "number"
+            },
+            {
+              "id": "fce9f8e0-ff39-4e73-9ab4-7d8570f51007",
+              "name": "nome",
+              "value": "={{ $json.query.cartao}}",
+              "type": "string"
+            },
+            {
+              "id": "dd1713ed-c8bf-488e-bf5f-64f5aee16daa",
+              "name": "data",
+              "value": "={{ $json.query.referencia}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1072,
+        1680
+      ],
+      "id": "68834182-4613-4777-9fab-98987c5e5334",
+      "name": "transcartao"
+    },
+    {
+      "parameters": {
+        "content": "## Carregar cópia de segurança\nDivida os arquivos JSON em lotes de 1, verifique se eles foram carregados no repositório antes. Se sim (true), carregue a nova versão do arquivo. Caso contrário (false) crie o arquivo no repositório.",
+        "height": 128,
+        "width": 1168,
+        "color": 3
+      },
+      "id": "0de20250-99b5-4096-9a27-152a5372e728",
+      "name": "Sticky Note1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1440,
+        1312
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -656,
+        128
+      ],
+      "id": "5953ebe8-230d-4f11-a326-4b0ef42dfad8",
+      "name": "Respond to Webhook21"
+    },
+    {
+      "parameters": {
+        "path": "editarcartao",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1328,
+        128
+      ],
+      "id": "4140c9c6-4504-412f-b97b-715c55496578",
+      "name": "EditarCartões",
+      "webhookId": "77c2764f-3d24-48db-aef2-07b64e9ecdeb"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4616a119-9b3f-4dcd-b548-0be8d5f7a3b4",
+              "name": "id_empresa",
+              "value": "={{ $json.query.empresa_id}} ",
+              "type": "number"
+            },
+            {
+              "id": "51324e38-48c6-4999-a5e0-07f88de5777e",
+              "name": "id",
+              "value": "={{ $json.query.id}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1120,
+        128
+      ],
+      "id": "ed305c69-7cd8-455f-87e6-e3c373f3ba38",
+      "name": "EditarCartões1"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select * from   cartoes  \n  where empresa_id = {{ $json.id_empresa }}\n and id = {{ $json.id }};",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -864,
+        128
+      ],
+      "id": "f785173a-94ba-4e6e-8026-33aefdc6898e",
+      "name": "EditarCartão",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "MJtrOgYw7gXxfNLV",
+          "name": "FinanceFlow"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -640,
+        864
+      ],
+      "id": "8859e1d6-6759-4f6a-af91-9e6efa640662",
+      "name": "Respond to Webhook22"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4616a119-9b3f-4dcd-b548-0be8d5f7a3b4",
+              "name": "id_empresa",
+              "value": "={{ $json.body.empresa_id}}",
+              "type": "number"
+            },
+            {
+              "id": "373fba2f-5a95-41d7-8881-ed39611774b5",
+              "name": "nome_cartao",
+              "value": "={{ $json.body.NomeCartao}}",
+              "type": "string"
+            },
+            {
+              "id": "19aafbb0-761d-43c4-980f-49672742fd58",
+              "name": "bandeira",
+              "value": "={{ $json.body.bandeira}}",
+              "type": "string"
+            },
+            {
+              "id": "a916646f-f4f1-40ea-9da4-7850cbcb06ff",
+              "name": "numero",
+              "value": "={{ $json.body.numero}}",
+              "type": "string"
+            },
+            {
+              "id": "b63c260a-d832-4644-84cd-ee94df4ccec7",
+              "name": "fechamento_dia",
+              "value": "={{ $json.body.fechamento_dia}}",
+              "type": "string"
+            },
+            {
+              "id": "bb6b3121-a463-48b0-94ee-46ffafccbcc1",
+              "name": "vencimento",
+              "value": "={{ $json.body.vencimento}}",
+              "type": "string"
+            },
+            {
+              "id": "f5d0b333-c217-450f-9173-7de4ae0dd30f",
+              "name": "status",
+              "value": "={{ $json.body.status}}",
+              "type": "string"
+            },
+            {
+              "id": "234342fb-06fa-46a9-98f3-995fbf4f6116",
+              "name": "id",
+              "value": "={{ $json.body.id}}",
+              "type": "string"
+            },
+            {
+              "id": "63e47d45-ebcb-402b-92d6-2039f46950c3",
+              "name": "limite",
+              "value": "={{ $json.body.limite}}",
+              "type": "string"
+            },
+            {
+              "id": "c6d9460b-7809-4633-aa86-e0a2e2c25dda",
+              "name": "vencimento_dia",
+              "value": "={{ $json.body.vencimento_dia}}",
+              "type": "string"
+            },
+            {
+              "id": "2f89b1e2-c7c7-4bce-9edf-3a24a74a76db",
+              "name": "limite_total",
+              "value": "={{ $json.body.limite_total}}",
+              "type": "string"
+            },
+            {
+              "id": "da7d9e41-6981-4818-a621-d1b1d282f37c",
+              "name": "nome",
+              "value": "={{ $json.body.nome}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1088,
+        864
+      ],
+      "id": "c3382e32-7c7d-44a6-a5a8-50e3140962fe",
+      "name": "EditNewCartao1"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "cartoes",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "empresa_id",
+              "condition": "eq",
+              "keyValue": "={{ $json.id_empresa }}"
+            },
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $json.id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "empresa_id",
+              "fieldValue": "={{ $json.id_empresa}} "
+            },
+            {
+              "fieldId": "NomeCartão",
+              "fieldValue": "= {{ $json.nome_cartao }}"
+            },
+            {
+              "fieldId": "bandeira",
+              "fieldValue": "={{ $json.bandeira}}"
+            },
+            {
+              "fieldId": "limite_total",
+              "fieldValue": "={{ $json.limite_total }}"
+            },
+            {
+              "fieldId": "fechamento_dia",
+              "fieldValue": "= {{ $json.fechamento_dia }}"
+            },
+            {
+              "fieldId": "vencimento_dia",
+              "fieldValue": "={{ $json.vencimento_dia }}"
+            },
+            {
+              "fieldId": "numero",
+              "fieldValue": "={{ $json.numero }}"
+            },
+            {
+              "fieldId": "Vencimento",
+              "fieldValue": "={{ $json.vencimento}}"
+            },
+            {
+              "fieldId": "status",
+              "fieldValue": "={{ $json.status}}"
+            },
+            {
+              "fieldId": "nome",
+              "fieldValue": "={{ $json.nome }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -864,
+        864
+      ],
+      "id": "b23f5fc8-92f6-45d3-a1d7-f3db2d2f6dc9",
+      "name": "SalvaCartao",
+      "credentials": {
+        "supabaseApi": {
+          "id": "FHa5RDfMmxUg7TuM",
+          "name": "FinanceFlow"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "salvacartao",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1376,
+        864
+      ],
+      "id": "896a1427-2f88-4c3c-9db2-a50b97d3521f",
+      "name": "SalvaCartao1",
+      "webhookId": "77c2764f-3d24-48db-aef2-07b64e9ecdeb"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4616a119-9b3f-4dcd-b548-0be8d5f7a3b4",
+              "name": "id_empresa",
+              "value": "={{ $json.body.id_empresa}}",
+              "type": "number"
+            },
+            {
+              "id": "373fba2f-5a95-41d7-8881-ed39611774b5",
+              "name": "nome_cartao",
+              "value": "={{ $json.body.NomeCartao}}",
+              "type": "string"
+            },
+            {
+              "id": "19aafbb0-761d-43c4-980f-49672742fd58",
+              "name": "bandeira",
+              "value": "={{ $json.body.bandeira}}",
+              "type": "string"
+            },
+            {
+              "id": "a916646f-f4f1-40ea-9da4-7850cbcb06ff",
+              "name": "numero",
+              "value": "={{ $json.body.numero}}",
+              "type": "string"
+            },
+            {
+              "id": "b63c260a-d832-4644-84cd-ee94df4ccec7",
+              "name": "fechamento_dia",
+              "value": "={{ $json.body.fechamento_dia}}",
+              "type": "string"
+            },
+            {
+              "id": "bb6b3121-a463-48b0-94ee-46ffafccbcc1",
+              "name": "vencimento",
+              "value": "={{ $json.body.vencimento}}",
+              "type": "string"
+            },
+            {
+              "id": "f5d0b333-c217-450f-9173-7de4ae0dd30f",
+              "name": "status",
+              "value": "={{ $json.body.status}}",
+              "type": "string"
+            },
+            {
+              "id": "c6d9460b-7809-4633-aa86-e0a2e2c25dda",
+              "name": "vencimento_dia",
+              "value": "={{ $json.body.vencimento_dia}}",
+              "type": "string"
+            },
+            {
+              "id": "2f89b1e2-c7c7-4bce-9edf-3a24a74a76db",
+              "name": "limite_total",
+              "value": "={{ $json.body.limite_total}}",
+              "type": "string"
+            },
+            {
+              "id": "3c55f15c-6281-446c-9a90-71428d00afee",
+              "name": "nome",
+              "value": "={{ $json.body.nome}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1056,
+        688
+      ],
+      "id": "3221b99c-01a1-40b1-82ba-e7510c95c13c",
+      "name": "EditNewCartao"
+    },
+    {
+      "parameters": {
+        "tableId": "cartoes",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "empresa_id",
+              "fieldValue": "={{ $json.id_empresa}} "
+            },
+            {
+              "fieldId": "NomeCartão",
+              "fieldValue": "= {{ $json.nome_cartao }}"
+            },
+            {
+              "fieldId": "bandeira",
+              "fieldValue": "={{ $json.bandeira}}"
+            },
+            {
+              "fieldId": "limite_total",
+              "fieldValue": "={{ $json.limite_total }}"
+            },
+            {
+              "fieldId": "fechamento_dia",
+              "fieldValue": "= {{ $json.fechamento_dia }}"
+            },
+            {
+              "fieldId": "vencimento_dia",
+              "fieldValue": "={{ $json.vencimento_dia }}"
+            },
+            {
+              "fieldId": "numero",
+              "fieldValue": "={{ $json.numero }}"
+            },
+            {
+              "fieldId": "Vencimento",
+              "fieldValue": "={{ $json.vencimento}}"
+            },
+            {
+              "fieldId": "status",
+              "fieldValue": "={{ $json.status}}"
+            },
+            {
+              "fieldId": "nome",
+              "fieldValue": "={{ $json.nome }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -848,
+        688
+      ],
+      "id": "6f49a7f7-9a51-4d27-a4d9-bf8eb2e5f595",
+      "name": "SalvaCartao2",
+      "credentials": {
+        "supabaseApi": {
+          "id": "FHa5RDfMmxUg7TuM",
+          "name": "FinanceFlow"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -496,
+        1040
+      ],
+      "id": "e3e49da1-3807-427f-9031-c5c64aa1aea3",
+      "name": "Respond to Webhook23"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": " delete \nFROM cartoes\nWHERE empresa_id = {{ $json.id_empresa }}\n  AND id = {{ $json.id }} \n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -864,
+        1040
+      ],
+      "id": "20a3559d-a72c-4240-8b76-553795ef7765",
+      "name": "DelCartões",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "MJtrOgYw7gXxfNLV",
+          "name": "FinanceFlow"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4616a119-9b3f-4dcd-b548-0be8d5f7a3b4",
+              "name": "id_empresa",
+              "value": "={{ $json.body.id_empresa}}",
+              "type": "number"
+            },
+            {
+              "id": "fce9f8e0-ff39-4e73-9ab4-7d8570f51007",
+              "name": "id",
+              "value": "={{ $json.body.id}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1120,
+        1040
+      ],
+      "id": "270d7a15-e89b-43e3-9ef1-7eb12e667732",
+      "name": "Delcartoes"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "excluircartoes",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1328,
+        1040
+      ],
+      "id": "9deefd61-5b1e-401a-8b6d-6d35b95ff85e",
+      "name": "DelCard",
+      "webhookId": "77c2764f-3d24-48db-aef2-07b64e9ecdeb"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        2848,
+        3680
+      ],
+      "id": "49efac4e-a8ef-47ef-93f4-b9e738ddf625",
+      "name": "Respond to Webhook24"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4616a119-9b3f-4dcd-b548-0be8d5f7a3b4",
+              "name": "id_empresa",
+              "value": "= 1",
+              "type": "number"
+            },
+            {
+              "id": "24afd85d-d5a2-48b2-be90-942470e0438f",
+              "name": "nomecartao",
+              "value": "=Nubank",
+              "type": "string"
+            },
+            {
+              "id": "230b6c3d-f5c9-4757-b5af-a3b0958c839d",
+              "name": "descricao",
+              "value": "Compra no posto do Carlin gasolina aditivada",
+              "type": "string"
+            },
+            {
+              "id": "5a635fe2-ab7b-4d45-9dc5-e5f2f4eea1c9",
+              "name": "valor",
+              "value": 150,
+              "type": "number"
+            },
+            {
+              "id": "f30f2fa4-b62e-4b2c-89dd-2af16c86bab4",
+              "name": "parcelas",
+              "value": 1,
+              "type": "number"
+            },
+            {
+              "id": "aa3b2e2e-a468-4dae-9cf8-67e4dcef888e",
+              "name": "data_compra",
+              "value": "20251116",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2192,
+        3680
+      ],
+      "id": "81b4812e-3484-4541-8f7b-690b662d55c4",
+      "name": "CartãoTransacaoEdit2"
+    },
+    {
+      "parameters": {
+        "path": "novatransacaocartao",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        1968,
+        3680
+      ],
+      "id": "b0685e07-addd-4d76-9485-75afb1f404a4",
+      "name": "InseretransacaoCartão1",
+      "webhookId": "77c2764f-3d24-48db-aef2-07b64e9ecdeb"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": " select * from cartoes_transacoes\n     where empresa_id = {{ $('CartãoTransacaoEdit1').item.json.id_empresa }}\n     and   id =  {{ $json.ff_registrar_compra_credito }};",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2640,
+        3680
+      ],
+      "id": "f58a628a-fcf7-451d-ad8a-e6babce277bb",
+      "name": "Execute a SQL query2",
+      "credentials": {
+        "postgres": {
+          "id": "MJtrOgYw7gXxfNLV",
+          "name": "FinanceFlow"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        2688,
+        3888
+      ],
+      "id": "f69fa543-ac9c-4a5a-befb-4dc64ef4f28b",
+      "name": "Respond to Webhook25"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "novo_cartao",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        1984,
+        3888
+      ],
+      "id": "f2c2365f-06cf-4242-bd4d-483ac11cf096",
+      "name": "NovoCartao1",
+      "webhookId": "77c2764f-3d24-48db-aef2-07b64e9ecdeb"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "   select * from ff_registrar_compra_credito(\n   {{ $json.id_empresa }} ,\n  '{{ $json.nomecartao }}',\n   '{{ $json.descricao }}', \n    {{ $json.valor }},\n   {{ $json.parcelas }} ,\n   '{{ $json.data_compra }}' \n ) \n\n ",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2432,
+        3680
+      ],
+      "id": "736adf29-ba3a-4a7c-8924-e6aee354dde0",
+      "name": "ff_registrar_compra_credito2",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "MJtrOgYw7gXxfNLV",
+          "name": "FinanceFlow"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "path": "cartoes",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        1968,
+        3488
+      ],
+      "id": "9a60e912-5468-4984-9750-b051f9b2d249",
+      "name": "ListaCartões1",
+      "webhookId": "77c2764f-3d24-48db-aef2-07b64e9ecdeb"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select * from   cartoes  where empresa_id = {{ $json.id_empresa }} ;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2432,
+        3488
+      ],
+      "id": "a4baf89b-4cd6-4556-b8e7-119439ab6079",
+      "name": "Cartoes1",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "MJtrOgYw7gXxfNLV",
+          "name": "FinanceFlow"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4616a119-9b3f-4dcd-b548-0be8d5f7a3b4",
+              "name": "id_empresa",
+              "value": "={{ $json.query.id_empresa}} ",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2176,
+        3488
+      ],
+      "id": "3bcd8606-0c8f-4249-ae3b-2d33671b26cb",
+      "name": "cartoesEdit1"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        2640,
+        3488
+      ],
+      "id": "9c5c7e46-f77b-4bab-b92a-b1ff5d46750a",
+      "name": "Respond to Webhook26"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        2640,
+        3328
+      ],
+      "id": "df7fce85-dbac-483c-80de-451c067ca291",
+      "name": "Respond to Webhook27"
+    },
+    {
+      "parameters": {
+        "path": "editarcartao",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        1968,
+        3328
+      ],
+      "id": "8088d127-ab1c-4ac7-a667-aec40293481a",
+      "name": "EditarCartões2",
+      "webhookId": "77c2764f-3d24-48db-aef2-07b64e9ecdeb"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4616a119-9b3f-4dcd-b548-0be8d5f7a3b4",
+              "name": "id_empresa",
+              "value": "={{ $json.query.empresa_id}} ",
+              "type": "number"
+            },
+            {
+              "id": "51324e38-48c6-4999-a5e0-07f88de5777e",
+              "name": "id",
+              "value": "={{ $json.query.id}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2176,
+        3328
+      ],
+      "id": "121520b3-a5f6-4b9f-9316-d81e9728954b",
+      "name": "EditarCartões3"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select * from   cartoes  \n  where empresa_id = {{ $json.id_empresa }}\n and id = {{ $json.id }};",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2432,
+        3328
+      ],
+      "id": "ef448007-edd6-4470-a60d-65df29c38fdf",
+      "name": "EditarCartão1",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "MJtrOgYw7gXxfNLV",
+          "name": "FinanceFlow"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        2656,
+        4064
+      ],
+      "id": "4b132ad8-a386-4770-ab50-592ce4041203",
+      "name": "Respond to Webhook28"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4616a119-9b3f-4dcd-b548-0be8d5f7a3b4",
+              "name": "id_empresa",
+              "value": "={{ $json.body.empresa_id}}",
+              "type": "number"
+            },
+            {
+              "id": "373fba2f-5a95-41d7-8881-ed39611774b5",
+              "name": "nome_cartao",
+              "value": "={{ $json.body.NomeCartao}}",
+              "type": "string"
+            },
+            {
+              "id": "19aafbb0-761d-43c4-980f-49672742fd58",
+              "name": "bandeira",
+              "value": "={{ $json.body.bandeira}}",
+              "type": "string"
+            },
+            {
+              "id": "a916646f-f4f1-40ea-9da4-7850cbcb06ff",
+              "name": "numero",
+              "value": "={{ $json.body.numero}}",
+              "type": "string"
+            },
+            {
+              "id": "b63c260a-d832-4644-84cd-ee94df4ccec7",
+              "name": "fechamento_dia",
+              "value": "={{ $json.body.fechamento_dia}}",
+              "type": "string"
+            },
+            {
+              "id": "bb6b3121-a463-48b0-94ee-46ffafccbcc1",
+              "name": "vencimento",
+              "value": "={{ $json.body.vencimento}}",
+              "type": "string"
+            },
+            {
+              "id": "f5d0b333-c217-450f-9173-7de4ae0dd30f",
+              "name": "status",
+              "value": "={{ $json.body.status}}",
+              "type": "string"
+            },
+            {
+              "id": "234342fb-06fa-46a9-98f3-995fbf4f6116",
+              "name": "id",
+              "value": "={{ $json.body.id}}",
+              "type": "string"
+            },
+            {
+              "id": "63e47d45-ebcb-402b-92d6-2039f46950c3",
+              "name": "limite",
+              "value": "={{ $json.body.limite}}",
+              "type": "string"
+            },
+            {
+              "id": "c6d9460b-7809-4633-aa86-e0a2e2c25dda",
+              "name": "vencimento_dia",
+              "value": "={{ $json.body.vencimento_dia}}",
+              "type": "string"
+            },
+            {
+              "id": "2f89b1e2-c7c7-4bce-9edf-3a24a74a76db",
+              "name": "limite_total",
+              "value": "={{ $json.body.limite_total}}",
+              "type": "string"
+            },
+            {
+              "id": "da7d9e41-6981-4818-a621-d1b1d282f37c",
+              "name": "nome",
+              "value": "={{ $json.body.nome}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2208,
+        4064
+      ],
+      "id": "5ae37185-5d43-4f45-8f17-d229e4904910",
+      "name": "EditNewCartao2"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "cartoes",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "empresa_id",
+              "condition": "eq",
+              "keyValue": "={{ $json.id_empresa }}"
+            },
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $json.id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "empresa_id",
+              "fieldValue": "={{ $json.id_empresa}} "
+            },
+            {
+              "fieldId": "NomeCartão",
+              "fieldValue": "= {{ $json.nome_cartao }}"
+            },
+            {
+              "fieldId": "bandeira",
+              "fieldValue": "={{ $json.bandeira}}"
+            },
+            {
+              "fieldId": "limite_total",
+              "fieldValue": "={{ $json.limite_total }}"
+            },
+            {
+              "fieldId": "fechamento_dia",
+              "fieldValue": "= {{ $json.fechamento_dia }}"
+            },
+            {
+              "fieldId": "vencimento_dia",
+              "fieldValue": "={{ $json.vencimento_dia }}"
+            },
+            {
+              "fieldId": "numero",
+              "fieldValue": "={{ $json.numero }}"
+            },
+            {
+              "fieldId": "Vencimento",
+              "fieldValue": "={{ $json.vencimento}}"
+            },
+            {
+              "fieldId": "status",
+              "fieldValue": "={{ $json.status}}"
+            },
+            {
+              "fieldId": "nome",
+              "fieldValue": "={{ $json.nome }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2432,
+        4064
+      ],
+      "id": "28d039c4-9953-4a43-87d2-1ad950de16ab",
+      "name": "SalvaCartao3",
+      "credentials": {
+        "supabaseApi": {
+          "id": "FHa5RDfMmxUg7TuM",
+          "name": "FinanceFlow"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "salvacartao",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        1920,
+        4064
+      ],
+      "id": "2c4d731a-5c6a-4857-aa1c-0d7f267c2766",
+      "name": "SalvaCartao4",
+      "webhookId": "77c2764f-3d24-48db-aef2-07b64e9ecdeb"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4616a119-9b3f-4dcd-b548-0be8d5f7a3b4",
+              "name": "id_empresa",
+              "value": "={{ $json.body.id_empresa}}",
+              "type": "number"
+            },
+            {
+              "id": "373fba2f-5a95-41d7-8881-ed39611774b5",
+              "name": "nome_cartao",
+              "value": "={{ $json.body.NomeCartao}}",
+              "type": "string"
+            },
+            {
+              "id": "19aafbb0-761d-43c4-980f-49672742fd58",
+              "name": "bandeira",
+              "value": "={{ $json.body.bandeira}}",
+              "type": "string"
+            },
+            {
+              "id": "a916646f-f4f1-40ea-9da4-7850cbcb06ff",
+              "name": "numero",
+              "value": "={{ $json.body.numero}}",
+              "type": "string"
+            },
+            {
+              "id": "b63c260a-d832-4644-84cd-ee94df4ccec7",
+              "name": "fechamento_dia",
+              "value": "={{ $json.body.fechamento_dia}}",
+              "type": "string"
+            },
+            {
+              "id": "bb6b3121-a463-48b0-94ee-46ffafccbcc1",
+              "name": "vencimento",
+              "value": "={{ $json.body.vencimento}}",
+              "type": "string"
+            },
+            {
+              "id": "f5d0b333-c217-450f-9173-7de4ae0dd30f",
+              "name": "status",
+              "value": "={{ $json.body.status}}",
+              "type": "string"
+            },
+            {
+              "id": "c6d9460b-7809-4633-aa86-e0a2e2c25dda",
+              "name": "vencimento_dia",
+              "value": "={{ $json.body.vencimento_dia}}",
+              "type": "string"
+            },
+            {
+              "id": "2f89b1e2-c7c7-4bce-9edf-3a24a74a76db",
+              "name": "limite_total",
+              "value": "={{ $json.body.limite_total}}",
+              "type": "string"
+            },
+            {
+              "id": "3c55f15c-6281-446c-9a90-71428d00afee",
+              "name": "nome",
+              "value": "={{ $json.body.nome}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2240,
+        3888
+      ],
+      "id": "bc64f255-7ee1-4223-9fda-6e1a89a306e3",
+      "name": "EditNewCartao3"
+    },
+    {
+      "parameters": {
+        "tableId": "cartoes",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "empresa_id",
+              "fieldValue": "={{ $json.id_empresa}} "
+            },
+            {
+              "fieldId": "NomeCartão",
+              "fieldValue": "= {{ $json.nome_cartao }}"
+            },
+            {
+              "fieldId": "bandeira",
+              "fieldValue": "={{ $json.bandeira}}"
+            },
+            {
+              "fieldId": "limite_total",
+              "fieldValue": "={{ $json.limite_total }}"
+            },
+            {
+              "fieldId": "fechamento_dia",
+              "fieldValue": "= {{ $json.fechamento_dia }}"
+            },
+            {
+              "fieldId": "vencimento_dia",
+              "fieldValue": "={{ $json.vencimento_dia }}"
+            },
+            {
+              "fieldId": "numero",
+              "fieldValue": "={{ $json.numero }}"
+            },
+            {
+              "fieldId": "Vencimento",
+              "fieldValue": "={{ $json.vencimento}}"
+            },
+            {
+              "fieldId": "status",
+              "fieldValue": "={{ $json.status}}"
+            },
+            {
+              "fieldId": "nome",
+              "fieldValue": "={{ $json.nome }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2448,
+        3888
+      ],
+      "id": "62e73dd2-9129-40fc-b69f-5158a525a7da",
+      "name": "SalvaCartao5",
+      "credentials": {
+        "supabaseApi": {
+          "id": "FHa5RDfMmxUg7TuM",
+          "name": "FinanceFlow"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        2800,
+        4240
+      ],
+      "id": "489562cd-5175-4f7c-8e3c-129c952824e6",
+      "name": "Respond to Webhook29"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": " delete \nFROM cartoes\nWHERE empresa_id = {{ $json.id_empresa }}\n  AND id = {{ $json.id }} \n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2432,
+        4240
+      ],
+      "id": "fd24b307-e3b8-408c-a435-eee03f7eebfe",
+      "name": "DelCartões1",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "MJtrOgYw7gXxfNLV",
+          "name": "FinanceFlow"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4616a119-9b3f-4dcd-b548-0be8d5f7a3b4",
+              "name": "id_empresa",
+              "value": "={{ $json.body.id_empresa}}",
+              "type": "number"
+            },
+            {
+              "id": "fce9f8e0-ff39-4e73-9ab4-7d8570f51007",
+              "name": "id",
+              "value": "={{ $json.body.id}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2176,
+        4240
+      ],
+      "id": "620f46f3-e934-48ea-aa77-fc071aaa6dc9",
+      "name": "Delcartoes1"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "excluircartoes",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        1968,
+        4240
+      ],
+      "id": "e8171d98-17dd-4c6e-9ed1-f933a70a497a",
+      "name": "DelCard1",
+      "webhookId": "77c2764f-3d24-48db-aef2-07b64e9ecdeb"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -2096,
+        400
+      ],
+      "id": "24a1541b-face-451b-a0e0-517a96d338b5",
+      "name": "Respond to Webhook31"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -2048,
+        576
+      ],
+      "id": "49aab032-9553-43be-b9af-1561a3f9a507",
+      "name": "Respond to Webhook32"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "  \nSELECT \n    t.*,\n    c.nome AS cartao_nome,\n    c.bandeira AS cartao_bandeira\nFROM cartoes_transacoes t\nJOIN cartoes_faturas f \n      ON f.id = t.fatura_id\n     AND f.empresa_id = t.empresa_id\nJOIN cartoes c\n      ON c.id = f.cartao_id\n     AND c.empresa_id = t.empresa_id\nWHERE t.id = {{ $json.id }}\n  AND t.empresa_id = {{ $json.id_empresa }};\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -2288,
+        576
+      ],
+      "id": "9125e693-4990-4a27-a4cb-b1dca97badd6",
+      "name": "TransaCartão3",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "MJtrOgYw7gXxfNLV",
+          "name": "FinanceFlow"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "path": "retrivetranscaocartao",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -2720,
+        576
+      ],
+      "id": "7e372960-03c8-42c0-9cfd-b72fd8de6ef0",
+      "name": "Edittranscartao1",
+      "webhookId": "77c2764f-3d24-48db-aef2-07b64e9ecdeb"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4616a119-9b3f-4dcd-b548-0be8d5f7a3b4",
+              "name": "id_empresa",
+              "value": "={{ $json.query.id_empresa}}",
+              "type": "number"
+            },
+            {
+              "id": "fce9f8e0-ff39-4e73-9ab4-7d8570f51007",
+              "name": "id",
+              "value": "={{ $json.query.id_transacao}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2496,
+        576
+      ],
+      "id": "4bd52a79-6345-4674-9a4a-fc2f1ef28a04",
+      "name": "EditarTranscartao2"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -1904,
+        224
+      ],
+      "id": "42acab7f-4d6c-47c5-8506-0fc229cc7581",
+      "name": "Respond to Webhook33"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -2064,
+        768
+      ],
+      "id": "8e7a440f-a8c2-4752-908c-c225688a72b1",
+      "name": "Respond to Webhook34"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4616a119-9b3f-4dcd-b548-0be8d5f7a3b4",
+              "name": "id_empresa",
+              "value": "={{ $json.body.id_empresa}}",
+              "type": "number"
+            },
+            {
+              "id": "fce9f8e0-ff39-4e73-9ab4-7d8570f51007",
+              "name": "id",
+              "value": "={{ $json.body.id_transacao}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2512,
+        768
+      ],
+      "id": "ab7960d0-82ba-45ea-886b-3fa63a7d8c9e",
+      "name": "EditarTranscartao3"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "exclitranscartao",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -2704,
+        768
+      ],
+      "id": "237e5ee6-4635-4da6-8dd7-8d5886a52f46",
+      "name": "Excluinscartao1",
+      "webhookId": "77c2764f-3d24-48db-aef2-07b64e9ecdeb"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": " SELECT *\n      \nFROM  ff_excluir_transacao_cartao( {{ $json.id_empresa }},   {{ $json.id }}) ;\n ",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -2288,
+        768
+      ],
+      "id": "ec830de7-5e32-4e5a-8cfc-07509716b769",
+      "name": "ff_excluir_transacao_cartao1",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "MJtrOgYw7gXxfNLV",
+          "name": "FinanceFlow"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Carregar cópia de segurança\nDivida os arquivos JSON em lotes de 1, verifique se eles foram carregados no repositório antes. Se sim (true), carregue a nova versão do arquivo. Caso contrário (false) crie o arquivo no repositório.",
+        "height": 1164,
+        "width": 1328,
+        "color": 4
+      },
+      "id": "b2841e66-7a7d-45a1-b7a2-6f9f6f8cdac2",
+      "name": "Sticky Note2",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -2880,
+        32
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "novacontapagar",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -2720,
+        224
+      ],
+      "id": "766fc7a2-7430-4eb1-b984-bf77bd91d4ad",
+      "name": "InsereContapagar",
+      "webhookId": "77c2764f-3d24-48db-aef2-07b64e9ecdeb"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4616a119-9b3f-4dcd-b548-0be8d5f7a3b4",
+              "name": "empresa_id",
+              "value": "={{ $json.body.empresa_id}}",
+              "type": "number"
+            },
+            {
+              "id": "5f3336f9-247a-4886-8eb8-3d7b4986eea8",
+              "name": "descricao",
+              "value": "={{ $json.body.descricao}}",
+              "type": "string"
+            },
+            {
+              "id": "0fbd6cd2-d457-4746-b457-c45b73fef4ec",
+              "name": "valor",
+              "value": "={{ $json.body.valor}}",
+              "type": "string"
+            },
+            {
+              "id": "0f4e66fc-7279-4e4b-8fee-c9a2f2923c0c",
+              "name": "vencimento",
+              "value": "={{ $json.body.vencimento}}",
+              "type": "string"
+            },
+            {
+              "id": "15e950e4-e251-498f-b953-fc28eb8abe62",
+              "name": "descricao",
+              "value": "={{ $json.body.descricao}}",
+              "type": "string"
+            },
+            {
+              "id": "2644f0d8-d165-4a3d-b186-4f2e72da2a8b",
+              "name": "categoria_id",
+              "value": "={{ $json.body.categoria_id}}",
+              "type": "string"
+            },
+            {
+              "id": "de393231-6bc4-46b1-a9fb-fa878f154e3a",
+              "name": "parcelas",
+              "value": "={{ $json.body.parcelas}}",
+              "type": "string"
+            },
+            {
+              "id": "71ad2246-2fab-44df-984a-c8967ab724a3",
+              "name": "fornecedor_id",
+              "value": "={{ $json.body.fornecedor_id}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2512,
+        224
+      ],
+      "id": "e12ae414-6d4f-44ad-ab27-c4c70bc633c2",
+      "name": "EditaaContapagar"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select * from contas_a_pagar \n  where id = {{ $json.ff_registrar_conta_pagar_com_parcelas }}\n  and empresa_id = {{ $('EditaaContapagar').item.json.empresa_id }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -2112,
+        224
+      ],
+      "id": "d54680bc-7b58-4d43-8b67-c52356ca256d",
+      "name": "ResultConta_pagar",
+      "credentials": {
+        "postgres": {
+          "id": "MJtrOgYw7gXxfNLV",
+          "name": "FinanceFlow"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": " select *\nfrom ff_consultar_contas_pagar(\n  {{ $json.id_empresa }},\n  '{{ $json.status }}',\n  '{{ $json.data_ini}}', \n  '{{ $json.data_fim}}',\n   {{ $json.fornecedor_id }}\n)\n\n\n ",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -2304,
+        400
+      ],
+      "id": "2080bcb8-8e31-4c99-be5c-66c90b5b8d62",
+      "name": "ff_consultar_contas_pagar",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "MJtrOgYw7gXxfNLV",
+          "name": "FinanceFlow"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4616a119-9b3f-4dcd-b548-0be8d5f7a3b4",
+              "name": "id_empresa",
+              "value": "={{ $json.query.empresa_id}}",
+              "type": "number"
+            },
+            {
+              "id": "fce9f8e0-ff39-4e73-9ab4-7d8570f51007",
+              "name": "status",
+              "value": "={{ $json.query.status}}",
+              "type": "string"
+            },
+            {
+              "id": "dd1713ed-c8bf-488e-bf5f-64f5aee16daa",
+              "name": "data_ini",
+              "value": "={{ $json.query.data_ini}}",
+              "type": "string"
+            },
+            {
+              "id": "dc098c67-1af5-44ef-ae1d-3992855f7fde",
+              "name": "data_fim",
+              "value": "={{ $json.query.data_fim}}",
+              "type": "string"
+            },
+            {
+              "id": "80e0ae6a-d205-478d-bb01-118324bbe421",
+              "name": "fornecedor_id",
+              "value": "={{ $json.query.fornecedor_id}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2496,
+        400
+      ],
+      "id": "9d869651-e2d1-42d3-8f78-fef33d19b4c5",
+      "name": "transcontapg"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -2048,
+        1520
+      ],
+      "id": "e5ef6b5e-57c1-45ef-ac62-88cb30d19216",
+      "name": "Respond to Webhook35"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -2048,
+        1696
+      ],
+      "id": "0be921c7-853d-4fea-8329-db6466f75438",
+      "name": "Respond to Webhook36"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -2032,
+        1840
+      ],
+      "id": "e27616fe-6306-4478-a80e-39b2419900f6",
+      "name": "Respond to Webhook38"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4616a119-9b3f-4dcd-b548-0be8d5f7a3b4",
+              "name": "id_empresa",
+              "value": "={{ $json.body.empresa_id}}",
+              "type": "number"
+            },
+            {
+              "id": "fce9f8e0-ff39-4e73-9ab4-7d8570f51007",
+              "name": "id",
+              "value": "={{ $json.body.id}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2448,
+        1840
+      ],
+      "id": "1fd9bda3-6183-4b8e-853e-f7391ac13614",
+      "name": "EditarTranscartao5"
+    },
+    {
+      "parameters": {
+        "content": "## Pessao Forncedor Cliente\nWebhook s relacionados a pewsssoa cliente fornecedor",
+        "height": 1164,
+        "width": 1328,
+        "color": 4
+      },
+      "id": "e5cee270-37fa-4841-961c-b080f6aae6f6",
+      "name": "Sticky Note3",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -2864,
+        1312
+      ]
+    },
+    {
+      "parameters": {
+        "path": "fornecedorcliente",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -2672,
+        1520
+      ],
+      "id": "192f1e34-ed98-43c2-aa89-e6914dd6c821",
+      "name": "ForncededorCliente",
+      "webhookId": "77c2764f-3d24-48db-aef2-07b64e9ecdeb"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4616a119-9b3f-4dcd-b548-0be8d5f7a3b4",
+              "name": "id_empresa",
+              "value": "={{ $json.query.empresa_id}}",
+              "type": "number"
+            },
+            {
+              "id": "b0e434d4-9925-47e2-acb2-0d645c9ca347",
+              "name": "tipo",
+              "value": "={{ $json.query.tipo}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2448,
+        1520
+      ],
+      "id": "43b8c869-3ef8-4256-bbdf-96c546516aa4",
+      "name": "EditForneCliente"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": " select *\nfrom pessoa where empresa_id = \n  {{ $json.id_empresa }} and tipo = \n  '{{ $json.tipo }}' ;\n\n\n ",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -2256,
+        1520
+      ],
+      "id": "62bf57d7-ee04-4c4a-beb0-f51b18586475",
+      "name": "ForneceClientePessoa",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "MJtrOgYw7gXxfNLV",
+          "name": "FinanceFlow"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "path": "editfornecedorcliente",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -2672,
+        1696
+      ],
+      "id": "3c563b5c-d216-485c-a7eb-f3f9a0c8915f",
+      "name": "EditForneCliente1",
+      "webhookId": "77c2764f-3d24-48db-aef2-07b64e9ecdeb"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4616a119-9b3f-4dcd-b548-0be8d5f7a3b4",
+              "name": "id_empresa",
+              "value": "={{ $json.query.empresa_id}}",
+              "type": "number"
+            },
+            {
+              "id": "fce9f8e0-ff39-4e73-9ab4-7d8570f51007",
+              "name": "id",
+              "value": "={{ $json.query.id}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2448,
+        1696
+      ],
+      "id": "bd7e3d6a-4001-43aa-a96d-850e87675508",
+      "name": "EditarFroCli1"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "  \nSELECT \n     *\nFROM pessoa  \nWHERE id = {{ $json.id }}\n  AND empresa_id = {{ $json.id_empresa }};\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -2240,
+        1696
+      ],
+      "id": "f5772d6c-0d2b-4f48-800c-5edf20c21f33",
+      "name": "FormFornecedorCliente",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "MJtrOgYw7gXxfNLV",
+          "name": "FinanceFlow"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -2032,
+        2000
+      ],
+      "id": "9ca62d93-11c7-47a2-97d3-56788edbcdbb",
+      "name": "Respond to Webhook30"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -2032,
+        2144
+      ],
+      "id": "a0c671d6-25c9-4d3d-b033-6cb3289b171d",
+      "name": "Respond to Webhook39"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "salvafornecedor",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -2672,
+        2000
+      ],
+      "id": "0c0c1410-3cc2-4d6f-b741-7968eeb25399",
+      "name": "SalvaForCli",
+      "webhookId": "77c2764f-3d24-48db-aef2-07b64e9ecdeb"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "pessoa",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $json.id }}"
+            },
+            {
+              "keyName": "empresa_id",
+              "condition": "eq",
+              "keyValue": "={{ $json.id_empresa }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "empresa_id",
+              "fieldValue": "={{ $json.id_empresa}} "
+            },
+            {
+              "fieldId": "tipo",
+              "fieldValue": "={{ $json.tipo }}"
+            },
+            {
+              "fieldId": "nome",
+              "fieldValue": "={{ $json.nome }}"
+            },
+            {
+              "fieldId": "cpf_cnpj",
+              "fieldValue": "={{ $json.cpf_cnpj }}"
+            },
+            {
+              "fieldId": "rg_ie",
+              "fieldValue": "={{ $json.rg_ie }}"
+            },
+            {
+              "fieldId": "telefone",
+              "fieldValue": "={{ $json.telefone }}"
+            },
+            {
+              "fieldId": "whatsapp",
+              "fieldValue": "={{ $json.whatsapp }}"
+            },
+            {
+              "fieldId": "email",
+              "fieldValue": "={{ $json.email }}"
+            },
+            {
+              "fieldId": "endereco",
+              "fieldValue": "={{ $json.endereco }}"
+            },
+            {
+              "fieldId": "bairro",
+              "fieldValue": "={{ $json.bairro }}"
+            },
+            {
+              "fieldId": "cidade",
+              "fieldValue": "={{ $json.cidade }}"
+            },
+            {
+              "fieldId": "estado",
+              "fieldValue": "={{ $json.estado }}"
+            },
+            {
+              "fieldId": "cep",
+              "fieldValue": "={{ $json.cep }}"
+            },
+            {
+              "fieldId": "obs",
+              "fieldValue": "={{ $json.obs }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -2240,
+        2000
+      ],
+      "id": "b51624a5-72a9-491e-a50a-73073b26fa04",
+      "name": "SalvaForneceClien",
+      "credentials": {
+        "supabaseApi": {
+          "id": "FHa5RDfMmxUg7TuM",
+          "name": "FinanceFlow"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4616a119-9b3f-4dcd-b548-0be8d5f7a3b4",
+              "name": "id_empresa",
+              "value": "={{ $json.body.empresa_id}}",
+              "type": "number"
+            },
+            {
+              "id": "373fba2f-5a95-41d7-8881-ed39611774b5",
+              "name": "tipo",
+              "value": "={{ $json.body.tipo}}",
+              "type": "string"
+            },
+            {
+              "id": "19aafbb0-761d-43c4-980f-49672742fd58",
+              "name": "nome",
+              "value": "={{ $json.body.nome}}",
+              "type": "string"
+            },
+            {
+              "id": "a916646f-f4f1-40ea-9da4-7850cbcb06ff",
+              "name": "cpf_cnpj",
+              "value": "={{ $json.body.cpf_cnpj}}",
+              "type": "string"
+            },
+            {
+              "id": "b63c260a-d832-4644-84cd-ee94df4ccec7",
+              "name": "rg_ie",
+              "value": "={{ $json.body.rg_ie}}",
+              "type": "string"
+            },
+            {
+              "id": "c6d9460b-7809-4633-aa86-e0a2e2c25dda",
+              "name": "telefone",
+              "value": "={{ $json.body.telefone}}",
+              "type": "string"
+            },
+            {
+              "id": "2f89b1e2-c7c7-4bce-9edf-3a24a74a76db",
+              "name": "whatsapp",
+              "value": "={{ $json.body.whatsapp}}",
+              "type": "string"
+            },
+            {
+              "id": "3c55f15c-6281-446c-9a90-71428d00afee",
+              "name": "email",
+              "value": "={{ $json.body.email}}",
+              "type": "string"
+            },
+            {
+              "id": "f27b116b-79e3-4115-b020-19282f1d0301",
+              "name": "endereco",
+              "value": "={{ $json.body.endereco}}",
+              "type": "string"
+            },
+            {
+              "id": "5b6967a2-a8af-4dd4-bbf1-e979c55b0bc3",
+              "name": "bairro",
+              "value": "={{ $json.body.bairro}}",
+              "type": "string"
+            },
+            {
+              "id": "e7d195ea-f64c-4f92-ac7c-9247afeb7a63",
+              "name": "cidade",
+              "value": "={{ $json.body.cidade}}",
+              "type": "string"
+            },
+            {
+              "id": "1eaf0ca6-ca2b-494a-81dc-9a3e08964f4b",
+              "name": "estado",
+              "value": "={{ $json.body.estado}}",
+              "type": "string"
+            },
+            {
+              "id": "d1d6c68e-b1eb-40fd-8f58-40e75a04bb89",
+              "name": "cep",
+              "value": "={{ $json.body.cep}}",
+              "type": "string"
+            },
+            {
+              "id": "7e056b54-da25-4be0-941d-824af711e0d4",
+              "name": "obs",
+              "value": "={{ $json.body.obs}}",
+              "type": "string"
+            },
+            {
+              "id": "a4f0dceb-7ad8-47a3-bce1-5f687d584030",
+              "name": "id",
+              "value": "={{ $json.body.id}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2448,
+        2000
+      ],
+      "id": "1d029afd-18cf-42dd-9e8c-53faeefedaa0",
+      "name": "EditSalvaForneceClien"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4616a119-9b3f-4dcd-b548-0be8d5f7a3b4",
+              "name": "id_empresa",
+              "value": "={{ $json.body.empresa_id}}",
+              "type": "number"
+            },
+            {
+              "id": "373fba2f-5a95-41d7-8881-ed39611774b5",
+              "name": "tipo",
+              "value": "={{ $json.body.tipo}}",
+              "type": "string"
+            },
+            {
+              "id": "19aafbb0-761d-43c4-980f-49672742fd58",
+              "name": "nome",
+              "value": "={{ $json.body.nome}}",
+              "type": "string"
+            },
+            {
+              "id": "a916646f-f4f1-40ea-9da4-7850cbcb06ff",
+              "name": "cpf_cnpj",
+              "value": "={{ $json.body.cpf_cnpj}}",
+              "type": "string"
+            },
+            {
+              "id": "b63c260a-d832-4644-84cd-ee94df4ccec7",
+              "name": "rg_ie",
+              "value": "={{ $json.body.rg_ie}}",
+              "type": "string"
+            },
+            {
+              "id": "c6d9460b-7809-4633-aa86-e0a2e2c25dda",
+              "name": "telefone",
+              "value": "={{ $json.body.telefone}}",
+              "type": "string"
+            },
+            {
+              "id": "2f89b1e2-c7c7-4bce-9edf-3a24a74a76db",
+              "name": "whatsapp",
+              "value": "={{ $json.body.whatsapp}}",
+              "type": "string"
+            },
+            {
+              "id": "3c55f15c-6281-446c-9a90-71428d00afee",
+              "name": "email",
+              "value": "={{ $json.body.email}}",
+              "type": "string"
+            },
+            {
+              "id": "f27b116b-79e3-4115-b020-19282f1d0301",
+              "name": "endereco",
+              "value": "={{ $json.body.endereco}}",
+              "type": "string"
+            },
+            {
+              "id": "5b6967a2-a8af-4dd4-bbf1-e979c55b0bc3",
+              "name": "bairro",
+              "value": "={{ $json.body.bairro}}",
+              "type": "string"
+            },
+            {
+              "id": "e7d195ea-f64c-4f92-ac7c-9247afeb7a63",
+              "name": "cidade",
+              "value": "={{ $json.body.cidade}}",
+              "type": "string"
+            },
+            {
+              "id": "1eaf0ca6-ca2b-494a-81dc-9a3e08964f4b",
+              "name": "estado",
+              "value": "={{ $json.body.estado}}",
+              "type": "string"
+            },
+            {
+              "id": "d1d6c68e-b1eb-40fd-8f58-40e75a04bb89",
+              "name": "cep",
+              "value": "={{ $json.body.cep}}",
+              "type": "string"
+            },
+            {
+              "id": "7e056b54-da25-4be0-941d-824af711e0d4",
+              "name": "obs",
+              "value": "={{ $json.body.obs}}",
+              "type": "string"
+            },
+            {
+              "id": "a4f0dceb-7ad8-47a3-bce1-5f687d584030",
+              "name": "id",
+              "value": "={{ $json.body.id}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2448,
+        2144
+      ],
+      "id": "14e7faf3-7280-4fa2-a445-82f9418614a7",
+      "name": "EditSalvaForneceClien1"
+    },
+    {
+      "parameters": {
+        "tableId": "pessoa",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "empresa_id",
+              "fieldValue": "={{ $json.id_empresa}} "
+            },
+            {
+              "fieldId": "tipo",
+              "fieldValue": "={{ $json.tipo }}"
+            },
+            {
+              "fieldId": "nome",
+              "fieldValue": "={{ $json.nome }}"
+            },
+            {
+              "fieldId": "cpf_cnpj",
+              "fieldValue": "={{ $json.cpf_cnpj }}"
+            },
+            {
+              "fieldId": "rg_ie",
+              "fieldValue": "={{ $json.rg_ie }}"
+            },
+            {
+              "fieldId": "telefone",
+              "fieldValue": "={{ $json.telefone }}"
+            },
+            {
+              "fieldId": "whatsapp",
+              "fieldValue": "={{ $json.whatsapp }}"
+            },
+            {
+              "fieldId": "email",
+              "fieldValue": "={{ $json.email }}"
+            },
+            {
+              "fieldId": "endereco",
+              "fieldValue": "={{ $json.endereco }}"
+            },
+            {
+              "fieldId": "bairro",
+              "fieldValue": "={{ $json.bairro }}"
+            },
+            {
+              "fieldId": "cidade",
+              "fieldValue": "={{ $json.cidade }}"
+            },
+            {
+              "fieldId": "estado",
+              "fieldValue": "={{ $json.estado }}"
+            },
+            {
+              "fieldId": "cep",
+              "fieldValue": "={{ $json.cep }}"
+            },
+            {
+              "fieldId": "obs",
+              "fieldValue": "={{ $json.obs }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -2240,
+        2144
+      ],
+      "id": "93f1aafb-a9c2-4e45-a35d-3b51bd4cebad",
+      "name": "InsereForneceClien",
+      "credentials": {
+        "supabaseApi": {
+          "id": "FHa5RDfMmxUg7TuM",
+          "name": "FinanceFlow"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "excluirfornecedorcliente",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -2672,
+        1840
+      ],
+      "id": "54ccab4c-b5b5-4c71-84b3-b46e3d13f2f5",
+      "name": "ExcluiForneClie",
+      "webhookId": "77c2764f-3d24-48db-aef2-07b64e9ecdeb"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "delete \n      \nFROM  pessoa where empresa_id = {{ $json.id_empresa }} and id =   {{ $json.id }} ;\n ",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -2240,
+        1840
+      ],
+      "id": "2926b291-0da9-492c-8f1b-328e8867167a",
+      "name": "ExcluiFornecedorCliente",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "MJtrOgYw7gXxfNLV",
+          "name": "FinanceFlow"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "inserefornecedorcliente",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -2672,
+        2144
+      ],
+      "id": "1927c1a4-b87b-4466-8ff7-c87a93cd05de",
+      "name": "InsereForCli",
+      "webhookId": "77c2764f-3d24-48db-aef2-07b64e9ecdeb"
+    },
+    {
+      "parameters": {
+        "path": "consultarcontapagar",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -2720,
+        400
+      ],
+      "id": "4ef64ad9-1959-47cd-8930-16a97f7eec8a",
+      "name": "ConsultarContaPagar",
+      "webhookId": "77c2764f-3d24-48db-aef2-07b64e9ecdeb"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": " select  * from ff_registrar_conta_pagar_com_parcelas(\n  {{ $json.empresa_id }} ,\n  '{{ $json.descricao}}',\n   {{ $json.valor}} , \n   '{{ $json.vencimento }}',\n   null, \n   {{ $json.parcelas}},\n   {{ $json.fornecedor_id }},\n   {{ $json.categoria_id}} \n)\n  \n ",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -2304,
+        224
+      ],
+      "id": "210a904d-2ac8-4361-9ce6-047cbf5fca1d",
+      "name": "ff_registrar_conta_pagar_com_parcelas",
+      "credentials": {
+        "postgres": {
+          "id": "MJtrOgYw7gXxfNLV",
+          "name": "FinanceFlow"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -2064,
+        1008
+      ],
+      "id": "288cbb0c-af8d-40e0-9c8f-21e4aff53e64",
+      "name": "Respond to Webhook37"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "contas_a_pagar",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $json.id }}"
+            },
+            {
+              "keyName": "empresa_id",
+              "condition": "eq",
+              "keyValue": "={{ $json.empresa_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "empresa_id",
+              "fieldValue": "={{ $json.empresa_id }}"
+            },
+            {
+              "fieldId": "descricao",
+              "fieldValue": "={{ $json.descricao }}"
+            },
+            {
+              "fieldId": "valor",
+              "fieldValue": "={{ $json.valor }}"
+            },
+            {
+              "fieldId": "vencimento",
+              "fieldValue": "={{ $json.vencimento }}"
+            },
+            {
+              "fieldId": "categoria_id",
+              "fieldValue": "={{ $json.categoria_id }}"
+            },
+            {
+              "fieldId": "fornecedor_id",
+              "fieldValue": "={{ $json.fornecedor_id }}"
+            },
+            {
+              "fieldId": "parcelas",
+              "fieldValue": "={{ $json.parcelas }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -2272,
+        1008
+      ],
+      "id": "4eb0dd2c-4952-4682-b7ec-2859ef97503c",
+      "name": "SalvaForneceClien1",
+      "credentials": {
+        "supabaseApi": {
+          "id": "FHa5RDfMmxUg7TuM",
+          "name": "FinanceFlow"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4616a119-9b3f-4dcd-b548-0be8d5f7a3b4",
+              "name": "empresa_id",
+              "value": "={{ $json.body.empresa_id}}",
+              "type": "number"
+            },
+            {
+              "id": "5f3336f9-247a-4886-8eb8-3d7b4986eea8",
+              "name": "descricao",
+              "value": "={{ $json.body.descricao}}",
+              "type": "string"
+            },
+            {
+              "id": "0fbd6cd2-d457-4746-b457-c45b73fef4ec",
+              "name": "valor",
+              "value": "={{ $json.body.valor}}",
+              "type": "string"
+            },
+            {
+              "id": "0f4e66fc-7279-4e4b-8fee-c9a2f2923c0c",
+              "name": "vencimento",
+              "value": "={{ $json.body.vencimento}}",
+              "type": "string"
+            },
+            {
+              "id": "15e950e4-e251-498f-b953-fc28eb8abe62",
+              "name": "descricao",
+              "value": "={{ $json.body.descricao}}",
+              "type": "string"
+            },
+            {
+              "id": "2644f0d8-d165-4a3d-b186-4f2e72da2a8b",
+              "name": "categoria_id",
+              "value": "={{ $json.body.categoria_id}}",
+              "type": "string"
+            },
+            {
+              "id": "de393231-6bc4-46b1-a9fb-fa878f154e3a",
+              "name": "parcelas",
+              "value": "={{ $json.body.parcelas}}",
+              "type": "string"
+            },
+            {
+              "id": "71ad2246-2fab-44df-984a-c8967ab724a3",
+              "name": "fornecedor_id",
+              "value": "={{ $json.body.fornecedor_id}}",
+              "type": "string"
+            },
+            {
+              "id": "b97f031a-5075-4f75-a5a7-7b46fe82da37",
+              "name": "id",
+              "value": "={{ $json.body.id}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2480,
+        1008
+      ],
+      "id": "04f62ee2-b643-4611-ab47-fc1588fadcdc",
+      "name": "EditaaContapagar1"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "salvarcontapagar",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -2704,
+        1008
+      ],
+      "id": "1fea2452-5990-4dcf-ba00-5ff29ce4274f",
+      "name": "SalvaContaPagar",
+      "webhookId": "77c2764f-3d24-48db-aef2-07b64e9ecdeb"
     }
   ],
   "pinData": {},
@@ -1800,7 +5173,7 @@
       "main": [
         [
           {
-            "node": "Execute a SQL query1",
+            "node": "If",
             "type": "main",
             "index": 0
           }
@@ -2034,7 +5407,7 @@
       "main": [
         [
           {
-            "node": "InsereTransacaoCartao",
+            "node": "ff_registrar_compra_credito",
             "type": "main",
             "index": 0
           }
@@ -2046,17 +5419,6 @@
         [
           {
             "node": "CartãoTransacaoEdit1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "InsereTransacaoCartao": {
-      "main": [
-        [
-          {
-            "node": "Execute a SQL query",
             "type": "main",
             "index": 0
           }
@@ -2156,39 +5518,6 @@
         [
           {
             "node": "ListaContas",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "cartoesEdit": {
-      "main": [
-        [
-          {
-            "node": "Cartoes",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Cartoes": {
-      "main": [
-        [
-          {
-            "node": "Respond to Webhook8",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "ListaCartões": {
-      "main": [
-        [
-          {
-            "node": "cartoesEdit",
             "type": "main",
             "index": 0
           }
@@ -2378,11 +5707,6 @@
         ]
       ]
     },
-    "sdd": {
-      "main": [
-        []
-      ]
-    },
     "Usuario": {
       "main": [
         [
@@ -2416,11 +5740,982 @@
         ]
       ]
     },
+    "Lancamentos1": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "EditarLancto": {
+      "main": [
+        [
+          {
+            "node": "EditLancto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "EditLancto": {
+      "main": [
+        [
+          {
+            "node": "Lancamentos1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lancamentos2": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook14",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DeliteLancto": {
+      "main": [
+        [
+          {
+            "node": "Deletelancto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Deletelancto": {
+      "main": [
+        [
+          {
+            "node": "Lancamentos2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "UpdateLancto": {
+      "main": [
+        [
+          {
+            "node": "Editlanct",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "UpdateLancto1": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook15",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Editlanct": {
+      "main": [
+        [
+          {
+            "node": "UpdateLancto1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TransacaoCartao": {
+      "main": [
+        [
+          {
+            "node": "transcartao",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TransaCartão": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook16",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TransaCartão1": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook17",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edittranscartao": {
+      "main": [
+        [
+          {
+            "node": "EditarTranscartao",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "EditarTranscartao": {
+      "main": [
+        [
+          {
+            "node": "TransaCartão1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "InsereTransCartão": {
+      "main": [
+        [
+          {
+            "node": "Edtranscartao",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
     "Execute a SQL query1": {
       "main": [
         [
           {
-            "node": "If",
+            "node": "Respond to Webhook19",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edtranscartao": {
+      "main": [
+        [
+          {
+            "node": "ff_registrar_compra_credito1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "EditarTranscartao1": {
+      "main": [
+        [
+          {
+            "node": "ff_excluir_transacao_cartao",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Excluinscartao": {
+      "main": [
+        [
+          {
+            "node": "EditarTranscartao1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "NovoCartao": {
+      "main": [
+        [
+          {
+            "node": "EditNewCartao",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ff_registrar_compra_credito": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ff_excluir_transacao_cartao": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook18",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ff_registrar_compra_credito1": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ListaCartões": {
+      "main": [
+        [
+          {
+            "node": "cartoesEdit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "cartoesEdit": {
+      "main": [
+        [
+          {
+            "node": "Cartoes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cartoes": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook8",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "transcartao": {
+      "main": [
+        [
+          {
+            "node": "TransaCartão",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "EditarCartões": {
+      "main": [
+        [
+          {
+            "node": "EditarCartões1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "EditarCartões1": {
+      "main": [
+        [
+          {
+            "node": "EditarCartão",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "EditarCartão": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook21",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "EditNewCartao1": {
+      "main": [
+        [
+          {
+            "node": "SalvaCartao",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SalvaCartao": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook22",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SalvaCartao1": {
+      "main": [
+        [
+          {
+            "node": "EditNewCartao1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "EditNewCartao": {
+      "main": [
+        [
+          {
+            "node": "SalvaCartao2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SalvaCartao2": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook20",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DelCartões": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook23",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond to Webhook23",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delcartoes": {
+      "main": [
+        [
+          {
+            "node": "DelCartões",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DelCard": {
+      "main": [
+        [
+          {
+            "node": "Delcartoes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CartãoTransacaoEdit2": {
+      "main": [
+        [
+          {
+            "node": "ff_registrar_compra_credito2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "InseretransacaoCartão1": {
+      "main": [
+        [
+          {
+            "node": "CartãoTransacaoEdit2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query2": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook24",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "NovoCartao1": {
+      "main": [
+        [
+          {
+            "node": "EditNewCartao3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ff_registrar_compra_credito2": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ListaCartões1": {
+      "main": [
+        [
+          {
+            "node": "cartoesEdit1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cartoes1": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook26",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "cartoesEdit1": {
+      "main": [
+        [
+          {
+            "node": "Cartoes1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "EditarCartões2": {
+      "main": [
+        [
+          {
+            "node": "EditarCartões3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "EditarCartões3": {
+      "main": [
+        [
+          {
+            "node": "EditarCartão1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "EditarCartão1": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook27",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "EditNewCartao2": {
+      "main": [
+        [
+          {
+            "node": "SalvaCartao3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SalvaCartao3": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook28",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SalvaCartao4": {
+      "main": [
+        [
+          {
+            "node": "EditNewCartao2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "EditNewCartao3": {
+      "main": [
+        [
+          {
+            "node": "SalvaCartao5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SalvaCartao5": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook25",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DelCartões1": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook29",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond to Webhook29",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delcartoes1": {
+      "main": [
+        [
+          {
+            "node": "DelCartões1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DelCard1": {
+      "main": [
+        [
+          {
+            "node": "Delcartoes1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TransaCartão3": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook32",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edittranscartao1": {
+      "main": [
+        [
+          {
+            "node": "EditarTranscartao2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "EditarTranscartao2": {
+      "main": [
+        [
+          {
+            "node": "TransaCartão3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "EditarTranscartao3": {
+      "main": [
+        [
+          {
+            "node": "ff_excluir_transacao_cartao1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Excluinscartao1": {
+      "main": [
+        [
+          {
+            "node": "EditarTranscartao3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ff_excluir_transacao_cartao1": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook34",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "InsereContapagar": {
+      "main": [
+        [
+          {
+            "node": "EditaaContapagar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "EditaaContapagar": {
+      "main": [
+        [
+          {
+            "node": "ff_registrar_conta_pagar_com_parcelas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ResultConta_pagar": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook33",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ff_consultar_contas_pagar": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook31",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "transcontapg": {
+      "main": [
+        [
+          {
+            "node": "ff_consultar_contas_pagar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "EditarTranscartao5": {
+      "main": [
+        [
+          {
+            "node": "ExcluiFornecedorCliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ForncededorCliente": {
+      "main": [
+        [
+          {
+            "node": "EditForneCliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "EditForneCliente": {
+      "main": [
+        [
+          {
+            "node": "ForneceClientePessoa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ForneceClientePessoa": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook35",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "EditForneCliente1": {
+      "main": [
+        [
+          {
+            "node": "EditarFroCli1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "EditarFroCli1": {
+      "main": [
+        [
+          {
+            "node": "FormFornecedorCliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FormFornecedorCliente": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook36",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SalvaForCli": {
+      "main": [
+        [
+          {
+            "node": "EditSalvaForneceClien",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SalvaForneceClien": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook30",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "EditSalvaForneceClien": {
+      "main": [
+        [
+          {
+            "node": "SalvaForneceClien",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "EditSalvaForneceClien1": {
+      "main": [
+        [
+          {
+            "node": "InsereForneceClien",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "InsereForneceClien": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook39",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ExcluiForneClie": {
+      "main": [
+        [
+          {
+            "node": "EditarTranscartao5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ExcluiFornecedorCliente": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook38",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "InsereForCli": {
+      "main": [
+        [
+          {
+            "node": "EditSalvaForneceClien1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ConsultarContaPagar": {
+      "main": [
+        [
+          {
+            "node": "transcontapg",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ff_registrar_conta_pagar_com_parcelas": {
+      "main": [
+        [
+          {
+            "node": "ResultConta_pagar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SalvaForneceClien1": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook37",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "EditaaContapagar1": {
+      "main": [
+        [
+          {
+            "node": "SalvaForneceClien1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SalvaContaPagar": {
+      "main": [
+        [
+          {
+            "node": "EditaaContapagar1",
             "type": "main",
             "index": 0
           }
@@ -2432,11 +6727,11 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "81df14a5-a9d4-4945-9160-c029d38fd1dc",
+  "versionId": "965722d0-3439-47c4-b347-f3551790f3aa",
   "meta": {
     "templateCredsSetupCompleted": true,
-    "instanceId": "ef09e6ed190f797c2c09f84ba200b44a3c9221871167c1973d4c9763b1744a33"
+    "instanceId": "fa6f7c707ef8db15f1e16b586f52109012630360d6d202f7148d60cd519759d7"
   },
-  "id": "tLfi56toZEqeeMvP",
+  "id": "fdK2vrlzUmfddcAE",
   "tags": []
 }
