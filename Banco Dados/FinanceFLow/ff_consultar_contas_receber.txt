@@ -1,30 +1,39 @@
-CREATE OR REPLACE FUNCTION ff_consultar_contas_receber(
-  p_empresa_id  BIGINT,
-  p_status      TEXT DEFAULT NULL,  -- 'aberto','recebido' ou NULL
-  p_data_ini    DATE DEFAULT NULL,
-  p_data_fim    DATE DEFAULT NULL
+ CREATE OR REPLACE FUNCTION ff_consultar_contas_receber(
+  p_empresa_id    BIGINT,
+  p_status        TEXT DEFAULT NULL,
+  p_data_ini      DATE DEFAULT NULL,
+  p_data_fim      DATE DEFAULT NULL,
+  p_cliente_id    BIGINT DEFAULT NULL
 )
 RETURNS TABLE (
   id BIGINT,
   descricao TEXT,
   valor NUMERIC,
   vencimento DATE,
+  categoria TEXT,
   cliente TEXT,
+  parcelas INT,
+  parcela_num INT,
   status TEXT
 )
-LANGUAGE sql
 AS $$
   SELECT
-    id,
-    descricao,
-    valor,
-    vencimento,
-    cliente,
-    status
-  FROM contas_a_receber
-  WHERE empresa_id = p_empresa_id
-    AND (p_status IS NULL OR status = p_status)
-    AND (p_data_ini IS NULL OR vencimento >= p_data_ini)
-    AND (p_data_fim IS NULL OR vencimento <= p_data_fim)
-  ORDER BY vencimento, id;
-$$;
+    cr.id,
+    cr.descricao,
+    cr.valor,
+    cr.vencimento,
+    cg.nome AS categoria,
+    p.nome  AS cliente,
+    cr.parcelas,
+    cr.parcela_num,
+    cr.status
+  FROM contas_a_receber cr
+  LEFT JOIN categorias_gerenciais cg ON cg.id = cr.categoria_id
+  LEFT JOIN pessoa p ON p.id = cr.cliente_id
+  WHERE cr.empresa_id = p_empresa_id
+    AND (p_status IS NULL OR cr.status = p_status)
+    AND (p_data_ini IS NULL OR cr.vencimento >= p_data_ini)
+    AND (p_data_fim IS NULL OR cr.vencimento <= p_data_fim)
+    AND (p_cliente_id IS NULL OR p_cliente_id = 0 OR cr.cliente_id = p_cliente_id)
+  ORDER BY cr.vencimento ASC, p.nome ASC, cr.parcela_num ASC;
+$$ LANGUAGE sql;

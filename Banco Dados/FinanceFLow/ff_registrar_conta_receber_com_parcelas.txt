@@ -1,0 +1,88 @@
+ CREATE OR REPLACE FUNCTION ff_registrar_conta_receber_com_parcelas(
+  p_empresa_id     BIGINT,
+  p_descricao      TEXT,
+  p_valor_total    NUMERIC,
+  p_vencimento     DATE,
+  p_categoria      TEXT DEFAULT NULL,
+  p_parcelas       INT DEFAULT 1,
+  p_cliente_id     BIGINT DEFAULT NULL,
+  p_categoria_id   BIGINT DEFAULT NULL
+)
+RETURNS BIGINT
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_categoria_id BIGINT;
+    v_id BIGINT;
+    v_valor_parcela NUMERIC;
+    v_venc DATE;
+    i INT;
+   v_lote_id BIGINT := NULL;
+BEGIN
+
+        -- Só gera lote se houver mais de 1 parcela
+    IF p_parcelas > 1 THEN
+        v_lote_id := nextval('contas_a_receber_lote_seq ');
+    END IF;
+
+    -----------------------------------------------------------
+    -- 1) SE categoria_id vier → prioridade total
+    -----------------------------------------------------------
+    IF p_categoria_id IS NOT NULL AND p_categoria_id > 0 THEN
+        v_categoria_id := p_categoria_id;
+
+    -----------------------------------------------------------
+    -- 2) Caso contrário → tenta buscar pelo nome
+    -----------------------------------------------------------
+    ELSIF p_categoria IS NOT NULL THEN
+        SELECT id INTO v_categoria_id
+        FROM categorias_gerenciais
+        WHERE empresa_id = p_empresa_id
+          AND lower(nome) = lower(p_categoria)
+        LIMIT 1;
+    END IF;
+
+    -----------------------------------------------------------
+    -- Valor por parcela
+    -----------------------------------------------------------
+    v_valor_parcela := ROUND(p_valor_total / p_parcelas, 2);
+
+    -----------------------------------------------------------
+    -- Criar parcelas
+    -----------------------------------------------------------
+    FOR i IN 1..p_parcelas LOOP
+
+        -- usa sua função de cálculo de data (já existente)
+        v_venc := ff_calcula_data_parcela(p_vencimento, i);
+
+        INSERT INTO contas_a_receber (
+            empresa_id,
+            descricao,
+            valor,
+            vencimento,
+            categoria_id,
+            cliente_id,
+            parcelas,
+            parcela_num,
+            status,
+            lote_id 
+        )
+        VALUES (
+            p_empresa_id,
+            p_descricao,
+            v_valor_parcela,
+            v_venc,
+            v_categoria_id,
+            p_cliente_id,
+            p_parcelas,
+            i,
+            'aberto',
+              v_lote_id
+        )
+        RETURNING id INTO v_id;
+
+    END LOOP;
+
+    RETURN v_id;
+END;
+$$;

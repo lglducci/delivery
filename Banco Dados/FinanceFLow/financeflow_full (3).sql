@@ -96,7 +96,8 @@ VALUES
 (1, 1, 3, 'saida', 92.50, 'Supermercado', '2025-11-06');
 
 
--- 7. contas_a_pagar
+ DROP TABLE IF EXISTS contas_a_pagar CASCADE;
+
 CREATE TABLE contas_a_pagar (
     id BIGSERIAL PRIMARY KEY,
     empresa_id BIGINT NOT NULL REFERENCES empresas(id),
@@ -104,35 +105,52 @@ CREATE TABLE contas_a_pagar (
     valor NUMERIC(12,2) NOT NULL,
     vencimento DATE NOT NULL,
     categoria_id BIGINT REFERENCES categorias_gerenciais(id),
+    fornecedor_id BIGINT REFERENCES pessoa(id), -- 🔵 ADICIONADO
     parcelas INT DEFAULT 1,
     parcela_num INT DEFAULT 1,
     status TEXT NOT NULL CHECK (status IN ('aberto','pago')),
     criado_em TIMESTAMP DEFAULT now()
 );
 
-INSERT INTO contas_a_pagar
-(empresa_id, descricao, valor, vencimento, categoria_id, status)
-VALUES
-(1, 'Aluguel', 1200.00, '2025-12-10', 3, 'aberto');
+-- Criar sequência para lote de contas a receber
+CREATE SEQUENCE IF NOT EXISTS contas_a_receber_lote_seq;
 
+-- Adicionar coluna lote_id
+ALTER TABLE contas_a_receber
+ADD COLUMN lote_id BIGINT DEFAULT nextval('contas_a_receber_lote_seq');
+
+ 
 
 -- 8. contas_a_receber
+ 
+ DROP TABLE IF EXISTS contas_a_receber CASCADE;
+
 CREATE TABLE contas_a_receber (
     id BIGSERIAL PRIMARY KEY,
     empresa_id BIGINT NOT NULL REFERENCES empresas(id),
+
     descricao TEXT NOT NULL,
     valor NUMERIC(12,2) NOT NULL,
     vencimento DATE NOT NULL,
+
     categoria_id BIGINT REFERENCES categorias_gerenciais(id),
-    cliente TEXT,
+    cliente_id BIGINT REFERENCES pessoa(id),
+
+    parcelas INT DEFAULT 1,
+    parcela_num INT DEFAULT 1,
+
     status TEXT NOT NULL CHECK (status IN ('aberto','recebido')),
     criado_em TIMESTAMP DEFAULT now()
 );
 
-INSERT INTO contas_a_receber
-(empresa_id, descricao, valor, vencimento, categoria_id, cliente, status)
-VALUES
-(1, 'Cliente Pedro', 850.00, '2025-12-12', 1, 'Pedro', 'aberto');
+-- Criar sequência para lote de contas a receber
+CREATE SEQUENCE IF NOT EXISTS contas_a_receber_lote_seq;
+
+-- Adicionar coluna lote_id
+ALTER TABLE contas_a_receber
+ADD COLUMN lote_id BIGINT DEFAULT nextval('contas_a_receber_lote_seq');
+
+ 
 
 
 -- 9. cartoes
@@ -204,3 +222,21 @@ INSERT INTO extrato_importado
 VALUES
 (1, 1, '2025-11-05', 'PIX Cliente João', 300.00, 'hash001');
 
+CREATE TABLE pessoa (
+    id SERIAL PRIMARY KEY,
+    empresa_id INTEGER NOT NULL, 
+    tipo VARCHAR(20) NOT NULL, -- 'cliente', 'fornecedor', 'ambos'
+    nome VARCHAR(200) NOT NULL, 
+    cpf_cnpj VARCHAR(20),
+    rg_ie VARCHAR(20), 
+    telefone VARCHAR(20),
+    whatsapp VARCHAR(20),
+    email VARCHAR(200), 
+    endereco TEXT,
+    bairro VARCHAR(100),
+    cidade VARCHAR(100),
+    estado VARCHAR(2),
+    cep VARCHAR(20), 
+    obs TEXT, 
+    criado_em TIMESTAMP DEFAULT NOW()
+);

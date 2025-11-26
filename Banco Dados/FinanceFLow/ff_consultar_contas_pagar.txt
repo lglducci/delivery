@@ -1,28 +1,39 @@
-CREATE OR REPLACE FUNCTION ff_consultar_contas_pagar(
-  p_empresa_id  BIGINT,
-  p_status      TEXT DEFAULT NULL,  -- 'aberto','pago' ou NULL
-  p_data_ini    DATE DEFAULT NULL,
-  p_data_fim    DATE DEFAULT NULL
+ CREATE OR REPLACE FUNCTION ff_consultar_contas_pagar(
+  p_empresa_id    BIGINT,
+  p_status        TEXT DEFAULT NULL,
+  p_data_ini      DATE DEFAULT NULL,
+  p_data_fim      DATE DEFAULT NULL,
+  p_fornecedor_id BIGINT DEFAULT NULL
 )
 RETURNS TABLE (
   id BIGINT,
   descricao TEXT,
   valor NUMERIC,
   vencimento DATE,
+  categoria TEXT,
+  fornecedor TEXT,
+  parcelas INT,
+  parcela_num INT,
   status TEXT
 )
-LANGUAGE sql
 AS $$
   SELECT
-    id,
-    descricao,
-    valor,
-    vencimento,
-    status
-  FROM contas_a_pagar
-  WHERE empresa_id = p_empresa_id
-    AND (p_status IS NULL OR status = p_status)
-    AND (p_data_ini IS NULL OR vencimento >= p_data_ini)
-    AND (p_data_fim IS NULL OR vencimento <= p_data_fim)
-  ORDER BY vencimento, id;
-$$;
+    cp.id,
+    cp.descricao,
+    cp.valor,
+    cp.vencimento,
+    cg.nome AS categoria,
+    p.nome  AS fornecedor,
+    cp.parcelas,
+    cp.parcela_num,
+    cp.status
+  FROM contas_a_pagar cp
+  LEFT JOIN categorias_gerenciais cg ON cg.id = cp.categoria_id
+  LEFT JOIN pessoa p ON p.id = cp.fornecedor_id
+  WHERE cp.empresa_id = p_empresa_id
+    AND (p_status IS NULL OR cp.status = p_status)
+    AND (p_data_ini IS NULL OR cp.vencimento >= p_data_ini)
+    AND (p_data_fim IS NULL OR cp.vencimento <= p_data_fim)
+    AND (p_fornecedor_id IS NULL OR p_fornecedor_id = 0  OR cp.fornecedor_id = p_fornecedor_id)
+  ORDER BY cp.vencimento ASC,  p.nome  asc,   cp.parcela_num asc   ;
+$$ LANGUAGE sql;
