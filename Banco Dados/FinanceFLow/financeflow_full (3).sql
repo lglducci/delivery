@@ -60,12 +60,16 @@ VALUES
 
 
 -- 5. categorias_gerenciais
+
+drop table    categorias_gerenciais cascade  
+
 CREATE TABLE categorias_gerenciais (
     id BIGSERIAL PRIMARY KEY,
     empresa_id BIGINT NOT NULL REFERENCES empresas(id),
     nome TEXT NOT NULL,
     tipo TEXT NOT NULL CHECK (tipo IN ('entrada','saida'))
 );
+
 
 INSERT INTO categorias_gerenciais (empresa_id, nome, tipo)
 VALUES
@@ -74,6 +78,8 @@ VALUES
 (1, 'Alimentação', 'saida'),
 (1, 'Tarifas', 'saida');
 
+
+drop table transacoes; 
 
 -- 6. transacoes
 CREATE TABLE transacoes (
@@ -96,6 +102,8 @@ VALUES
 (1, 1, 3, 'saida', 92.50, 'Supermercado', '2025-11-06');
 
 
+ 
+
  DROP TABLE IF EXISTS contas_a_pagar CASCADE;
 
 CREATE TABLE contas_a_pagar (
@@ -113,12 +121,11 @@ CREATE TABLE contas_a_pagar (
 );
 
 -- Criar sequência para lote de contas a receber
-CREATE SEQUENCE IF NOT EXISTS contas_a_receber_lote_seq;
+CREATE SEQUENCE IF NOT EXISTS contas_a_pagar_lote_seq;
 
 -- Adicionar coluna lote_id
-ALTER TABLE contas_a_receber
-ADD COLUMN lote_id BIGINT DEFAULT nextval('contas_a_receber_lote_seq');
-
+ALTER TABLE contas_a_pagar
+ADD COLUMN lote_id BIGINT DEFAULT nextval('contas_a_pagar_lote_seq');
  
 
 -- 8. contas_a_receber
@@ -127,18 +134,14 @@ ADD COLUMN lote_id BIGINT DEFAULT nextval('contas_a_receber_lote_seq');
 
 CREATE TABLE contas_a_receber (
     id BIGSERIAL PRIMARY KEY,
-    empresa_id BIGINT NOT NULL REFERENCES empresas(id),
-
+    empresa_id BIGINT NOT NULL REFERENCES empresas(id), 
     descricao TEXT NOT NULL,
     valor NUMERIC(12,2) NOT NULL,
-    vencimento DATE NOT NULL,
-
+    vencimento DATE NOT NULL, 
     categoria_id BIGINT REFERENCES categorias_gerenciais(id),
-    cliente_id BIGINT REFERENCES pessoa(id),
-
+   fornecedor_id BIGINT REFERENCES pessoa(id), -- 🔵 ADICIONADO
     parcelas INT DEFAULT 1,
-    parcela_num INT DEFAULT 1,
-
+    parcela_num INT DEFAULT 1, 
     status TEXT NOT NULL CHECK (status IN ('aberto','recebido')),
     criado_em TIMESTAMP DEFAULT now()
 );

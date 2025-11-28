@@ -1,4 +1,4 @@
- CREATE OR REPLACE FUNCTION ff_consultar_contas_receber(
+   CREATE OR REPLACE FUNCTION ff_consultar_contas_receber(
   p_empresa_id    BIGINT,
   p_status        TEXT DEFAULT NULL,
   p_data_ini      DATE DEFAULT NULL,
@@ -29,11 +29,11 @@ AS $$
     cr.status
   FROM contas_a_receber cr
   LEFT JOIN categorias_gerenciais cg ON cg.id = cr.categoria_id
-  LEFT JOIN pessoa p ON p.id = cr.cliente_id
+  LEFT JOIN pessoa p ON p.id = cr.fornecedor_id
   WHERE cr.empresa_id = p_empresa_id
     AND (p_status IS NULL OR cr.status = p_status)
     AND (p_data_ini IS NULL OR cr.vencimento >= p_data_ini)
     AND (p_data_fim IS NULL OR cr.vencimento <= p_data_fim)
-    AND (p_cliente_id IS NULL OR p_cliente_id = 0 OR cr.cliente_id = p_cliente_id)
+    AND (p_cliente_id IS NULL OR p_cliente_id = 0 OR cr.fornecedor_id = p_cliente_id)
   ORDER BY cr.vencimento ASC, p.nome ASC, cr.parcela_num ASC;
 $$ LANGUAGE sql;

@@ -5,7 +5,7 @@
   p_vencimento     DATE,
   p_categoria      TEXT DEFAULT NULL,
   p_parcelas       INT DEFAULT 1,
-  p_cliente_id     BIGINT DEFAULT NULL,
+  p_fornecedor_id     BIGINT DEFAULT NULL,
   p_categoria_id   BIGINT DEFAULT NULL
 )
 RETURNS BIGINT
@@ -61,7 +61,7 @@ BEGIN
             valor,
             vencimento,
             categoria_id,
-            cliente_id,
+            fornecedor_id,
             parcelas,
             parcela_num,
             status,
@@ -73,7 +73,7 @@ BEGIN
             v_valor_parcela,
             v_venc,
             v_categoria_id,
-            p_cliente_id,
+            p_fornecedor_id,
             p_parcelas,
             i,
             'aberto',
