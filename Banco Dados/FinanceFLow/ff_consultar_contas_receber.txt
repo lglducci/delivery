@@ -11,7 +11,7 @@ RETURNS TABLE (
   valor NUMERIC,
   vencimento DATE,
   categoria TEXT,
-  cliente TEXT,
+  fornecedor TEXT,
   parcelas INT,
   parcela_num INT,
   status TEXT
@@ -23,7 +23,7 @@ AS $$
     cr.valor,
     cr.vencimento,
     cg.nome AS categoria,
-    p.nome  AS cliente,
+    p.nome  AS fornecedor,
     cr.parcelas,
     cr.parcela_num,
     cr.status
