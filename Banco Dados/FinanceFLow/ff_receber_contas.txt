@@ -1,0 +1,51 @@
+CREATE OR REPLACE FUNCTION ff_receber_contas(
+  p_empresa_id BIGINT,
+  p_lista_ids JSON,
+ p_conta_id BIGINT 
+)
+RETURNS TEXT
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_id BIGINT;
+BEGIN
+  FOR v_id IN SELECT json_array_elements_text(p_lista_ids)::BIGINT LOOP
+
+    -- Atualiza conta a receber
+    UPDATE contas_a_receber
+    SET 
+      status = 'recebido',
+      data_recebimento = CURRENT_DATE
+    WHERE id = v_id 
+      AND empresa_id = p_empresa_id;
+
+    -- Insere transação
+    INSERT INTO transacoes(
+      empresa_id,
+      conta_id,
+      categoria_id,
+      tipo,
+      valor,
+      data_movimento,
+      descricao,
+      receber_id
+    )
+    SELECT 
+      empresa_id,
+      p_conta_id ,
+      categoria_id,
+      'entrada',
+      valor,
+      CURRENT_DATE,
+      descricao,
+      id
+    FROM contas_a_receber
+    WHERE id = v_id;
+
+ 
+
+  END LOOP;
+
+  RETURN 'Contas recebidas com sucesso';
+END;
+$$;

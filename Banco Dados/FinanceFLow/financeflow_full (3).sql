@@ -92,7 +92,9 @@ CREATE TABLE transacoes (
     descricao TEXT,
     data_movimento DATE NOT NULL,
     origem TEXT DEFAULT 'manual',
-    criado_em TIMESTAMP DEFAULT now()
+    criado_em TIMESTAMP DEFAULT now(),
+	pagar_id   BIGINT ,
+	receber_id   BIGINT 
 );
 
 INSERT INTO transacoes
