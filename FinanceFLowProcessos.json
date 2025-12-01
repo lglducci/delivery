@@ -1,0 +1,326 @@
+{
+  "name": "FinanceFLowProcessos",
+  "nodes": [
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        624,
+        -32
+      ],
+      "id": "db292ec8-7b31-4017-8bc9-0a000c7f029d",
+      "name": "Respond to Webhook19"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4616a119-9b3f-4dcd-b548-0be8d5f7a3b4",
+              "name": "empresa_id",
+              "value": "={{ $json.body.empresa_id}}",
+              "type": "number"
+            },
+            {
+              "id": "4c58a210-2ff6-4980-96ef-623ea84092a0",
+              "name": "contas",
+              "value": "={{ $json.body.contas}}",
+              "type": "string"
+            },
+            {
+              "id": "3d27d507-2aef-4907-9696-e41f23d10c6a",
+              "name": "conta_id",
+              "value": "={{ $json.body.conta_id}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        16,
+        -32
+      ],
+      "id": "73e9022a-096b-4aba-a199-56d7e0c9b775",
+      "name": "Edtranscartao"
+    },
+    {
+      "parameters": {
+        "content": "## Carregar cópia de segurança\nDivida os arquivos JSON em lotes de 1, verifique se eles foram carregados no repositório antes. Se sim (true), carregue a nova versão do arquivo. Caso contrário (false) crie o arquivo no repositório.",
+        "height": 1004,
+        "width": 1328,
+        "color": 4
+      },
+      "id": "c4659b39-38f2-41f0-a919-04f53c172572",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -368,
+        -240
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": " SELECT ff_pagar_contas(\n  {{ $json.empresa_id }},\n  '{{ $json.contas_json }}'::json,\n   {{ $json.conta_id }}\n);\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        432,
+        -32
+      ],
+      "id": "199f48c9-7613-41b7-83c8-ddba882aeb68",
+      "name": "ff_pagar_contas",
+      "credentials": {
+        "postgres": {
+          "id": "STozEMe82vC1nwYd",
+          "name": "Financeflow"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        608,
+        144
+      ],
+      "id": "a47e3e85-3baf-4521-9833-5a5fdd3761ce",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4616a119-9b3f-4dcd-b548-0be8d5f7a3b4",
+              "name": "empresa_id",
+              "value": "={{ $json.body.empresa_id}}",
+              "type": "number"
+            },
+            {
+              "id": "4c58a210-2ff6-4980-96ef-623ea84092a0",
+              "name": "contas",
+              "value": "={{ $json.body.contas}}",
+              "type": "string"
+            },
+            {
+              "id": "3d27d507-2aef-4907-9696-e41f23d10c6a",
+              "name": "conta_id",
+              "value": "={{ $json.body.conta_id}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        0,
+        144
+      ],
+      "id": "84f2707f-278f-499f-8db3-0e5a32c57885",
+      "name": "Edtranscartao1"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "pagar_contas",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -208,
+        -32
+      ],
+      "id": "736cacae-4e7a-4ef0-a83c-04d906d7f75a",
+      "name": "PagaContaPagar",
+      "webhookId": "77c2764f-3d24-48db-aef2-07b64e9ecdeb"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "receber_contas",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -224,
+        144
+      ],
+      "id": "63cc8995-756e-43a7-a25e-3c5e0bcfe413",
+      "name": "RecebeContaReceber",
+      "webhookId": "77c2764f-3d24-48db-aef2-07b64e9ecdeb"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": " SELECT ff_receber_contas(\n  {{ $json.empresa_id }},\n  '{{ $json.contas_json }}'::json,\n   {{ $json.conta_id }}\n);\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        416,
+        144
+      ],
+      "id": "0308937a-05e3-47ad-addf-e3b129eae7bd",
+      "name": "ff_receber_contas",
+      "credentials": {
+        "postgres": {
+          "id": "STozEMe82vC1nwYd",
+          "name": "Financeflow"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": " return [\n  {\n    empresa_id: $json.empresa_id,\n    contas_json: JSON.stringify($json.contas).replace(/\\\\/g, '').replace(/^\"|\"$/g, ''),\n    conta_id: $input.first().json.conta_id\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        144
+      ],
+      "id": "1a580006-495f-4c37-b445-ce6d1c53728b",
+      "name": "CodeReceber"
+    },
+    {
+      "parameters": {
+        "jsCode": " return [\n  {\n    empresa_id: $json.empresa_id,\n    contas_json: JSON.stringify($json.contas).replace(/\\\\/g, '').replace(/^\"|\"$/g, ''),\n    conta_id: $input.first().json.conta_id\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        -32
+      ],
+      "id": "c5d14c23-0c83-4757-b1b4-2062900ef5df",
+      "name": "CodePagar"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Edtranscartao": {
+      "main": [
+        [
+          {
+            "node": "CodePagar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ff_pagar_contas": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook19",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edtranscartao1": {
+      "main": [
+        [
+          {
+            "node": "CodeReceber",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PagaContaPagar": {
+      "main": [
+        [
+          {
+            "node": "Edtranscartao",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RecebeContaReceber": {
+      "main": [
+        [
+          {
+            "node": "Edtranscartao1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ff_receber_contas": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CodeReceber": {
+      "main": [
+        [
+          {
+            "node": "ff_receber_contas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CodePagar": {
+      "main": [
+        [
+          {
+            "node": "ff_pagar_contas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "f07af959-d382-4ebd-86a9-ac1b46d0a79b",
+  "meta": {
+    "instanceId": "33738330930e3881dd5571eca013f36ddf8aab20e4ea5c1f2ebaf4a2b4668ac6"
+  },
+  "id": "bbm1xaJyQPs1Zoo9",
+  "tags": []
+}
