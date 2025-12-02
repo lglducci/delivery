@@ -1,79 +1,104 @@
-CREATE OR REPLACE FUNCTION ff_registrar_pagamento_fatura(
-  p_empresa_id   BIGINT,
-  p_cartao_nome  TEXT,
-  p_conta_nome   TEXT,
-  p_valor_pago   NUMERIC,
-  p_data_pagto   DATE DEFAULT CURRENT_DATE
+ CREATE OR REPLACE FUNCTION ff_registrar_pagamento_faturas(
+  p_empresa_id BIGINT,
+  p_conta_id   BIGINT,
+  p_faturas    JSON
 )
-RETURNS BIGINT
+RETURNS JSON
 LANGUAGE plpgsql
 AS $$
 DECLARE
-  v_cartao_id   BIGINT;
-  v_fatura_id   BIGINT;
-  v_conta_id    BIGINT;
-  v_valor_fatura NUMERIC;
-  v_id_transacao BIGINT;
+  v_fatura_id     BIGINT;
+  v_valor_fatura  NUMERIC;
+  v_cartao_nome   TEXT;
+  v_status        TEXT;
+  v_transacao_id  BIGINT;
+  v_resultado     JSONB := '[]'::jsonb;
+ v_cat_id BIGINT;
+
 BEGIN
-  SELECT id
-    INTO v_cartao_id
-  FROM cartoes
-  WHERE empresa_id = p_empresa_id
-    AND lower(nome) = lower(p_cartao_nome)
-  LIMIT 1;
 
-  IF v_cartao_id IS NULL THEN
-    RAISE EXCEPTION 'Cartão "%" não encontrado para empresa %', p_cartao_nome, p_empresa_id;
+  IF p_faturas IS NULL THEN
+    RAISE EXCEPTION 'Lista de faturas inválida.';
   END IF;
 
-  -- fatura mais recente em aberto/fechada
-  SELECT id, valor_total
-    INTO v_fatura_id, v_valor_fatura
-  FROM cartoes_faturas
-  WHERE cartao_id = v_cartao_id
-    AND empresa_id = p_empresa_id
-    AND status IN ('aberta','fechada')
-  ORDER BY mes_referencia DESC
-  LIMIT 1;
-
-  IF v_fatura_id IS NULL THEN
-    RAISE EXCEPTION 'Nenhuma fatura em aberto/fechada encontrada para o cartão %', p_cartao_nome;
+  IF p_conta_id IS NULL OR p_conta_id = 0 THEN
+    RAISE EXCEPTION 'Conta bancária inválida.';
   END IF;
 
-  IF p_valor_pago IS NULL OR p_valor_pago = 0 THEN
-    p_valor_pago := COALESCE(v_valor_fatura, 0);
-  END IF;
+v_cat_id := ff_get_categoria_id(p_empresa_id, 'Pagamento de Fatura', 'saida');
 
-  v_conta_id := ff_get_conta_id(p_empresa_id, p_conta_nome);
+  --------------------------------------------------------------------
+  -- LOOP NAS FATURAS
+  --------------------------------------------------------------------
+  FOR v_fatura_id IN
+    SELECT value::bigint FROM json_array_elements_text(p_faturas)
+  LOOP
 
-  -- grava a saída na conta
-  INSERT INTO transacoes (
-    empresa_id,
-    conta_id,
-    categoria_id,
-    tipo,
-    valor,
-    descricao,
-    data_movimento,
-    origem
-  )
-  VALUES (
-    p_empresa_id,
-    v_conta_id,
-    NULL,
-    'saida',
-    p_valor_pago,
-    'Pagamento fatura ' || p_cartao_nome,
-    p_data_pagto,
-    'zap'
-  )
-  RETURNING id INTO v_id_transacao;
+      --------------------------------------------------------------------
+      -- BUSCA A FATURA + STATUS
+      --------------------------------------------------------------------
+      SELECT f.valor_total,
+             c.nome,
+             f.status
+        INTO v_valor_fatura,
+             v_cartao_nome,
+             v_status
+        FROM cartoes_faturas f
+        JOIN cartoes c ON c.id = f.cartao_id
+       WHERE f.id = v_fatura_id
+         AND f.empresa_id = p_empresa_id
+       LIMIT 1;
 
-  -- marca fatura como paga (simplesmente)
-  UPDATE cartoes_faturas
-     SET status = 'paga'
-   WHERE id = v_fatura_id;
+      IF v_valor_fatura IS NULL THEN
+        RAISE EXCEPTION 'Fatura % não encontrada.', v_fatura_id;
+      END IF;
 
-  RETURN v_id_transacao;
+      --------------------------------------------------------------------
+      -- BLOQUEIA PAGAMENTO DUPLO
+      --------------------------------------------------------------------
+      IF v_status = 'paga' THEN
+        RAISE EXCEPTION 'Fatura % já foi paga anteriormente.', v_fatura_id;
+      END IF;
+
+      --------------------------------------------------------------------
+      -- SE CHEGOU AQUI = FATURA ABERTA OU FECHADA
+      --------------------------------------------------------------------
+
+      INSERT INTO transacoes (
+        empresa_id,
+        conta_id, 
+        tipo,
+        valor,
+        descricao,
+        data_movimento,
+        origem,
+      categoria_id
+      )
+      VALUES (
+        p_empresa_id,
+        p_conta_id, 
+        'saida',
+        v_valor_fatura,
+        'Pagamento fatura cartão ' || v_cartao_nome,
+        CURRENT_DATE,
+        'web',
+       v_cat_id 
+      )
+      RETURNING id INTO v_transacao_id;
+
+      UPDATE cartoes_faturas
+         SET status = 'paga'
+       WHERE id = v_fatura_id;
+
+      v_resultado := v_resultado || jsonb_build_object(
+        'fatura_id', v_fatura_id,
+        'transacao_id', v_transacao_id,
+        'status', 'paga'
+      );
+
+  END LOOP;
+
+  RETURN v_resultado::json;
+
 END;
 $$;

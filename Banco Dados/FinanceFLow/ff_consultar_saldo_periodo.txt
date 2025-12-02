@@ -1,7 +1,8 @@
  CREATE OR REPLACE FUNCTION ff_consultar_saldo_periodo(
   p_empresa_id BIGINT,
   p_data_ini   DATE,
-  p_data_fim   DATE
+  p_data_fim   DATE,
+ p_conta_id  BIGINT
 )
 RETURNS TABLE (
   conta_id BIGINT,               -- ✅ ID adicionado
@@ -18,6 +19,7 @@ RETURNS TABLE (
 )
 LANGUAGE sql
 AS $$
+ 
 
 WITH contas AS (
   SELECT
@@ -31,6 +33,7 @@ WITH contas AS (
     saldo_inicial
   FROM contas_financeiras
   WHERE empresa_id = p_empresa_id
+    AND (p_conta_id IS NULL OR p_conta_id = 0 OR id = p_conta_id)  -- ✅ FILTRO OPCIONAL
 ),
 
 mov_antes AS (
@@ -41,6 +44,7 @@ mov_antes AS (
   FROM transacoes t
   WHERE t.empresa_id = p_empresa_id
     AND t.data_movimento < p_data_ini
+    AND (p_conta_id IS NULL OR p_conta_id = 0 OR t.conta_id = p_conta_id)  -- ✅ FILTRO
   GROUP BY t.conta_id
 ),
 
@@ -52,11 +56,12 @@ mov_periodo AS (
   FROM transacoes t
   WHERE t.empresa_id = p_empresa_id
     AND t.data_movimento BETWEEN p_data_ini AND p_data_fim
+    AND (p_conta_id IS NULL OR p_conta_id = 0 OR t.conta_id = p_conta_id)  -- ✅ FILTRO
   GROUP BY t.conta_id
 )
 
 SELECT
-  c.id AS conta_id,                    -- ✅ ESSA LINHA É A CORREÇÃO
+  c.id AS conta_id,
   c.nome AS conta_nome,
   c.nro_banco,
   c.agencia,
@@ -75,5 +80,6 @@ FROM contas c
 LEFT JOIN mov_antes   ma ON ma.conta_id = c.id
 LEFT JOIN mov_periodo mp ON mp.conta_id = c.id
 ORDER BY c.nome;
+
 
 $$;
