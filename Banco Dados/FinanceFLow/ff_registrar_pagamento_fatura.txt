@@ -72,7 +72,8 @@ v_cat_id := ff_get_categoria_id(p_empresa_id, 'Pagamento de Fatura', 'saida');
         descricao,
         data_movimento,
         origem,
-      categoria_id
+      categoria_id,
+      fatura_id    
       )
       VALUES (
         p_empresa_id,
@@ -82,7 +83,8 @@ v_cat_id := ff_get_categoria_id(p_empresa_id, 'Pagamento de Fatura', 'saida');
         'Pagamento fatura cartão ' || v_cartao_nome,
         CURRENT_DATE,
         'web',
-       v_cat_id 
+       v_cat_id ,
+      v_fatura_id     
       )
       RETURNING id INTO v_transacao_id;
 

@@ -1,0 +1,56 @@
+CREATE OR REPLACE FUNCTION ff_estornar_transacao(
+  p_empresa_id BIGINT,
+  p_transacao_id BIGINT
+)
+RETURNS TEXT
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_pagar_id BIGINT;
+  v_receber_id BIGINT;
+  v_fatura_id BIGINT;
+BEGIN
+
+  -- Buscar origem da transação
+  SELECT pagar_id, receber_id, fatura_id
+    INTO v_pagar_id, v_receber_id, v_fatura_id
+    FROM transacoes
+   WHERE id = p_transacao_id
+     AND empresa_id = p_empresa_id;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Transação % não encontrada.', p_transacao_id;
+  END IF;
+
+  -- Se veio de contas a pagar → reabrir
+  IF v_pagar_id IS NOT NULL THEN
+    UPDATE contas_a_pagar
+       SET status = 'aberto'
+     WHERE id = v_pagar_id
+       AND empresa_id = p_empresa_id;
+  END IF;
+
+  -- Se veio de contas a receber → reabrir
+  IF v_receber_id IS NOT NULL THEN
+    UPDATE contas_a_receber
+       SET status = 'aberto'
+     WHERE id = v_receber_id
+       AND empresa_id = p_empresa_id;
+  END IF;
+
+  -- Se veio de fatura → voltar para fechada
+  IF v_fatura_id IS NOT NULL THEN
+    UPDATE cartoes_faturas
+       SET status = 'aberto'
+     WHERE id = v_fatura_id
+       AND empresa_id = p_empresa_id;
+  END IF;
+
+  -- Remover a transação
+  DELETE FROM transacoes
+   WHERE id = p_transacao_id;
+
+  RETURN 'sucesso';
+
+END;
+$$;

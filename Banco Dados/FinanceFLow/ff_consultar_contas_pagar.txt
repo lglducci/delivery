@@ -1,3 +1,5 @@
+  
+
  CREATE OR REPLACE FUNCTION ff_consultar_contas_pagar(
   p_empresa_id    BIGINT,
   p_status        TEXT DEFAULT NULL,
@@ -31,9 +33,10 @@ AS $$
   LEFT JOIN categorias_gerenciais cg ON cg.id = cp.categoria_id
   LEFT JOIN pessoa p ON p.id = cp.fornecedor_id
   WHERE cp.empresa_id = p_empresa_id
-    AND (p_status IS NULL OR cp.status = p_status)
+    AND (p_status IS NULL OR    cp.status = p_status or p_status   ='0')
     AND (p_data_ini IS NULL OR cp.vencimento >= p_data_ini)
     AND (p_data_fim IS NULL OR cp.vencimento <= p_data_fim)
     AND (p_fornecedor_id IS NULL OR p_fornecedor_id = 0  OR cp.fornecedor_id = p_fornecedor_id)
   ORDER BY cp.vencimento ASC,  p.nome  asc,   cp.parcela_num asc   ;
 $$ LANGUAGE sql;
+

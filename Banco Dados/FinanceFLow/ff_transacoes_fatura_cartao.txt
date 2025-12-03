@@ -1,6 +1,6 @@
  CREATE OR REPLACE FUNCTION ff_transacoes_fatura_cartao(
   p_empresa_id BIGINT,
-  p_cartao_nome TEXT,
+  p_cartao_id BIGINT, 
   p_referencia DATE
 )
 RETURNS JSON
@@ -28,7 +28,7 @@ BEGIN
     JOIN cartoes c ON c.id = f.cartao_id
     JOIN cartoes_transacoes t ON t.fatura_id = f.id
     WHERE f.empresa_id = p_empresa_id
-      AND lower(c.nome) = lower(p_cartao_nome)
+      AND c.id = p_cartao_id
       AND date_trunc('month', t.data_parcela) = date_trunc('month', p_referencia)
     LIMIT 1;
 
