@@ -1,9 +1,39 @@
+   ---------------------------------------------------
+-- FINANCE-FLOW – SCRIPT COMPLETO REVISADO
+---------------------------------------------------
 
--- SQL COMPLETO DO SISTEMA FINANCE-FLOW
--- (12 tabelas físicas + inserts)
--- ====================================
+-- ORDEM IMPORTANTE: CRIAR BASE E TABELAS MESTRES PRIMEIRO
+---------------------------------------------------
 
--- 1. usuarios
+DROP TABLE IF EXISTS extrato_importado CASCADE;
+DROP TABLE IF EXISTS cartoes_transacoes CASCADE;
+DROP TABLE IF EXISTS cartoes_faturas CASCADE;
+DROP TABLE IF EXISTS cartoes CASCADE;
+
+DROP TABLE IF EXISTS contas_a_receber CASCADE;
+DROP TABLE IF EXISTS contas_a_pagar CASCADE;
+
+DROP TABLE IF EXISTS transacoes CASCADE;
+DROP TABLE IF EXISTS categorias_gerenciais CASCADE;
+
+DROP TABLE IF EXISTS contas_financeiras CASCADE;
+
+DROP TABLE IF EXISTS usuario_empresa CASCADE;
+DROP TABLE IF EXISTS pessoa CASCADE;
+DROP TABLE IF EXISTS usuarios CASCADE;
+DROP TABLE IF EXISTS empresas CASCADE;
+     ---------------------------------------------------
+-- FINANCE-FLOW – SCRIPT COMPLETO REVISADO
+---------------------------------------------------
+
+-- ORDEM IMPORTANTE: CRIAR BASE E TABELAS MESTRES PRIMEIRO
+---------------------------------------------------
+ 
+
+
+---------------------------------------------------
+-- 1. USUÁRIOS
+---------------------------------------------------
 CREATE TABLE usuarios (
     id BIGSERIAL PRIMARY KEY,
     nome TEXT NOT NULL,
@@ -12,11 +42,10 @@ CREATE TABLE usuarios (
     criado_em TIMESTAMP DEFAULT now()
 );
 
-INSERT INTO usuarios (nome, email, senha_hash)
-VALUES ('Administrador', 'admin@admin.com', '123456');
 
-
--- 2. empresas
+---------------------------------------------------
+-- 2. EMPRESAS
+---------------------------------------------------
 CREATE TABLE empresas (
     id BIGSERIAL PRIMARY KEY,
     nome TEXT NOT NULL,
@@ -25,24 +54,27 @@ CREATE TABLE empresas (
     criado_em TIMESTAMP DEFAULT now()
 );
 
-INSERT INTO empresas (nome, tipo, documento)
-VALUES ('Empresa Padrão', 'PF', '00000000000');
 
-
--- 3. usuario_empresa
+---------------------------------------------------
+-- 3. USUARIO x EMPRESA
+---------------------------------------------------
 CREATE TABLE usuario_empresa (
     id BIGSERIAL PRIMARY KEY,
     usuario_id BIGINT NOT NULL REFERENCES usuarios(id),
     empresa_id BIGINT NOT NULL REFERENCES empresas(id),
     role TEXT DEFAULT 'admin',
-    UNIQUE (usuario_id, empresa_id)
+    UNIQUE (usuario_id, empresa_id),
+    escolha BOOLEAN DEFAULT false 
 );
 
-INSERT INTO usuario_empresa (usuario_id, empresa_id, role)
-VALUES (1, 1, 'admin');
+
+---------------------------------------------------
+-- 4. CONTAS FINANCEIRAS
+---------------------------------------------------
+ 
 
 
--- 4. contas_financeiras
+
 CREATE TABLE contas_financeiras (
     id BIGSERIAL PRIMARY KEY,
     empresa_id BIGINT NOT NULL REFERENCES empresas(id),
@@ -50,38 +82,55 @@ CREATE TABLE contas_financeiras (
     banco TEXT,
     tipo TEXT NOT NULL CHECK (tipo IN ('corrente','poupanca','carteira','caixa')),
     saldo_inicial NUMERIC(12,2) DEFAULT 0,
-    criado_em TIMESTAMP DEFAULT now()
+    criado_em TIMESTAMP DEFAULT now(),
+	  padrao boolean DEFAULT false,
+	  nro_banco text,
+	  agencia text,
+	  conta text,
+	  conjunta boolean DEFAULT false,
+	  juridica boolean DEFAULT false  
 );
 
-INSERT INTO contas_financeiras (empresa_id, nome, banco, tipo, saldo_inicial)
-VALUES
-(1, 'Nubank', 'Nubank', 'corrente', 500.00),
-(1, 'Carteira', 'Fisico', 'carteira', 150.00);
+ 
 
-
--- 5. categorias_gerenciais
-
-drop table    categorias_gerenciais cascade  
-
+---------------------------------------------------
+-- 5. CATEGORIAS GERENCIAIS
+---------------------------------------------------
 CREATE TABLE categorias_gerenciais (
     id BIGSERIAL PRIMARY KEY,
     empresa_id BIGINT NOT NULL REFERENCES empresas(id),
     nome TEXT NOT NULL,
+    grupo_contabil TEXT NULL,
     tipo TEXT NOT NULL CHECK (tipo IN ('entrada','saida'))
 );
 
 
-INSERT INTO categorias_gerenciais (empresa_id, nome, tipo)
-VALUES
-(1, 'Vendas', 'entrada'),
-(1, 'PIX Recebido', 'entrada'),
-(1, 'Alimentação', 'saida'),
-(1, 'Tarifas', 'saida');
+---------------------------------------------------
+-- 6. PESSOA (Cliente / Fornecedor)
+---------------------------------------------------
+CREATE TABLE pessoa (
+    id BIGSERIAL PRIMARY KEY,
+    empresa_id BIGINT NOT NULL REFERENCES empresas(id),
+    tipo VARCHAR(20) NOT NULL CHECK (tipo IN ('cliente','fornecedor','ambos')),
+    nome VARCHAR(200) NOT NULL, 
+    cpf_cnpj VARCHAR(20),
+    rg_ie VARCHAR(20), 
+    telefone VARCHAR(20),
+    whatsapp VARCHAR(20),
+    email VARCHAR(200), 
+    endereco TEXT,
+    bairro VARCHAR(100),
+    cidade VARCHAR(100),
+    estado VARCHAR(2),
+    cep VARCHAR(20), 
+    obs TEXT,
+    criado_em TIMESTAMP DEFAULT now()
+);
 
 
-drop table transacoes; 
-
--- 6. transacoes
+---------------------------------------------------
+-- 7. TRANSACOES (movimentação financeira)
+---------------------------------------------------
 CREATE TABLE transacoes (
     id BIGSERIAL PRIMARY KEY,
     empresa_id BIGINT NOT NULL REFERENCES empresas(id),
@@ -93,21 +142,14 @@ CREATE TABLE transacoes (
     data_movimento DATE NOT NULL,
     origem TEXT DEFAULT 'manual',
     criado_em TIMESTAMP DEFAULT now(),
-	pagar_id   BIGINT ,
-	receber_id   BIGINT 
+    pagar_id BIGINT,
+    receber_id BIGINT
 );
 
-INSERT INTO transacoes
-(empresa_id, conta_id, categoria_id, tipo, valor, descricao, data_movimento)
-VALUES
-(1, 1, 1, 'entrada', 300.00, 'Venda PIX Cliente João', '2025-11-05'),
-(1, 1, 3, 'saida', 92.50, 'Supermercado', '2025-11-06');
 
-
- 
-
- DROP TABLE IF EXISTS contas_a_pagar CASCADE;
-
+---------------------------------------------------
+-- 8. CONTAS A PAGAR
+---------------------------------------------------
 CREATE TABLE contas_a_pagar (
     id BIGSERIAL PRIMARY KEY,
     empresa_id BIGINT NOT NULL REFERENCES empresas(id),
@@ -115,54 +157,48 @@ CREATE TABLE contas_a_pagar (
     valor NUMERIC(12,2) NOT NULL,
     vencimento DATE NOT NULL,
     categoria_id BIGINT REFERENCES categorias_gerenciais(id),
-    fornecedor_id BIGINT REFERENCES pessoa(id), -- 🔵 ADICIONADO
+    fornecedor_id BIGINT REFERENCES pessoa(id),
     parcelas INT DEFAULT 1,
     parcela_num INT DEFAULT 1,
     status TEXT NOT NULL CHECK (status IN ('aberto','pago')),
-    criado_em TIMESTAMP DEFAULT now()
+    criado_em TIMESTAMP DEFAULT now(),
+    lote_id BIGINT
 );
 
--- Criar sequência para lote de contas a receber
 CREATE SEQUENCE IF NOT EXISTS contas_a_pagar_lote_seq;
+ALTER TABLE contas_a_pagar ALTER COLUMN lote_id SET DEFAULT nextval('contas_a_pagar_lote_seq');
 
--- Adicionar coluna lote_id
-ALTER TABLE contas_a_pagar
-ADD COLUMN lote_id BIGINT DEFAULT nextval('contas_a_pagar_lote_seq');
- 
 
--- 8. contas_a_receber
- 
- DROP TABLE IF EXISTS contas_a_receber CASCADE;
-
+---------------------------------------------------
+-- 9. CONTAS A RECEBER
+---------------------------------------------------
 CREATE TABLE contas_a_receber (
     id BIGSERIAL PRIMARY KEY,
-    empresa_id BIGINT NOT NULL REFERENCES empresas(id), 
+    empresa_id BIGINT NOT NULL REFERENCES empresas(id),
     descricao TEXT NOT NULL,
     valor NUMERIC(12,2) NOT NULL,
-    vencimento DATE NOT NULL, 
+    vencimento DATE NOT NULL,
     categoria_id BIGINT REFERENCES categorias_gerenciais(id),
-   fornecedor_id BIGINT REFERENCES pessoa(id), -- 🔵 ADICIONADO
+    fornecedor_id BIGINT REFERENCES pessoa(id),
     parcelas INT DEFAULT 1,
-    parcela_num INT DEFAULT 1, 
+    parcela_num INT DEFAULT 1,
     status TEXT NOT NULL CHECK (status IN ('aberto','recebido')),
-    criado_em TIMESTAMP DEFAULT now()
+    criado_em TIMESTAMP DEFAULT now(),
+    lote_id BIGINT
 );
 
--- Criar sequência para lote de contas a receber
 CREATE SEQUENCE IF NOT EXISTS contas_a_receber_lote_seq;
-
--- Adicionar coluna lote_id
-ALTER TABLE contas_a_receber
-ADD COLUMN lote_id BIGINT DEFAULT nextval('contas_a_receber_lote_seq');
-
- 
+ALTER TABLE contas_a_receber ALTER COLUMN lote_id SET DEFAULT nextval('contas_a_receber_lote_seq');
 
 
--- 9. cartoes
+---------------------------------------------------
+-- 10. CARTÕES
+---------------------------------------------------
 CREATE TABLE cartoes (
     id BIGSERIAL PRIMARY KEY,
     empresa_id BIGINT NOT NULL REFERENCES empresas(id),
     nome TEXT NOT NULL,
+	nomecartao TEXT NOT NULL,
     bandeira TEXT,
     limite_total NUMERIC(12,2),
     fechamento_dia INT,
@@ -170,12 +206,10 @@ CREATE TABLE cartoes (
     criado_em TIMESTAMP DEFAULT now()
 );
 
-INSERT INTO cartoes (empresa_id, nome, bandeira, limite_total, fechamento_dia, vencimento_dia)
-VALUES
-(1, 'Nubank Roxo', 'Mastercard', 2000.00, 3, 10);
 
-
--- 10. cartoes_faturas
+---------------------------------------------------
+-- 11. FATURAS DO CARTÃO
+---------------------------------------------------
 CREATE TABLE cartoes_faturas (
     id BIGSERIAL PRIMARY KEY,
     cartao_id BIGINT NOT NULL REFERENCES cartoes(id),
@@ -183,15 +217,16 @@ CREATE TABLE cartoes_faturas (
     mes_referencia DATE NOT NULL,
     valor_total NUMERIC(12,2) DEFAULT 0,
     status TEXT CHECK (status IN ('aberta','fechada','paga')) DEFAULT 'aberta',
+	vencimento  text,
+	numero text, 
+	status  text,
     criado_em TIMESTAMP DEFAULT now()
 );
 
-INSERT INTO cartoes_faturas (cartao_id, empresa_id, mes_referencia, valor_total, status)
-VALUES
-(1, 1, '2025-11-01', 0, 'aberta');
 
-
--- 11. cartoes_transacoes
+---------------------------------------------------
+-- 12. TRANSAÇÕES DO CARTÃO
+---------------------------------------------------
 CREATE TABLE cartoes_transacoes (
     id BIGSERIAL PRIMARY KEY,
     fatura_id BIGINT NOT NULL REFERENCES cartoes_faturas(id),
@@ -200,16 +235,14 @@ CREATE TABLE cartoes_transacoes (
     valor NUMERIC(12,2) NOT NULL,
     parcela_num INT,
     parcela_total INT,
-    criado_em TIMESTAMP DEFAULT now()
+    criado_em TIMESTAMP DEFAULT now(),
+     data_parcela DATE NOT NULL
 );
 
-INSERT INTO cartoes_transacoes
-(fatura_id, empresa_id, descricao, valor, parcela_num, parcela_total)
-VALUES
-(1, 1, 'Mercado – compra parcelada', 150.00, 1, 3);
 
-
--- 12. extrato_importado
+---------------------------------------------------
+-- 13. EXTRATO IMPORTADO
+---------------------------------------------------
 CREATE TABLE extrato_importado (
     id BIGSERIAL PRIMARY KEY,
     empresa_id BIGINT NOT NULL REFERENCES empresas(id),
@@ -222,26 +255,101 @@ CREATE TABLE extrato_importado (
     criado_em TIMESTAMP DEFAULT now()
 );
 
-INSERT INTO extrato_importado
-(empresa_id, conta_id, data_movimento, descricao, valor, hash_linha)
-VALUES
-(1, 1, '2025-11-05', 'PIX Cliente João', 300.00, 'hash001');
 
-CREATE TABLE pessoa (
-    id SERIAL PRIMARY KEY,
-    empresa_id INTEGER NOT NULL, 
-    tipo VARCHAR(20) NOT NULL, -- 'cliente', 'fornecedor', 'ambos'
-    nome VARCHAR(200) NOT NULL, 
-    cpf_cnpj VARCHAR(20),
-    rg_ie VARCHAR(20), 
-    telefone VARCHAR(20),
-    whatsapp VARCHAR(20),
-    email VARCHAR(200), 
-    endereco TEXT,
-    bairro VARCHAR(100),
-    cidade VARCHAR(100),
-    estado VARCHAR(2),
-    cep VARCHAR(20), 
-    obs TEXT, 
-    criado_em TIMESTAMP DEFAULT NOW()
-);
+ 
+ 
+
+
+ALTER TABLE public.usuarios ENABLE ROW LEVEL SECURITY;
+CREATE POLICY pol_usuarios_empresa
+ON public.usuarios
+FOR ALL TO public
+USING (true)
+WITH CHECK (true);
+ 
+ 
+ALTER TABLE public.empresas ENABLE ROW LEVEL SECURITY;
+CREATE POLICY pol_empresas_empresa
+ON public.empresas
+FOR ALL TO public
+USING (true)
+WITH CHECK (true);
+ 
+
+ 
+ALTER TABLE public.usuario_empresa ENABLE ROW LEVEL SECURITY;
+CREATE POLICY pol_usuario_empresa
+ON public.usuario_empresa
+FOR ALL TO public
+USING true
+WITH  true;
+ 
+ALTER TABLE public.contas_financeiras ENABLE ROW LEVEL SECURITY;
+CREATE POLICY pol_contas_financeiras
+ON public.contas_financeiras
+FOR ALL TO public
+USING true
+WITH CHECK true;
+ 
+ALTER TABLE public.categorias_gerenciais ENABLE ROW LEVEL SECURITY;
+CREATE POLICY pol_categorias_gerenciais
+ON public.categorias_gerenciais
+FOR ALL TO public
+USING true
+WITH CHECK true;
+ 
+ALTER TABLE public.transacoes ENABLE ROW LEVEL SECURITY;
+CREATE POLICY pol_transacoes
+ON public.transacoes
+FOR ALL TO public
+USING (empresa_id = current_setting('app.empresa_id')::BIGINT)
+WITH CHECK (empresa_id = current_setting('app.empresa_id')::BIGINT);
+ 
+ALTER TABLE public.contas_a_pagar ENABLE ROW LEVEL SECURITY;
+CREATE POLICY pol_contas_a_pagar
+ON public.contas_a_pagar
+FOR ALL TO public
+USING true
+WITH CHECK true;
+ 
+ALTER TABLE public.contas_a_receber ENABLE ROW LEVEL SECURITY;
+CREATE POLICY pol_contas_a_receber
+ON public.contas_a_receber
+FOR ALL TO public
+USING true
+WITH CHECK true;
+ 
+ALTER TABLE public.cartoes ENABLE ROW LEVEL SECURITY;
+CREATE POLICY pol_cartoes
+ON public.cartoes
+FOR ALL TO public
+USING true
+WITH CHECK true;
+ 
+ALTER TABLE public.cartoes_faturas ENABLE ROW LEVEL SECURITY;
+CREATE POLICY pol_cartoes_faturas
+ON public.cartoes_faturas
+FOR ALL TO public
+USING true
+WITH CHECK true;
+ 
+ALTER TABLE public.cartoes_transacoes ENABLE ROW LEVEL SECURITY;
+CREATE POLICY pol_cartoes_transacoes
+ON public.cartoes_transacoes
+FOR ALL TO public
+USING true
+WITH CHECK true;
+ 
+ALTER TABLE public.extrato_importado ENABLE ROW LEVEL SECURITY;
+CREATE POLICY pol_extrato_importado
+ON public.extrato_importado
+FOR ALL TO public
+USING true
+WITH CHECK true;
+ 
+ALTER TABLE public.pessoa ENABLE ROW LEVEL SECURITY;
+CREATE POLICY pol_pessoa
+ON public.pessoa
+FOR ALL TO public
+USING true
+WITH CHECK true;

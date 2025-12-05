@@ -1,0 +1,51 @@
+CREATE OR REPLACE FUNCTION ff_fluxo_projetado(
+    p_empresa_id BIGINT,
+    p_ini DATE,
+    p_fim DATE
+)
+RETURNS TABLE (
+    data DATE,
+    valor NUMERIC,
+    tipo TEXT,
+    origem TEXT
+)
+LANGUAGE sql AS $$
+    -- CONTAS A PAGAR
+    SELECT 
+        c.vencimento AS data,
+        c.valor AS valor,
+        'pagar' AS tipo,
+        'contas_a_pagar' AS origem
+    FROM contas_a_pagar c
+    WHERE c.empresa_id = p_empresa_id
+      AND c.status = 'aberto'
+      AND c.vencimento BETWEEN p_ini AND p_fim
+
+    UNION ALL
+
+    -- CONTAS A RECEBER
+    SELECT 
+        r.vencimento AS data,
+        r.valor AS valor,
+        'receber' AS tipo,
+        'contas_a_receber' AS origem
+    FROM contas_a_receber r
+    WHERE r.empresa_id = p_empresa_id
+      AND r.status = 'aberto'
+      AND r.vencimento BETWEEN p_ini AND p_fim
+
+    UNION ALL
+
+    -- FATURA DE CARTÃO → PROJETADO
+    SELECT 
+        f.vencimento AS data,
+        f.valor_total AS valor,
+        'pagar' AS tipo,
+        'cartao_fatura' AS origem
+    FROM cartoes_faturas f
+    WHERE f.empresa_id = p_empresa_id
+      AND f.status IN ('fechada','aberta')   -- não pagas
+      AND f.vencimento BETWEEN p_ini AND p_fim
+
+    ORDER BY data;
+$$;

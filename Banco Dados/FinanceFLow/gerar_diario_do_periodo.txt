@@ -1,0 +1,125 @@
+ CREATE OR REPLACE FUNCTION contab.gerar_diario_do_periodo(
+    p_empresa_id BIGINT,
+    p_data DATE
+)
+RETURNS void
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    r RECORD;
+    v_modelo_codigo TEXT;
+BEGIN
+    ---------------------------------------------------------------------
+    -- 1) TRANSAÇÕES FINANCEIRAS (entrada/saída já ocorrida)
+    ---------------------------------------------------------------------
+    FOR r IN 
+        SELECT t.*, c.grupo_contabil AS modelo_codigo
+        FROM transacoes_financeiras t
+        JOIN categorias_gerenciais c ON c.id = t.categoria_id
+        WHERE t.empresa_id = p_empresa_id
+          AND t.data = p_data
+    LOOP
+        INSERT INTO contab.diario (
+            empresa_id, data_mov, modelo_codigo, historico,
+            valor_total, valor_custo, valor_imposto, outros
+        )
+        VALUES (
+            p_empresa_id,
+            r.data,
+            r.modelo_codigo,
+            r.descricao,
+            r.valor,
+            0, 0,
+            '{}'
+        );
+    END LOOP;
+
+    ---------------------------------------------------------------------
+    -- 2) CONTAS A PAGAR (provisão)
+    ---------------------------------------------------------------------
+    FOR r IN
+        SELECT p.*, c.grupo_contabil AS modelo_codigo
+        FROM contas_pagar p
+        JOIN categorias_gerenciais c ON c.id = p.categoria_id
+        WHERE p.empresa_id = p_empresa_id
+          AND p.data_vencimento = p_data
+    LOOP
+        INSERT INTO contab.diario (
+            empresa_id, data_mov, modelo_codigo, historico,
+            valor_total, valor_custo, valor_imposto, outros
+        )
+        VALUES (
+            p_empresa_id,
+            r.data_vencimento,
+            r.modelo_codigo,
+            r.descricao,
+            r.valor,
+            0, 0,
+            '{}'
+        );
+    END LOOP;
+
+    ---------------------------------------------------------------------
+    -- 3) CONTAS A RECEBER (provisão)
+    ---------------------------------------------------------------------
+    FOR r IN
+        SELECT rcv.*, c.grupo_contabil AS modelo_codigo
+        FROM contas_receber rcv
+        JOIN categorias_gerenciais c ON c.id = rcv.categoria_id
+        WHERE rcv.empresa_id = p_empresa_id
+          AND rcv.data_vencimento = p_data
+    LOOP
+        INSERT INTO contab.diario (
+            empresa_id, data_mov, modelo_codigo, historico,
+            valor_total, valor_custo, valor_imposto, outros
+        )
+        VALUES (
+            p_empresa_id,
+            r.data_vencimento,
+            r.modelo_codigo,
+            r.descricao,
+            r.valor,
+            0, 0,
+            '{}'
+        );
+    END LOOP;
+
+    ---------------------------------------------------------------------
+    -- 4) FATURAS DE CARTÃO (provisão)
+    ---------------------------------------------------------------------
+    FOR r IN
+        SELECT f.*, c.grupo_contabil AS modelo_codigo
+        FROM faturas_cartao f
+        JOIN categorias_gerenciais c ON c.id = f.categoria_id
+        WHERE f.empresa_id = p_empresa_id
+          AND f.data_fechamento = p_data
+    LOOP
+        INSERT INTO contab.diario (
+            empresa_id, data_mov, modelo_codigo, historico,
+            valor_total, valor_custo, valor_imposto, outros
+        )
+        VALUES (
+            p_empresa_id,
+            r.data_fechamento,
+            r.modelo_codigo,
+            CONCAT('Fatura ', r.cartao_nome),
+            r.valor_total,
+            0, 0,
+            '{}'
+        );
+    END LOOP;
+
+    ---------------------------------------------------------------------
+    -- 5) PROCESSAR DIÁRIOS GERADOS
+    ---------------------------------------------------------------------
+    FOR r IN 
+        SELECT id 
+        FROM contab.diario
+        WHERE empresa_id = p_empresa_id
+          AND data_mov = p_data
+    LOOP
+        PERFORM contab.gerar_lancamentos_por_diario(r.id, p_empresa_id);
+    END LOOP;
+
+END;
+$$;

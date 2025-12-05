@@ -1,0 +1,23 @@
+CREATE OR REPLACE FUNCTION ff_fluxo_realizado(
+    p_empresa_id BIGINT,
+    p_ini DATE,
+    p_fim DATE
+)
+RETURNS TABLE (
+    data DATE,
+    valor NUMERIC,
+    tipo TEXT,
+    origem TEXT
+)
+LANGUAGE sql AS $$
+    SELECT 
+        t.data AS data,
+        t.valor AS valor,
+        t.tipo AS tipo,
+        'transacao' AS origem
+    FROM transacoes t
+    WHERE t.empresa_id = p_empresa_id
+      AND t.data BETWEEN p_ini AND p_fim
+      AND t.status = 'pago'
+    ORDER BY t.data;
+$$;

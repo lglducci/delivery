@@ -1,0 +1,35 @@
+CREATE OR REPLACE FUNCTION ff_fluxo_completo(
+    p_empresa_id BIGINT,
+    p_ini DATE,
+    p_fim DATE
+)
+RETURNS TABLE (
+    data DATE,
+    valor NUMERIC,
+    tipo TEXT,
+    origem TEXT,
+    tipo_indicador TEXT
+)
+LANGUAGE sql AS $$
+    -- REALIZADO
+    SELECT 
+        fr.data,
+        fr.valor,
+        fr.tipo,
+        fr.origem,
+        'realizado' AS tipo_indicador
+    FROM ff_fluxo_realizado(p_empresa_id, p_ini, p_fim) fr
+
+    UNION ALL
+
+    -- PROJETADO
+    SELECT 
+        fp.data,
+        fp.valor,
+        fp.tipo,
+        fp.origem,
+        'projetado' AS tipo_indicador
+    FROM ff_fluxo_projetado(p_empresa_id, p_ini, p_fim) fp
+
+    ORDER BY data;
+$$;
