@@ -1,71 +1,67 @@
  CREATE OR REPLACE FUNCTION ff_transacoes_fatura_cartao(
   p_empresa_id BIGINT,
-  p_cartao_id BIGINT, 
+  p_cartao_id  BIGINT,
   p_referencia DATE
 )
 RETURNS JSON
 LANGUAGE plpgsql
 AS $$
 DECLARE
-    v_fatura_id BIGINT;
+    v_fatura_id   BIGINT;
     v_cartao_nome TEXT;
-    v_mes_ref TEXT;
-    v_fatura JSON;
-    v_transacoes JSON;
-    v_soma NUMERIC;
+    v_mes_ref     TEXT;
+    v_fatura      JSON;
+    v_transacoes  JSON;
+    v_soma        NUMERIC;
 BEGIN
-    -- MÊS/ANO DA REFERÊNCIA
     v_mes_ref := to_char(p_referencia, 'YYYY-MM');
 
-    -- ACHAR A FATURA EXATA
     SELECT 
         f.id,
         c.nome,
         jsonb_build_object(
-            'id', f.id,
-            'mes_referencia', f.mes_referencia,
-            'status', f.status,
-            'valor_total', f.valor_total
+            'id',            f.id,
+            'mes_referencia',f.mes_referencia,
+            'status',        f.status,
+            'valor_total',   f.valor_total
         )::json
     INTO v_fatura_id, v_cartao_nome, v_fatura
     FROM cartoes_faturas f
     JOIN cartoes c ON c.id = f.cartao_id
     WHERE f.empresa_id = p_empresa_id
-      AND c.id = p_cartao_id
+      AND c.id         = p_cartao_id
       AND to_char(f.mes_referencia,'YYYY-MM') = v_mes_ref
     LIMIT 1;
 
     IF v_fatura_id IS NULL THEN
         RETURN json_build_object(
-            'erro', 'Fatura não encontrada para este cartão e mês'
+            'erro','Fatura não encontrada para este cartão e mês'
         );
     END IF;
 
-    -- BUSCAR APENAS AS PARCELAS DO MÊS CORRETO
     SELECT json_agg(row_to_json(t2))
     INTO v_transacoes
     FROM (
         SELECT *
         FROM cartoes_transacoes t
-        WHERE t.fatura_id = v_fatura_id
+        WHERE t.fatura_id  = v_fatura_id
           AND t.empresa_id = p_empresa_id
-          AND to_char(t.data_parcela,'YYYY-MM') = v_mes_ref
+        --  AND to_char(t.data_parcela,'YYYY-MM') = v_mes_ref
         ORDER BY t.data_parcela
     ) t2;
 
-    -- SOMA DO QUE FOI FILTRADO
     SELECT SUM(t.valor)
     INTO v_soma
     FROM cartoes_transacoes t
-    WHERE t.fatura_id = v_fatura_id
+    WHERE t.fatura_id  = v_fatura_id
       AND t.empresa_id = p_empresa_id
       AND to_char(t.data_parcela,'YYYY-MM') = v_mes_ref;
 
-    -- RETORNO FINAL
     RETURN json_build_object(
-        'cartao', v_cartao_nome,
-        'fatura', (v_fatura::jsonb || jsonb_build_object('soma_transacoes', COALESCE(v_soma,0)))::json,
-        'transacoes', COALESCE(v_transacoes, '[]'::json)
+        'cartao',      v_cartao_nome,
+        'fatura',      (v_fatura::jsonb ||
+                        jsonb_build_object('soma_transacoes', COALESCE(v_soma,0)))::json,
+        'transacoes',  COALESCE(v_transacoes, '[]'::json)
     );
 END;
 $$;

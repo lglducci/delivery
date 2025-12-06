@@ -207,10 +207,29 @@ CREATE TABLE cartoes (
 );
 
 
+CREATE TABLE cartoes_compras (
+    id BIGSERIAL PRIMARY KEY,
+    empresa_id BIGINT NOT NULL REFERENCES empresas(id),
+    cartao_id BIGINT NOT NULL REFERENCES cartoes(id),
+
+    descricao TEXT NOT NULL,
+    valor_total NUMERIC(12,2) NOT NULL,
+    parcelas INT NOT NULL,
+
+    data_compra DATE NOT NULL,
+    criado_em TIMESTAMP DEFAULT now()
+);
+
+
+ 
+
+
+
 ---------------------------------------------------
 -- 11. FATURAS DO CARTÃO
 ---------------------------------------------------
-CREATE TABLE cartoes_faturas (
+ 
+  CREATE TABLE cartoes_faturas (
     id BIGSERIAL PRIMARY KEY,
     cartao_id BIGINT NOT NULL REFERENCES cartoes(id),
     empresa_id BIGINT NOT NULL REFERENCES empresas(id),
@@ -218,25 +237,26 @@ CREATE TABLE cartoes_faturas (
     valor_total NUMERIC(12,2) DEFAULT 0,
     status TEXT CHECK (status IN ('aberta','fechada','paga')) DEFAULT 'aberta',
 	vencimento  text,
-	numero text, 
-	status  text,
+	numero text,  
+	data_compra DATE,
     criado_em TIMESTAMP DEFAULT now()
 );
 
 
----------------------------------------------------
--- 12. TRANSAÇÕES DO CARTÃO
----------------------------------------------------
-CREATE TABLE cartoes_transacoes (
+ 
+
+
+ CREATE TABLE cartoes_transacoes (
     id BIGSERIAL PRIMARY KEY,
-    fatura_id BIGINT NOT NULL REFERENCES cartoes_faturas(id),
     empresa_id BIGINT NOT NULL REFERENCES empresas(id),
+    fatura_id BIGINT NOT NULL REFERENCES cartoes_faturas(id), 
+    compra_id BIGINT REFERENCES cartoes_compras(id), 
     descricao TEXT NOT NULL,
-    valor NUMERIC(12,2) NOT NULL,
+    valor NUMERIC(12,2) NOT NULL, 
     parcela_num INT,
-    parcela_total INT,
-    criado_em TIMESTAMP DEFAULT now(),
-     data_parcela DATE NOT NULL
+    parcela_total INT, 
+    data_parcela DATE NOT NULL,
+    criado_em TIMESTAMP DEFAULT now()
 );
 
 

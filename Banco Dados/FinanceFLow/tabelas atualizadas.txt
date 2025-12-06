@@ -1,0 +1,196 @@
+   DROP TABLE IF EXISTS public.usuarios CASCADE;   
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
+ CREATE TABLE public.usuarios (  id bigint DEFAULT nextval('usuarios_id_seq'::regclass) NOT NULL,
+  nome text NOT NULL,
+  email text NOT NULL,
+  senha_hash text NOT NULL,
+  criado_em timestamp without time zone DEFAULT now(),
+  telefone text,
+  CONSTRAINT usuarios_pkey PRIMARY KEY (id),
+  CONSTRAINT usuarios_email_key UNIQUE (email));          
+                                                                                                                                                                                                                                                                                                                                             
+ DROP TABLE IF EXISTS public.empresas CASCADE;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         
+ CREATE TABLE public.empresas (  id bigint DEFAULT nextval('empresas_id_seq'::regclass) NOT NULL,
+  nome text NOT NULL,
+  tipo text NOT NULL,
+  documento text,
+  criado_em timestamp without time zone DEFAULT now(),
+  CONSTRAINT empresas_pkey PRIMARY KEY (id),
+  CONSTRAINT empresas_tipo_check CHECK (tipo = ANY (ARRAY['PF'::text, 'MEI'::text, 'PJ'::text])));            
+
+                                                                                                                                                                                                                                                                                                                     
+ DROP TABLE IF EXISTS public.usuario_empresa CASCADE;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  
+ CREATE TABLE public.usuario_empresa (  id bigint DEFAULT nextval('usuario_empresa_id_seq'::regclass) NOT NULL,
+  usuario_id bigint NOT NULL,
+  empresa_id bigint NOT NULL,
+  role text DEFAULT 'admin'::text,
+  escolha boolean DEFAULT false,
+  CONSTRAINT usuario_empresa_pkey PRIMARY KEY (id),
+  CONSTRAINT usuario_empresa_usuario_id_empresa_id_key UNIQUE (usuario_id, empresa_id));     
+                                                                                                                                                                                                                                                                                                      
+ DROP TABLE IF EXISTS public.contas_financeiras CASCADE;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
+ CREATE TABLE public.contas_financeiras (  id bigint DEFAULT nextval('contas_financeiras_id_seq'::regclass) NOT NULL,
+  empresa_id bigint NOT NULL,
+  nome text NOT NULL,
+  banco text,
+  tipo text NOT NULL,
+  saldo_inicial numeric(12,2) DEFAULT 0,
+  criado_em timestamp without time zone DEFAULT now(),
+  padrao boolean DEFAULT false,
+  nro_banco text,
+  agencia text,
+  conta text,
+  conjunta boolean DEFAULT false,
+  juridica boolean DEFAULT false,
+  CONSTRAINT contas_financeiras_pkey PRIMARY KEY (id),
+  CONSTRAINT contas_financeiras_tipo_check CHECK (tipo = ANY (ARRAY['corrente'::text, 'poupanca'::text, 'carteira'::text, 'caixa'::text])));                                  
+ 
+DROP TABLE IF EXISTS public.cartoes CASCADE;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          
+ CREATE TABLE public.cartoes (  id bigint DEFAULT nextval('cartoes_id_seq'::regclass) NOT NULL,
+  empresa_id bigint NOT NULL,
+  nome text NOT NULL,
+  bandeira text,
+  limite_total numeric(12,2),
+  fechamento_dia integer,
+  vencimento_dia integer,
+  criado_em timestamp without time zone DEFAULT now(),
+  escolhido boolean DEFAULT false,
+  numero text,
+  nomecartao text,
+  "Vencimento" text,
+  status text DEFAULT 'ativo'::text,
+  CONSTRAINT cartoes_pkey PRIMARY KEY (id));                                                                                                                                                                                                              
+ DROP TABLE IF EXISTS public.cartoes_transacoes CASCADE;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
+ CREATE TABLE public.cartoes_transacoes (  id bigint DEFAULT nextval('cartoes_transacoes_id_seq'::regclass) NOT NULL,
+  fatura_id bigint NOT NULL,
+  empresa_id bigint NOT NULL,
+  descricao text NOT NULL,
+  valor numeric(12,2) NOT NULL,
+  parcela_num integer,
+  parcela_total integer,
+  criado_em timestamp without time zone DEFAULT now(),
+  data_parcela date,
+  CONSTRAINT cartoes_transacoes_pkey PRIMARY KEY (id));                                                                                                                                                                                                                                                                        
+ 
+
+DROP TABLE IF EXISTS public.extrato_importado CASCADE;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                
+ CREATE TABLE public.extrato_importado (  id bigint DEFAULT nextval('extrato_importado_id_seq'::regclass) NOT NULL,
+  empresa_id bigint NOT NULL,
+  conta_id bigint NOT NULL,
+  data_movimento date NOT NULL,
+  descricao text,
+  valor numeric(12,2) NOT NULL,
+  hash_linha text,
+  conciliado boolean DEFAULT false,
+  criado_em timestamp without time zone DEFAULT now(),
+  CONSTRAINT extrato_importado_pkey PRIMARY KEY (id),
+  CONSTRAINT extrato_importado_hash_linha_key UNIQUE (hash_linha));                                                                                                                                                                                                
+ 
+DROP TABLE IF EXISTS public.cartoes_faturas CASCADE;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  
+ CREATE TABLE public.cartoes_faturas (  id bigint DEFAULT nextval('cartoes_faturas_id_seq'::regclass) NOT NULL,
+  cartao_id bigint NOT NULL,
+  empresa_id bigint NOT NULL,
+  mes_referencia date NOT NULL,
+  valor_total numeric(12,2) DEFAULT 0,
+  status text DEFAULT 'aberta'::text,
+  criado_em timestamp without time zone DEFAULT now(),
+  CONSTRAINT cartoes_faturas_pkey PRIMARY KEY (id),
+  CONSTRAINT cartoes_faturas_status_check CHECK (status = ANY (ARRAY['aberta'::text, 'fechada'::text, 'paga'::text])));                                                                                                                                                                             
+
+ DROP TABLE IF EXISTS public.pessoa CASCADE;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           
+ CREATE TABLE public.pessoa (  id integer DEFAULT nextval('pessoa_id_seq'::regclass) NOT NULL,
+  empresa_id integer NOT NULL,
+  tipo character varying(20) NOT NULL,
+  nome character varying(200) NOT NULL,
+  cpf_cnpj character varying(20),
+  rg_ie character varying(20),
+  telefone character varying(20),
+  whatsapp character varying(20),
+  email character varying(200),
+  endereco text,
+  bairro character varying(100),
+  cidade character varying(100),
+  estado character varying(2),
+  cep character varying(20),
+  obs text,
+  criado_em timestamp without time zone DEFAULT now(),
+  CONSTRAINT pessoa_pkey PRIMARY KEY (id));                                                        
+ 
+DROP TABLE IF EXISTS public.transacoes CASCADE;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       
+ CREATE TABLE public.transacoes (  id bigint DEFAULT nextval('transacoes_id_seq'::regclass) NOT NULL,
+  empresa_id bigint NOT NULL,
+  conta_id bigint NOT NULL,
+  categoria_id bigint,
+  tipo text NOT NULL,
+  valor numeric(12,2) NOT NULL,
+  descricao text,
+  data_movimento date NOT NULL,
+  origem text DEFAULT 'manual'::text,
+  criado_em timestamp without time zone DEFAULT now(),
+  pagar_id bigint,
+  receber_id bigint,
+  fatura_id bigint,
+  CONSTRAINT transacoes_pkey PRIMARY KEY (id),
+  CONSTRAINT transacoes_tipo_check CHECK (tipo = ANY (ARRAY['entrada'::text, 'saida'::text])));                                                                                                 
+ 
+DROP TABLE IF EXISTS public.contas_a_pagar CASCADE;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   
+ CREATE TABLE public.contas_a_pagar (  id bigint DEFAULT nextval('contas_a_pagar_id_seq'::regclass) NOT NULL,
+  empresa_id bigint NOT NULL,
+  descricao text NOT NULL,
+  valor numeric(12,2) NOT NULL,
+  vencimento date NOT NULL,
+  categoria_id bigint,
+  fornecedor_id bigint,
+  parcelas integer DEFAULT 1,
+  parcela_num integer DEFAULT 1,
+  status text NOT NULL,
+  criado_em timestamp without time zone DEFAULT now(),
+  lote_id bigint DEFAULT nextval('contas_a_pagar_lote_seq'::regclass),
+  data_pagamento date,
+  CONSTRAINT contas_a_pagar_pkey PRIMARY KEY (id),
+  CONSTRAINT contas_a_pagar_status_check CHECK (status = ANY (ARRAY['aberto'::text, 'pago'::text])));                 
+
+
+ DROP TABLE IF EXISTS public.categorias_gerenciais CASCADE;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            
+ CREATE TABLE public.categorias_gerenciais (  id bigint DEFAULT nextval('categorias_gerenciais_id_seq'::regclass) NOT NULL,
+  empresa_id bigint NOT NULL,
+  nome text NOT NULL,
+  tipo text NOT NULL,
+  grupo_contabil text,
+  CONSTRAINT categorias_gerenciais_pkey PRIMARY KEY (id),
+  CONSTRAINT categorias_gerenciais_tipo_check CHECK (tipo = ANY (ARRAY['entrada'::text, 'saida'::text])));                                                                                                                                                                                                                                                                                                      
+ 
+
+DROP TABLE IF EXISTS public.contas_a_receber CASCADE;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 
+ CREATE TABLE public.contas_a_receber (  id bigint DEFAULT nextval('contas_a_receber_id_seq'::regclass) NOT NULL,
+  empresa_id bigint NOT NULL,
+  descricao text NOT NULL,
+  valor numeric(12,2) NOT NULL,
+  vencimento date NOT NULL,
+  categoria_id bigint,
+  fornecedor_id bigint,
+  parcelas integer DEFAULT 1,
+  parcela_num integer DEFAULT 1,
+  status text NOT NULL,
+  criado_em timestamp without time zone DEFAULT now(),
+  lote_id bigint DEFAULT nextval('contas_a_receber_lote_seq'::regclass),
+  data_recebimento date,
+  CONSTRAINT contas_a_receber_pkey PRIMARY KEY (id),
+  CONSTRAINT contas_a_receber_status_check CHECK (status = ANY (ARRAY['aberto'::text, 'recebido'::text]))); 
+
+
+ ALTER TABLE contas_financeiras ADD CONSTRAINT contas_financeiras_empresa_id_fkey FOREIGN KEY (empresa_id) REFERENCES empresas(id);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
+ ALTER TABLE contas_a_receber ADD CONSTRAINT contas_a_receber_empresa_id_fkey FOREIGN KEY (empresa_id) REFERENCES empresas(id);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        
+ ALTER TABLE contas_a_receber ADD CONSTRAINT contas_a_receber_categoria_id_fkey FOREIGN KEY (categoria_id) REFERENCES categorias_gerenciais(id);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       
+ ALTER TABLE contas_a_receber ADD CONSTRAINT contas_a_receber_fornecedor_id_fkey FOREIGN KEY (fornecedor_id) REFERENCES pessoa(id);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
+ ALTER TABLE cartoes ADD CONSTRAINT cartoes_empresa_id_fkey FOREIGN KEY (empresa_id) REFERENCES empresas(id);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          
+ ALTER TABLE cartoes_transacoes ADD CONSTRAINT cartoes_transacoes_empresa_id_fkey FOREIGN KEY (empresa_id) REFERENCES empresas(id);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
+ ALTER TABLE extrato_importado ADD CONSTRAINT extrato_importado_empresa_id_fkey FOREIGN KEY (empresa_id) REFERENCES empresas(id);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
+ ALTER TABLE extrato_importado ADD CONSTRAINT extrato_importado_conta_id_fkey FOREIGN KEY (conta_id) REFERENCES contas_financeiras(id);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                
+ ALTER TABLE cartoes_faturas ADD CONSTRAINT cartoes_faturas_cartao_id_fkey FOREIGN KEY (cartao_id) REFERENCES cartoes(id);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
+ ALTER TABLE cartoes_faturas ADD CONSTRAINT cartoes_faturas_empresa_id_fkey FOREIGN KEY (empresa_id) REFERENCES empresas(id);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          
+ ALTER TABLE transacoes ADD CONSTRAINT transacoes_empresa_id_fkey FOREIGN KEY (empresa_id) REFERENCES empresas(id);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
+ ALTER TABLE transacoes ADD CONSTRAINT transacoes_conta_id_fkey FOREIGN KEY (conta_id) REFERENCES contas_financeiras(id);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              
+ ALTER TABLE contas_a_pagar ADD CONSTRAINT contas_a_pagar_empresa_id_fkey FOREIGN KEY (empresa_id) REFERENCES empresas(id);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            
+ ALTER TABLE contas_a_pagar ADD CONSTRAINT contas_a_pagar_fornecedor_id_fkey FOREIGN KEY (fornecedor_id) REFERENCES pessoa(id);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        
+ ALTER TABLE categorias_gerenciais ADD CONSTRAINT categorias_gerenciais_empresa_id_fkey FOREIGN KEY (empresa_id) REFERENCES empresas(id);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              

@@ -6,7 +6,8 @@ CREATE OR REPLACE FUNCTION ff_registrar_despesa(
   p_categoria_nome TEXT,
   p_valor NUMERIC,
   p_descricao TEXT,
-  p_data DATE DEFAULT CURRENT_DATE
+  p_data DATE DEFAULT CURRENT_DATE,
+ p_origem text DEFAULT  'ZAP'
 )
 RETURNS BIGINT
 LANGUAGE plpgsql
@@ -16,9 +17,7 @@ DECLARE
   v_cat_id   BIGINT;
   v_id       BIGINT;
 BEGIN
-                   v_conta_id := ff_get_conta_id(p_empresa_id, p_conta_nome);
                 
-
          IF p_conta_id IS NOT NULL AND p_conta_id > 0 THEN
               v_conta_id := p_conta_id;
           ELSE
@@ -52,7 +51,7 @@ BEGIN
     p_valor,
     p_descricao,
     p_data,
-    'zap'
+    p_origem 
   )
   RETURNING id INTO v_id;
 

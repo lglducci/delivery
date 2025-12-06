@@ -6,7 +6,8 @@ CREATE OR REPLACE FUNCTION ff_registrar_receita(
   p_categoria_nome TEXT,
   p_valor NUMERIC,
   p_descricao TEXT,
-  p_data DATE DEFAULT CURRENT_DATE
+  p_data DATE DEFAULT CURRENT_DATE,
+ p_origem TEXT DEFAULT 'ZAP'
 )
 RETURNS BIGINT
 LANGUAGE plpgsql
@@ -48,7 +49,7 @@ BEGIN
     p_valor,
     p_descricao,
     p_data,
-    'zap'
+    p_origem 
   )
   RETURNING id INTO v_id;
 

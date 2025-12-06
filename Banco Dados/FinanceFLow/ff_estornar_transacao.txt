@@ -41,7 +41,7 @@ BEGIN
   -- Se veio de fatura → voltar para fechada
   IF v_fatura_id IS NOT NULL THEN
     UPDATE cartoes_faturas
-       SET status = 'aberto'
+       SET status = 'aberta'
      WHERE id = v_fatura_id
        AND empresa_id = p_empresa_id;
   END IF;
