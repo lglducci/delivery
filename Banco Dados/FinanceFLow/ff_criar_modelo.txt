@@ -1,0 +1,44 @@
+  create or replace function ff_criar_modelo(p_empresa_id int, p_nome text, p_token text)
+returns int as $$
+declare
+    v_modelo_id int;
+    v_conta_deb int;
+    v_conta_cred int;
+begin
+    -- cria o modelo
+    insert into contab.modelos (empresa_id, nome, codigo)
+    values (p_empresa_id, p_nome, p_token)
+    returning id into v_modelo_id;
+
+    -- garante conta fake debito
+    select id into v_conta_deb
+    from contab.contas
+    where empresa_id = p_empresa_id and codigo = 'XPTO_D';
+
+    if v_conta_deb is null then
+        insert into contab.contas (empresa_id, codigo, nome, tipo, natureza, nivel)
+        values (p_empresa_id, 'XPTO_D', 'Conta Padrão Débito', 'ATIVO', 'D', 1)
+        returning id into v_conta_deb;
+    end if;
+
+    -- garante conta fake crédito
+    select id into v_conta_cred
+    from contab.contas
+    where empresa_id = p_empresa_id and codigo = 'XPTO_C';
+
+    if v_conta_cred is null then
+        insert into contab.contas (empresa_id, codigo, nome, tipo, natureza, nivel)
+        values (p_empresa_id, 'XPTO_C', 'Conta Padrão Crédito', 'ATIVO', 'C', 1)
+        returning id into v_conta_cred;
+    end if;
+
+    -- insere as duas linhas do modelo
+    insert into contab.modelos_linhas (empresa_id, modelo_id, conta_id, dc ,fonte_valor, valor_fixo)
+    values (p_empresa_id, v_modelo_id, v_conta_deb, 'D','Total',null );
+
+    insert into contab.modelos_linhas (empresa_id, modelo_id, conta_id, dc  ,fonte_valor, valor_fixo)
+    values (p_empresa_id, v_modelo_id, v_conta_cred, 'C','Total',null );
+
+    return v_modelo_id;
+end;
+$$ language plpgsql;

@@ -1,0 +1,24 @@
+create or replace function ff_excluir_modelo(
+    p_empresa_id int,
+    p_modelo_id  int
+)
+returns json as $$
+declare
+begin
+    -- 1) EXCLUI AS LINHAS DO MODELO
+    delete from contab.modelos_linhas
+    where empresa_id = p_empresa_id
+      and modelo_id  = p_modelo_id;
+
+    -- 2) EXCLUI O MODELO
+    delete from contab.modelos
+    where empresa_id = p_empresa_id
+      and id         = p_modelo_id;
+
+    return json_build_object(
+        'ok', true,
+        'message', 'Modelo excluído com sucesso',
+        'modelo_id', p_modelo_id
+    );
+end;
+$$ language plpgsql;
