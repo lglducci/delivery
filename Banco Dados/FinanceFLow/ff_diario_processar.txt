@@ -1,0 +1,20 @@
+CREATE OR REPLACE FUNCTION contab.ff_diario_processar(
+    p_empresa_id int,
+    p_diario_id  bigint
+)
+RETURNS void AS
+$$
+BEGIN
+    UPDATE contab.diario
+       SET status = 'processado'
+     WHERE id = p_diario_id
+       AND empresa_id = p_empresa_id
+       AND status IN ('rascunho', 'confirmado');
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Lançamento não encontrado ou já está processado/estornado.';
+    END IF;
+
+    -- 🔜 aqui depois você coloca a lógica que gera os lançamentos contábeis
+END;
+$$ LANGUAGE plpgsql;
