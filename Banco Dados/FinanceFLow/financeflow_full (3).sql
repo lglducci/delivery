@@ -113,7 +113,7 @@ CREATE TABLE pessoa (
     empresa_id BIGINT NOT NULL REFERENCES empresas(id),
     tipo VARCHAR(20) NOT NULL CHECK (tipo IN ('cliente','fornecedor','ambos')),
     nome VARCHAR(200) NOT NULL, 
-    cpf_cnpj VARCHAR(20),
+    cpf_cnpj VARCHAR(20) not null,
     rg_ie VARCHAR(20), 
     telefone VARCHAR(20),
     whatsapp VARCHAR(20),
@@ -124,7 +124,8 @@ CREATE TABLE pessoa (
     estado VARCHAR(2),
     cep VARCHAR(20), 
     obs TEXT,
-    criado_em TIMESTAMP DEFAULT now()
+    criado_em TIMESTAMP DEFAULT now(),
+    validado  boolean DEFAULT true
 );
 
 
