@@ -147,6 +147,7 @@ CREATE TABLE transacoes (
     receber_id BIGINT
 );
 
+ alter table public.transacoes add column evento_codigo text;
 
 ---------------------------------------------------
 -- 8. CONTAS A PAGAR
@@ -163,7 +164,8 @@ CREATE TABLE contas_a_pagar (
     parcela_num INT DEFAULT 1,
     status TEXT NOT NULL CHECK (status IN ('aberto','pago')),
     criado_em TIMESTAMP DEFAULT now(),
-    lote_id BIGINT
+    lote_id BIGINT,
+	evento_codigo text default 'PAGAR'
 );
 
 CREATE SEQUENCE IF NOT EXISTS contas_a_pagar_lote_seq;
@@ -185,7 +187,8 @@ CREATE TABLE contas_a_receber (
     parcela_num INT DEFAULT 1,
     status TEXT NOT NULL CHECK (status IN ('aberto','recebido')),
     criado_em TIMESTAMP DEFAULT now(),
-    lote_id BIGINT
+    lote_id BIGINT,
+	evento_codigo text default 'RECEBER'
 );
 
 CREATE SEQUENCE IF NOT EXISTS contas_a_receber_lote_seq;
@@ -218,6 +221,7 @@ CREATE TABLE cartoes_compras (
     parcelas INT NOT NULL,
 
     data_compra DATE NOT NULL,
+	evento_codigo text default  'COMPRA_CARTAO',
     criado_em TIMESTAMP DEFAULT now()
 );
 
@@ -240,9 +244,10 @@ CREATE TABLE cartoes_compras (
 	vencimento  text,
 	numero text,  
 	data_compra DATE,
+	evento_codigo text default 'PAGAMENTO_FATURA_CARTAO',
     criado_em TIMESTAMP DEFAULT now()
 );
-
+ 
 
  
 
@@ -278,7 +283,9 @@ CREATE TABLE extrato_importado (
 
 
  
- 
+
+
+
 
 
 ALTER TABLE public.usuarios ENABLE ROW LEVEL SECURITY;
@@ -374,3 +381,21 @@ ON public.pessoa
 FOR ALL TO public
 USING true
 WITH CHECK true;
+
+
+
+🔥 ETAPA 4 — Quando o usuário ou sistema criar algo, você grava o EVENTO
+Exemplo 1 — criar conta a pagar
+evento_codigo = 'CRIA_PAGAR'
+
+Exemplo 2 — pagar parcela
+evento_codigo = 'PAGAR'
+
+Exemplo 3 — compra no cartão
+evento_codigo = 'COMPRA_CARTAO'
+
+Exemplo 4 — pagamento da fatura
+evento_codigo = 'PAGAMENTO_FATURA_CARTAO'
+
+Exemplo 5 — recebimento PIX
+evento_codigo = 'RECEBIMENTO_PIX'
