@@ -91,7 +91,7 @@ BEGIN
         UPDATE contab.diario_staging
         SET validacao = v_msg,
             parceiro_id = v_parceiro_id,
-            status = CASE WHEN v_msg IS NULL THEN 'concluido' ELSE 'erro' END,
+            status = CASE WHEN v_msg IS NULL THEN 'ok' ELSE 'erro' END,
             linha = i
         WHERE id = r.id;
 

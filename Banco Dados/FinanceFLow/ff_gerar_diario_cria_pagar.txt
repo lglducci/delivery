@@ -1,0 +1,89 @@
+CREATE OR REPLACE FUNCTION contab.ff_gerar_diario_cria_pagar(
+    p_empresa_id BIGINT,
+    p_data_ini   DATE,
+    p_data_fim   DATE
+)
+RETURNS INTEGER
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_qtd INTEGER := 0;
+BEGIN
+    /*
+      🔹 Tabela usada: fin.contas_pagar  (troque se o nome for outro)
+      Campos esperados (adapte se precisar):
+        - empresa_id
+        - descricao
+        - valor
+        - vencimento
+        - fornecedor_id        -- parceiro
+        - parcelas             -- total de parcelas da dívida
+        - parcela_nr           -- nº da parcela (1..N)
+        - status               -- 'aberto', 'pago', etc
+        - criado_em            -- data de criação da dívida
+        - lote_id              -- identificador do grupo de parcelas da mesma dívida
+    */
+
+    INSERT INTO contab.diario (
+        empresa_id,
+        data_mov,
+        modelo_codigo,
+        historico,
+        doc_ref,
+        parceiro_id,
+        data_vencto,
+        valor_total,
+        valor_custo,
+        valor_imposto,
+        desconto,
+        status,
+        outros,
+        lote_id
+    )
+    SELECT
+        cp.empresa_id,
+        MIN(cp.criado_em)                        AS data_mov,
+        'CRIA_PAGAR'                             AS modelo_codigo,
+        'Criação de dívida: ' || MAX(cp.descricao)
+            || ' (' || MAX(cp.parcelas) || ' parcelas)' AS historico,
+        'CP-' || cp.lote_id                      AS doc_ref,
+        cp.fornecedor_id                         AS parceiro_id,
+        MAX(cp.vencimento)                       AS data_vencto,
+        SUM(cp.valor)                            AS valor_total,
+        0::NUMERIC(14,2)                         AS valor_custo,
+        0::NUMERIC(14,2)                         AS valor_imposto,
+        0::NUMERIC(14,2)                         AS desconto,
+        'rascunho'                               AS status,
+        jsonb_build_object(
+            'origem', 'CONTAS_PAGAR',
+            'evento', 'CRIA_PAGAR',
+            'lote_id', cp.lote_id
+        )                                        AS outros,
+        cp.lote_id
+    FROM fin.contas_pagar cp
+    WHERE cp.empresa_id = p_empresa_id
+      -- período de criação da dívida
+      AND cp.criado_em BETWEEN p_data_ini AND p_data_fim
+      -- apenas dívidas ainda em aberto (ajuste se sua regra for outra)
+      AND cp.status IN ('aberto', 'em_aberto')
+    GROUP BY
+        cp.empresa_id,
+        cp.lote_id,
+        cp.fornecedor_id
+    HAVING
+        -- evita duplicar se diário já gerou esse lote
+        NOT EXISTS (
+            SELECT 1
+            FROM contab.diario d
+            WHERE d.empresa_id   = p_empresa_id
+              AND d.modelo_codigo = 'CRIA_PAGAR'
+              AND d.doc_ref       = 'CP-' || cp.lote_id
+        )
+    RETURNING 1 INTO v_qtd;
+
+    -- retorna quantos lançamentos foram inseridos
+    GET DIAGNOSTICS v_qtd = ROW_COUNT;
+
+    RETURN v_qtd;
+END;
+$$;

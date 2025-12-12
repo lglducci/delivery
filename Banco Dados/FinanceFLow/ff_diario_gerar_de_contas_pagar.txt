@@ -1,0 +1,59 @@
+CREATE OR REPLACE FUNCTION contab.ff_diario_gerar_de_contas_pagar(
+    p_empresa_id bigint,
+    p_data_ini   date,
+    p_data_fim   date
+)
+RETURNS uuid
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_lote_id uuid := gen_random_uuid();
+BEGIN
+    INSERT INTO contab.diario (
+        empresa_id,
+        data_mov,
+        modelo_codigo,
+        historico,
+        doc_ref,
+        parceiro_id,
+        data_vencto,
+        valor_total,
+        valor_custo,
+        valor_imposto,
+        desconto,
+        status,
+        outros,
+        lote_id
+    )
+    SELECT
+        c.empresa_id,
+        c.data_mov,
+        c.evento_codigo   AS modelo_codigo,   -- ← você define o nome da coluna
+        c.historico,
+        c.doc_ref,
+        c.parceiro_id,
+        c.data_vencto,
+        c.valor_total,
+        0,
+        0,
+        0,
+        'rascunho',
+        c.outros,
+        v_lote_id
+    FROM financeiro.contas_pagar c
+    WHERE c.empresa_id = p_empresa_id
+      AND c.data_mov BETWEEN p_data_ini AND p_data_fim
+
+      AND c.evento_codigo IS NOT NULL     -- só gera se tiver modelo ligado
+
+      AND NOT EXISTS (
+            SELECT 1 FROM contab.diario d
+            WHERE d.empresa_id    = c.empresa_id
+              AND d.data_mov      = c.data_mov
+              AND d.doc_ref       = c.doc_ref
+              AND d.modelo_codigo = c.evento_codigo
+      );
+
+    RETURN v_lote_id;
+END;
+$$;

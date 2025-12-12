@@ -1,0 +1,23 @@
+CREATE OR REPLACE FUNCTION contab.ff_gerar_diario_tudo(
+    p_empresa_id BIGINT,
+    p_data_ini   DATE,
+    p_data_fim   DATE
+)
+RETURNS VOID
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_qtd_cria_pagar INTEGER;
+BEGIN
+    -- 1) Diario vindo de transações financeiras (já existente aí no seu projeto)
+    PERFORM contab.ff_gerar_diario_de_transacoes(p_empresa_id, p_data_ini, p_data_fim);
+
+    -- 2) Diario vindo de eventos de parcelas pagas / recebidas (PAGAR / RECEBER)
+    PERFORM contab.ff_gerar_diario_de_parcelas(p_empresa_id, p_data_ini, p_data_fim);
+
+    -- 3) ✅ Criação do passivo total das dívidas parceladas (CRIA_PAGAR)
+    v_qtd_cria_pagar := contab.ff_gerar_diario_cria_pagar(p_empresa_id, p_data_ini, p_data_fim);
+
+    RAISE NOTICE 'Diário gerado: % lançamentos de CRIA_PAGAR.', v_qtd_cria_pagar;
+END;
+$$;
