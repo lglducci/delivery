@@ -1,0 +1,58 @@
+-- dentro da sua ff_gerar_diario_transacoes_staging(...)
+WITH sem_parceiro AS (
+  SELECT (contab.ff_get_or_create_sem_parceiro(p_empresa_id)).*
+),
+base AS (
+  SELECT
+    t.*,
+    cp.fornecedor_id AS pagar_fornecedor_id,
+    cr.fornecedor_id AS receber_fornecedor_id,
+    p1.cpf_cnpj      AS cnpj_pagar,
+    p2.cpf_cnpj      AS cnpj_receber
+  FROM public.transacoes t
+  LEFT JOIN public.contas_a_pagar   cp ON cp.id = t.pagar_id
+  LEFT JOIN public.contas_a_receber cr ON cr.id = t.receber_id
+  LEFT JOIN public.pessoa p1 ON p1.id = cp.fornecedor_id
+  LEFT JOIN public.pessoa p2 ON p2.id = cr.fornecedor_id
+  WHERE t.empresa_id = p_empresa_id
+    AND t.data_movimento BETWEEN p_data_ini AND p_data_fim
+)
+INSERT INTO contab.diario_staging (
+  empresa_id,
+  data_mov,
+  modelo_codigo,
+  historico,
+  doc_ref,
+  parceiro_id,
+  cnpj,
+  data_vencto,
+  valor_total,
+  valor_custo,
+  valor_imposto,
+  desconto,
+  status,
+  outros,
+  lote_id
+)
+SELECT
+  b.empresa_id,
+  b.data_movimento::date AS data_mov,
+
+  -- modelo: você disse que vem da categoria.grupo_contabil (ou evento). Ajuste aqui:
+  cg.grupo_contabil      AS modelo_codigo,
+
+  COALESCE(b.descricao, '') AS historico,
+  'TRX-' || b.id::text      AS doc_ref,
+
+  COALESCE(b.pagar_fornecedor_id, b.receber_fornecedor_id, sp.parceiro_id) AS parceiro_id,
+  COALESCE(b.cnpj_pagar, b.cnpj_receber, sp.cnpj) AS cnpj,
+
+  NULL::date AS data_vencto,
+  b.valor    AS valor_total,
+  0,0,0,
+  'pendente',
+  jsonb_build_object('origem','TRANSACOES','transacao_id',b.id,'pagar_id',b.pagar_id,'receber_id',b.receber_id),
+  gen_random_uuid()
+FROM base b
+LEFT JOIN public.categorias_gerenciais cg ON cg.id = b.categoria_id
+CROSS JOIN sem_parceiro sp;

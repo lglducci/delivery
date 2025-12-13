@@ -1,0 +1,43 @@
+CREATE OR REPLACE FUNCTION contab.ff_staging_de_transacoes(
+  p_empresa_id bigint,
+  p_data_ini date,
+  p_data_fim date
+)
+RETURNS uuid
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_lote uuid := gen_random_uuid();
+BEGIN
+ 
+ INSERT INTO contab.diario_staging (
+                        empresa_id,  
+                        data_mov, 
+                        modelo_codigo, 
+                        historico,
+                        doc_ref, 
+                        parceiro_id,
+                        cnpj, 
+                        data_vencto, 
+                        valor_total,
+                        valor_custo, 
+                        valor_imposto, 
+                        desconto, 
+                        status, 
+                        lote_id  )
+ 
+           SELECT
+                     t.empresa_id,
+  	  t.data_movimento,
+  	  t.descricao,
+  	  COALESCE(t.doc_ref, 'TRANS#' || t.id),
+ 	   t.valor,
+  	  'pendente',
+ 	   v_lote
+             FROM transacoes t
+  WHERE t.empresa_id = p_empresa_id
+    AND t.data_movimento BETWEEN p_data_ini AND p_data_fim;
+
+  RETURN v_lote;
+END;
+$$;

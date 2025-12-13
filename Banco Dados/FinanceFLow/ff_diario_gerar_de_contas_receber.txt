@@ -1,45 +1,61 @@
-CREATE OR REPLACE FUNCTION contab.ff_diario_gerar_de_contas_receber(
+  CREATE OR REPLACE FUNCTION contab.ff_diario_gerar_de_contas_receber(
     p_empresa_id bigint,
     p_data_ini   date,
     p_data_fim   date
 )
-RETURNS uuid
+RETURNS void
 LANGUAGE plpgsql
 AS $$
 DECLARE
-    v_lote_id uuid := gen_random_uuid();
+    
+
 BEGIN
-    INSERT INTO contab.diario (
-        empresa_id, data_mov, modelo_codigo, historico,
-        doc_ref, parceiro_id, data_vencto, valor_total,
+
+ 
+    INSERT INTO contab.diario_staging (
+        empresa_id, 
+        data_mov,
+         modelo_codigo,
+        historico,
+        doc_ref,
+        parceiro_id,
+        cnpj,
+        data_vencto, 
+        valor_total,
         valor_custo, valor_imposto, desconto, status,
-        outros, lote_id
+        outros   
     )
     SELECT
         r.empresa_id,
-        r.data_mov,
+        r.criado_em,
         r.evento_codigo,
-        r.historico,
+        r.descricao,
         r.doc_ref,
-        r.parceiro_id,
-        r.data_vencto,
-        r.valor_total,
+        r.fornecedor_id,
+        (
+      SELECT p.cpf_cnpj
+      FROM   pessoa p
+      WHERE p.id = r.fornecedor_id
+    ) AS cnpj,
+        r.vencimento ,
+        r.valor,
         0,0,0,
-        'rascunho',
-        r.outros,
-        v_lote_id
-    FROM financeiro.contas_receber r
+        'rascunho' ,
+         jsonb_build_object(
+        'origem', 'CONTAS_RECEBER',
+        'evento', 'RECEBER'  ) 
+    FROM contas_a_receber r
     WHERE r.empresa_id = p_empresa_id
-      AND r.data_mov BETWEEN p_data_ini AND p_data_fim
+      AND r.vencimento BETWEEN p_data_ini AND p_data_fim
       AND r.evento_codigo IS NOT NULL
       AND NOT EXISTS (
-            SELECT 1 FROM contab.diario d
+            SELECT 1 FROM  contab.diario_staging  d
             WHERE d.empresa_id    = r.empresa_id
-              AND d.data_mov      = r.data_mov
+              AND d.data_mov      = r.vencimento
               AND d.doc_ref       = r.doc_ref
               AND d.modelo_codigo = r.evento_codigo
       );
-
-    RETURN v_lote_id;
+ 
 END;
 $$;
+

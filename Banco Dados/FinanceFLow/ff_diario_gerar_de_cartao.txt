@@ -1,4 +1,4 @@
- CREATE OR REPLACE FUNCTION contab.ff_diario_gerar_de_cartao(
+   CREATE OR REPLACE FUNCTION contab.ff_diario_gerar_de_cartao(
     p_empresa_id bigint,
     p_data_ini   date,
     p_data_fim   date
@@ -8,36 +8,52 @@ LANGUAGE plpgsql
 AS $$
 DECLARE
     v_lote_id uuid := gen_random_uuid();
+     v_fornecedor bigint  ;
+     
+ 
 BEGIN
-    INSERT INTO contab.diario (
-        empresa_id, data_mov, modelo_codigo, historico,
-        doc_ref, parceiro_id, data_vencto, valor_total,
-        valor_custo, valor_imposto, desconto, status,
-        outros, lote_id
-    )
-    SELECT
-        m.empresa_id,
-        m.data_mov,
-        m.evento_codigo,
-        m.historico,
-        m.doc_ref,
-        m.parceiro_id,
-        m.data_vencto,
-        m.valor_total,
-        0,0,0,
-        'rascunho',
-        m.outros,
-        v_lote_id
-    FROM cartao.movimentos m
-    WHERE m.empresa_id = p_empresa_id
-      AND m.data_mov BETWEEN p_data_ini AND p_data_fim
-      AND m.evento_codigo IS NOT NULL
+
+v_fornecedor := contab.ff_get_fornecedor_cartao(p_empresa_id ) ;
+
+
+INSERT INTO contab.diario_staging (
+                        empresa_id,  
+                        data_mov, 
+                        modelo_codigo, 
+                        historico,
+                        doc_ref, 
+                        parceiro_id,
+                        cnpj, 
+                        data_vencto, 
+                        valor_total,
+                        valor_custo, 
+                        valor_imposto, 
+                        desconto, 
+                        status, 
+                        lote_id  )
+                SELECT
+      	       	 f.empresa_id,
+       		     f.vencimento,
+       		     f.evento_codigo,
+     		    f.numero ,
+       		    f.numero ,
+       		    v_fornecedor,
+               '00000000000000',
+      		   f.vencimento,
+      		   f.valor_total,
+      		   0,0,0,
+     		  'rascunho', 
+      		   v_lote_id
+    	FROM cartoes_faturas  f
+    WHERE f.empresa_id = p_empresa_id
+      AND f.vencimento  BETWEEN p_data_ini AND p_data_fim
+      AND f.evento_codigo IS NOT NULL
       AND NOT EXISTS (
-            SELECT 1 FROM contab.diario d
-            WHERE d.empresa_id    = m.empresa_id
-              AND d.data_mov      = m.data_mov
-              AND d.doc_ref       = m.doc_ref
-              AND d.modelo_codigo = m.evento_codigo
+            SELECT 1 FROM contab.diario_staging d
+            WHERE d.empresa_id    = f.empresa_id
+              AND     d.data_mov      = f.vencimento 
+              AND     d.doc_ref       =   f.numero
+              AND     d.modelo_codigo = f.evento_codigo
       );
 
     RETURN v_lote_id;
