@@ -7,56 +7,83 @@ RETURNS BIGINT
 LANGUAGE plpgsql
 AS $$
 DECLARE
-  v_cartao_id       BIGINT;
-  v_fechamento_dia  INT;
-  v_mes_ref         DATE;
-  v_fatura_id       BIGINT;
+  v_cartao_id        BIGINT;
+  v_fechamento_dia   INT;
+  v_vencimento_dia   INT;
+  v_mes_ref          DATE;
+  v_data_vencimento  DATE;
+  v_doc_ref          TEXT;
+  v_fatura_id        BIGINT;
 BEGIN
+  -- 🔹 Seleciona cartão
   IF p_cartao_nome IS NULL
      OR trim(p_cartao_nome) = ''
      OR lower(trim(p_cartao_nome)) IN ('null', 'undefined')
   THEN
-    SELECT id, fechamento_dia
-      INTO v_cartao_id, v_fechamento_dia
+    SELECT id, fechamento_dia, vencimento_dia
+      INTO v_cartao_id, v_fechamento_dia, v_vencimento_dia
     FROM cartoes
     WHERE empresa_id = p_empresa_id
       AND escolhido = TRUE
     ORDER BY id
     LIMIT 1;
-
-    IF v_cartao_id IS NULL THEN
-      RAISE EXCEPTION 'Nenhum cartão marcado como escolhido para empresa %', p_empresa_id;
-    END IF;
   ELSE
-    SELECT id, fechamento_dia
-      INTO v_cartao_id, v_fechamento_dia
+    SELECT id, fechamento_dia, vencimento_dia
+      INTO v_cartao_id, v_fechamento_dia, v_vencimento_dia
     FROM cartoes
     WHERE empresa_id = p_empresa_id
       AND lower(nome) = lower(p_cartao_nome)
     LIMIT 1;
-
-    IF v_cartao_id IS NULL THEN
-      RAISE EXCEPTION 'Cartão "%" não encontrado para empresa %', p_cartao_nome, p_empresa_id;
-    END IF;
   END IF;
 
+  IF v_cartao_id IS NULL THEN
+    RAISE EXCEPTION 'Cartão não encontrado para empresa %', p_empresa_id;
+  END IF;
+
+  -- 🔹 Define mês de referência
   IF EXTRACT(DAY FROM p_data_compra) > v_fechamento_dia THEN
     v_mes_ref := date_trunc('month', p_data_compra + INTERVAL '1 month');
   ELSE
     v_mes_ref := date_trunc('month', p_data_compra);
   END IF;
 
+  -- 🔹 Calcula vencimento da fatura
+  v_data_vencimento :=
+    (v_mes_ref + (v_vencimento_dia - 1) * INTERVAL '1 day')::date;
+
+  -- 🔹 Gera doc_ref padrão
+  v_doc_ref :=
+    'FATURA_CARTAO_' || v_cartao_id || '_' || to_char(v_mes_ref, 'YYYY-MM');
+
+  -- 🔹 Verifica se fatura já existe
   SELECT id
     INTO v_fatura_id
   FROM cartoes_faturas
-  WHERE cartao_id   = v_cartao_id
-    AND empresa_id  = p_empresa_id
+  WHERE cartao_id = v_cartao_id
+    AND empresa_id = p_empresa_id
     AND mes_referencia = v_mes_ref
   LIMIT 1;
 
+  -- 🔹 Cria fatura se não existir
   IF v_fatura_id IS NULL THEN
-    INSERT INTO cartoes_faturas (cartao_id, empresa_id, mes_referencia, valor_total, status)
-    VALUES (v_cartao_id, p_empresa_id, v_mes_ref, 0, 'aberta')
+    INSERT INTO cartoes_faturas (
+      cartao_id,
+      empresa_id,
+      mes_referencia,
+      valor_total,
+      status,
+      vencimento,
+      numero
+    )
+    VALUES (
+      v_cartao_id,
+      p_empresa_id,
+      v_mes_ref,
+      0,
+      'aberta',
+      v_data_vencimento,
+      v_doc_ref
+    )
     RETURNING id INTO v_fatura_id;
   END IF;
 

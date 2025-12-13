@@ -1,4 +1,4 @@
-create or replace function ff_excluir_modelo(
+create or replace function  contab.ff_excluir_modelo(
     p_empresa_id int,
     p_modelo_id  int
 )

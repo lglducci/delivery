@@ -1,4 +1,4 @@
-  create or replace function ff_criar_modelo(p_empresa_id int, p_nome text, p_token text)
+  create or replace function contab.ff_criar_modelo(p_empresa_id int, p_nome text, p_token text, p_tipo_automacao text )
 returns int as $$
 declare
     v_modelo_id int;
@@ -6,8 +6,8 @@ declare
     v_conta_cred int;
 begin
     -- cria o modelo
-    insert into contab.modelos (empresa_id, nome, codigo)
-    values (p_empresa_id, p_nome, p_token)
+    insert into contab.modelos (empresa_id, nome, codigo, tipo_automacao )
+    values (p_empresa_id, p_nome, p_token, p_tipo_automacao )
     returning id into v_modelo_id;
 
     -- garante conta fake debito

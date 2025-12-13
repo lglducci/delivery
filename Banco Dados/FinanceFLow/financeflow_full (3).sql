@@ -165,7 +165,8 @@ CREATE TABLE contas_a_pagar (
     status TEXT NOT NULL CHECK (status IN ('aberto','pago')),
     criado_em TIMESTAMP DEFAULT now(),
     lote_id BIGINT,
-	evento_codigo text default 'PAGAR'
+    doc_ref  text null,
+   evento_codigo text default 'PAGAR'
 );
 
 CREATE SEQUENCE IF NOT EXISTS contas_a_pagar_lote_seq;

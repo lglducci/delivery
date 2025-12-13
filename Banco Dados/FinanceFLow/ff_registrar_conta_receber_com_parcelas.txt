@@ -6,7 +6,8 @@
   p_categoria      TEXT DEFAULT NULL,
   p_parcelas       INT DEFAULT 1,
   p_fornecedor_id     BIGINT DEFAULT NULL,
-  p_categoria_id   BIGINT DEFAULT NULL
+  p_categoria_id   BIGINT DEFAULT NULL,
+  p_doc_ref   text DEFAULT NULL
 )
 RETURNS BIGINT
 LANGUAGE plpgsql
@@ -65,7 +66,8 @@ BEGIN
             parcelas,
             parcela_num,
             status,
-            lote_id 
+            lote_id  ,
+          doc_ref 
         )
         VALUES (
             p_empresa_id,
@@ -77,7 +79,8 @@ BEGIN
             p_parcelas,
             i,
             'aberto',
-              v_lote_id
+              v_lote_id,
+            p_doc_ref
         )
         RETURNING id INTO v_id;
 
