@@ -1,23 +1,48 @@
-CREATE OR REPLACE FUNCTION contab.ff_gerar_diario_tudo(
+ CREATE OR REPLACE FUNCTION contab.ff_gerar_diario_tudo(
     p_empresa_id BIGINT,
     p_data_ini   DATE,
     p_data_fim   DATE
 )
-RETURNS VOID
+RETURNS UUID
 LANGUAGE plpgsql
 AS $$
 DECLARE
-    v_qtd_cria_pagar INTEGER;
+    v_dia     DATE;
+    v_lote_id UUID := gen_random_uuid();
 BEGIN
-    -- 1) Diario vindo de transações financeiras (já existente aí no seu projeto)
-    PERFORM contab.ff_gerar_diario_de_transacoes(p_empresa_id, p_data_ini, p_data_fim);
+    -- processa por DIA, pulando dias já processados/estornados
+    FOR v_dia IN
+        SELECT d.dia::date
+        FROM generate_series(p_data_ini, p_data_fim, interval '1 day') d(dia)
+        WHERE NOT EXISTS (
+            SELECT 1
+            FROM contab.diario x
+            WHERE x.empresa_id = p_empresa_id
+              AND x.data_mov   = d.dia::date
+              AND x.status IN ('processado','estornado')
+        )
+    LOOP
+        -- 1) limpa staging só do dia (apenas o que ainda não foi fechado)
+        DELETE FROM contab.diario_staging s
+         WHERE s.empresa_id = p_empresa_id
+           AND s.data_mov   = v_dia;
 
-    -- 2) Diario vindo de eventos de parcelas pagas / recebidas (PAGAR / RECEBER)
-    PERFORM contab.ff_gerar_diario_de_parcelas(p_empresa_id, p_data_ini, p_data_fim);
+        -- 2) gera staging do dia (mantendo suas assinaturas atuais)
+        PERFORM contab.ff_gerar_diario_staging_transacoes(p_empresa_id, v_dia);
+        PERFORM contab.ff_diario_gerar_de_contas_pagar(p_empresa_id, v_dia);
+        PERFORM contab.ff_gerar_diario_cria_pagar(p_empresa_id, v_dia );
+        PERFORM contab.ff_diario_gerar_de_contas_receber(p_empresa_id, v_dia);
+        PERFORM contab.ff_gerar_diario_cria_receber(p_empresa_id, v_dia);
+        PERFORM contab.ff_diario_gerar_de_cartao(p_empresa_id, v_dia);
 
-    -- 3) ✅ Criação do passivo total das dívidas parceladas (CRIA_PAGAR)
-    v_qtd_cria_pagar := contab.ff_gerar_diario_cria_pagar(p_empresa_id, p_data_ini, p_data_fim);
+        -- 3) marca o lote_id único dessa execução no staging do dia
+        UPDATE contab.diario_staging s
+           SET lote_id = v_lote_id
+         WHERE s.empresa_id = p_empresa_id
+           AND s.data_mov   = v_dia
+           AND (s.lote_id IS NULL OR s.lote_id <> v_lote_id);
+    END LOOP;
 
-    RAISE NOTICE 'Diário gerado: % lançamentos de CRIA_PAGAR.', v_qtd_cria_pagar;
+    RETURN v_lote_id;
 END;
 $$;

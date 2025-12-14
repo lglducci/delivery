@@ -1,13 +1,12 @@
    CREATE OR REPLACE FUNCTION contab.ff_diario_gerar_de_cartao(
     p_empresa_id bigint,
-    p_data_ini   date,
-    p_data_fim   date
+    p_data date  
 )
-RETURNS uuid
+RETURNS void
 LANGUAGE plpgsql
 AS $$
 DECLARE
-    v_lote_id uuid := gen_random_uuid();
+ 
      v_fornecedor bigint  ;
      
  
@@ -29,8 +28,7 @@ INSERT INTO contab.diario_staging (
                         valor_custo, 
                         valor_imposto, 
                         desconto, 
-                        status, 
-                        lote_id  )
+                        status  )
                 SELECT
       	       	 f.empresa_id,
        		     f.vencimento,
@@ -42,20 +40,11 @@ INSERT INTO contab.diario_staging (
       		   f.vencimento,
       		   f.valor_total,
       		   0,0,0,
-     		  'rascunho', 
-      		   v_lote_id
+     		  'rascunho' 
     	FROM cartoes_faturas  f
     WHERE f.empresa_id = p_empresa_id
-      AND f.vencimento  BETWEEN p_data_ini AND p_data_fim
-      AND f.evento_codigo IS NOT NULL
-      AND NOT EXISTS (
-            SELECT 1 FROM contab.diario_staging d
-            WHERE d.empresa_id    = f.empresa_id
-              AND     d.data_mov      = f.vencimento 
-              AND     d.doc_ref       =   f.numero
-              AND     d.modelo_codigo = f.evento_codigo
-      );
-
-    RETURN v_lote_id;
+      AND f.vencimento  = p_data;
+  
+ 
 END;
 $$;
