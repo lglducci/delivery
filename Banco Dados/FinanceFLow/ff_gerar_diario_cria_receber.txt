@@ -62,7 +62,8 @@ SELECT
     jsonb_build_object(
         'origem', 'CONTAS_RECEBER',
         'evento', 'CRIA_RECEBER',
-        'lote_id', cr.lote_id
+        'vencimento',   MAX(cr.vencimento),
+        'parcelas',  MAX(cr.descricao)
     ) 
 FROM contas_a_receber cr
 WHERE cr.empresa_id = p_empresa_id

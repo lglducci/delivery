@@ -1,53 +1,99 @@
-    CREATE OR REPLACE FUNCTION contab.ff_diario_gerar_de_contas_receber(
+ CREATE OR REPLACE FUNCTION contab.ff_gerar_diario_staging_transacoes(
     p_empresa_id bigint,
     p_data    date    
 )
 RETURNS void
 LANGUAGE plpgsql
 AS $$
-DECLARE
-    
-
-BEGIN
-
  
+DECLARE
+  
+    v_sem_parceiro_id BIGINT;
+    v_sem_parceiro_cnpj VARCHAR(20);
+BEGIN
+    /* -------------------------------------------------------
+       1) Garante parceiro técnico "SEM PARCEIRO"
+    ------------------------------------------------------- */
+    SELECT parceiro_id, cnpj
+      INTO v_sem_parceiro_id, v_sem_parceiro_cnpj
+    FROM contab.ff_get_or_create_sem_parceiro(p_empresa_id);
+
+    /* -------------------------------------------------------
+       2) Gera staging das transações
+    ------------------------------------------------------- */
     INSERT INTO contab.diario_staging (
-        empresa_id, 
+        empresa_id,
         data_mov,
-         modelo_codigo,
+        modelo_codigo,
         historico,
         doc_ref,
         parceiro_id,
         cnpj,
-        data_vencto, 
+        data_vencto,
         valor_total,
-        valor_custo, valor_imposto, desconto, status,
-        outros   
+        valor_custo,
+        valor_imposto,
+        desconto,
+        status,
+        outros 
     )
     SELECT
-        r.empresa_id,
-        r.criado_em,
-        r.evento_codigo,
-        r.descricao,
-        r.doc_ref,
-        r.fornecedor_id,
-        (
-      SELECT p.cpf_cnpj
-      FROM   pessoa p
-      WHERE p.id = r.fornecedor_id
-    ) AS cnpj,
-        r.vencimento ,
-        r.valor,
-        0,0,0,
-        'rascunho' ,
-         jsonb_build_object(
-        'origem', 'CONTAS_RECEBER',
-        'evento', 'RECEBER'  )  
-    FROM contas_a_receber r
-    WHERE r.empresa_id = p_empresa_id
-      AND r.vencimento = p_data;
- 
- 
-END;
-$$;
+        t.empresa_id,
+        t.data_movimento::date,
 
+        /* modelo vem da categoria (sua decisão de projeto) */
+        cg.grupo_contabil        AS modelo_codigo,
+
+        COALESCE(t.descricao, '') AS historico,
+        'TRX-' || t.id::text      AS doc_ref,
+
+        /* parceiro */
+        COALESCE(
+            cp.fornecedor_id,
+            cr.fornecedor_id,
+            v_sem_parceiro_id
+        ) AS parceiro_id,
+
+        /* cnpj obrigatório */
+        COALESCE(
+            p1.cpf_cnpj,
+            p2.cpf_cnpj,
+            v_sem_parceiro_cnpj
+        ) AS cnpj,
+
+        NULL::date               AS data_vencto,
+        t.valor                  AS valor_total,
+        0::numeric(14,2),
+        0::numeric(14,2),
+        0::numeric(14,2),
+        'pendente',
+
+        jsonb_build_object(
+            'origem', 'TRANSACOES',
+            'transacao_id', t.id,
+            'pagar_id', t.pagar_id,
+            'receber_id', t.receber_id
+        )  
+    FROM public.transacoes t
+    LEFT JOIN public.categorias_gerenciais cg
+           ON cg.id = t.categoria_id
+
+    LEFT JOIN public.contas_a_pagar cp
+           ON cp.id = t.pagar_id
+
+    LEFT JOIN public.contas_a_receber cr
+           ON cr.id = t.receber_id
+
+    LEFT JOIN public.pessoa p1
+           ON p1.id = cp.fornecedor_id
+
+    LEFT JOIN public.pessoa p2
+           ON p2.id = cr.fornecedor_id
+
+    WHERE t.empresa_id = p_empresa_id
+      AND t.data_movimento = p_data ;
+ 
+    
+END;
+
+$$;

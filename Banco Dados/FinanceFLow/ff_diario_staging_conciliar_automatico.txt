@@ -1,0 +1,103 @@
+ CREATE OR REPLACE FUNCTION contab.ff_diario_staging_conciliar_automatico(
+    p_empresa_id bigint,
+    p_lote_id uuid
+)
+RETURNS  void
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    r record;
+    v_msg text;
+    v_modelo_id bigint;
+    v_tem_linhas boolean;
+    v_exige_parceiro boolean;
+BEGIN
+    ------------------------------------------------------------------
+    -- VALIDA LINHA A LINHA DO LOTE
+    ------------------------------------------------------------------
+    FOR r IN
+        SELECT *
+        FROM contab.diario_staging
+        WHERE empresa_id = p_empresa_id
+          AND lote_id = p_lote_id
+    LOOP
+        v_msg := NULL;
+        v_modelo_id := NULL;
+        v_tem_linhas := FALSE;
+        v_exige_parceiro := FALSE;
+
+        ------------------------------------------------------------------
+        -- 1) MODELO EXISTE
+        ------------------------------------------------------------------
+        SELECT id
+        INTO v_modelo_id
+        FROM contab.modelos
+        WHERE empresa_id = p_empresa_id
+          AND codigo = r.modelo_codigo
+          AND ativo = true
+        LIMIT 1;
+
+        IF v_modelo_id IS NULL THEN
+            v_msg := 'Modelo inexistente ou inativo; ';
+        END IF;
+
+        ------------------------------------------------------------------
+        -- 2) MODELO TEM LINHAS
+        ------------------------------------------------------------------
+        IF v_modelo_id IS NOT NULL THEN
+            SELECT EXISTS (
+                SELECT 1
+                FROM contab.modelos_linhas
+                WHERE empresa_id = p_empresa_id
+                  AND modelo_id = v_modelo_id
+            )
+            INTO v_tem_linhas;
+
+            IF NOT v_tem_linhas THEN
+                v_msg := COALESCE(v_msg,'') || 'Modelo sem linhas contábeis; ';
+            END IF;
+        END IF;
+
+        ------------------------------------------------------------------
+        -- 3) PARCEIRO OBRIGATÓRIO?
+        ------------------------------------------------------------------
+        IF v_modelo_id IS NOT NULL THEN
+            SELECT EXISTS (
+                SELECT 1
+                FROM contab.modelos_linhas
+                WHERE empresa_id = p_empresa_id
+                  AND modelo_id = v_modelo_id
+                  AND obrigatorio = true
+            )
+            INTO v_exige_parceiro;
+
+            IF v_exige_parceiro AND r.parceiro_id IS NULL THEN
+                v_msg := COALESCE(v_msg,'') || 'Parceiro obrigatório; ';
+            END IF;
+        END IF;
+
+        ------------------------------------------------------------------
+        -- 4) VALOR
+        ------------------------------------------------------------------
+        IF r.valor_total IS NULL OR r.valor_total <= 0 THEN
+            v_msg := COALESCE(v_msg,'') || 'Valor inválido; ';
+        END IF;
+
+        ------------------------------------------------------------------
+        -- 5) ATUALIZA STAGING
+        ------------------------------------------------------------------
+        UPDATE contab.diario_staging
+        SET validacao = v_msg,
+            status = CASE
+                       WHEN v_msg IS NULL THEN 'ok'
+                       ELSE 'erro'
+                     END
+        WHERE id = r.id;
+    END LOOP;
+
+    ------------------------------------------------------------------
+    -- RETORNA RESULTADO DO LOTE
+    ------------------------------------------------------------------
+     
+END;
+$$;

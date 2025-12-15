@@ -1,4 +1,4 @@
-  CREATE OR REPLACE FUNCTION contab.ff_diario_gerar_de_contas_receber(
+    CREATE OR REPLACE FUNCTION contab.ff_diario_gerar_de_contas_receber(
     p_empresa_id bigint,
     p_data    date    
 )
@@ -26,7 +26,7 @@ BEGIN
     )
     SELECT
         r.empresa_id,
-        r.criado_em,
+        r.vencimento ,
         r.evento_codigo,
         r.descricao,
         r.doc_ref,
@@ -42,12 +42,12 @@ BEGIN
         'rascunho' ,
          jsonb_build_object(
         'origem', 'CONTAS_RECEBER',
-        'evento', 'RECEBER'  )  
+        'evento', 'RECEBER' ,
+        'Vencto Parcela', r.vencimento )  
     FROM contas_a_receber r
     WHERE r.empresa_id = p_empresa_id
-      AND r.vencimento BETWEEN p_data;
+      AND r.vencimento = p_data;
  
  
 END;
 $$;
-

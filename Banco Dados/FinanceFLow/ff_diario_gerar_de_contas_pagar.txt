@@ -27,7 +27,7 @@ BEGIN
     )
     SELECT
         c.empresa_id,
-        c.criado_em,
+        c.vencimento,
         c.evento_codigo   AS modelo_codigo,   -- ← você define o nome da coluna
         c.descricao,
         c.doc_ref,
@@ -45,12 +45,14 @@ BEGIN
         'rascunho',
          jsonb_build_object(
         'origem', 'CONTAS_PAGAR',
-        'evento', 'CRIA_PAGAR' 
+        'evento', 'CRIA_PAGAR' ,
+       'data parcela', c.vencimento,
+       'parcelas',  c.parcelas
     ) 
      
     FROM public.contas_a_pagar c
     WHERE c.empresa_id = p_empresa_id
-      AND c.criado_em =  p_data   ;
+      AND  c.vencimento  =  p_data   ;
   
 END;
 $$;

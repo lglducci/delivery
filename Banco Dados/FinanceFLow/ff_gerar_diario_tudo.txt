@@ -3,7 +3,7 @@
     p_data_ini   DATE,
     p_data_fim   DATE
 )
-RETURNS UUID
+RETURNS  SETOF contab.diario_staging
 LANGUAGE plpgsql
 AS $$
 DECLARE
@@ -26,7 +26,12 @@ BEGIN
         DELETE FROM contab.diario_staging s
          WHERE s.empresa_id = p_empresa_id
            AND s.data_mov   = v_dia;
-
+         
+    DELETE FROM contab.diario  d
+         WHERE d.empresa_id = p_empresa_id
+           AND d.data_mov   = v_dia and
+                     d.status ='rascunho';
+   
         -- 2) gera staging do dia (mantendo suas assinaturas atuais)
         PERFORM contab.ff_gerar_diario_staging_transacoes(p_empresa_id, v_dia);
         PERFORM contab.ff_diario_gerar_de_contas_pagar(p_empresa_id, v_dia);
@@ -43,6 +48,12 @@ BEGIN
            AND (s.lote_id IS NULL OR s.lote_id <> v_lote_id);
     END LOOP;
 
-    RETURN v_lote_id;
+    PERFORM  contab.ff_diario_staging_conciliar_automatico( p_empresa_id ,  v_lote_id); 
+
+  RETURN QUERY
+    SELECT *
+    FROM contab.diario_staging
+    WHERE empresa_id = p_empresa_id
+      AND lote_id = v_lote_id;
 END;
 $$;

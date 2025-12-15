@@ -43,7 +43,7 @@ SELECT
     cp.empresa_id,
     MIN(cp.criado_em)::date,
     'CRIA_PAGAR',
-    'Criação de dívida: ' || MAX(cp.descricao)
+    'Criação de dívida do tata: ' || MAX(cp.descricao)
       || ' (' || MAX(cp.parcelas) || ' parcelas)',
     'CP-' || cp.lote_id,
     cp.fornecedor_id,
@@ -61,8 +61,9 @@ SELECT
     'rascunho',
     jsonb_build_object(
         'origem', 'CONTAS_PAGAR',
-        'evento', 'CRIA_PAGAR',
-        'lote_id', cp.lote_id
+        'evento', 'CRIA_PAGAR', 
+        'data criacao', MIN(cp.criado_em),
+         'parcelas', MAX(cp.parcelas) 
     ) 
 FROM contas_a_pagar cp
 WHERE cp.empresa_id = p_empresa_id

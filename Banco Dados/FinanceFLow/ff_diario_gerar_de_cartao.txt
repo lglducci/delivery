@@ -28,23 +28,26 @@ INSERT INTO contab.diario_staging (
                         valor_custo, 
                         valor_imposto, 
                         desconto, 
-                        status  )
+                        status ,
+                       outros  )
                 SELECT
-      	       	 f.empresa_id,
+      	       	    f.empresa_id,
        		     f.vencimento,
        		     f.evento_codigo,
      		    f.numero ,
        		    f.numero ,
        		    v_fornecedor,
-               '00000000000000',
+                                      '00000000000000',
       		   f.vencimento,
       		   f.valor_total,
       		   0,0,0,
-     		  'rascunho' 
+     		  'rascunho' , 
+       		 jsonb_build_object(
+           		 'origem', 'Fatura do Cartão', 
+          		  'Fatura_id', f.id,
+           		 'vencimento',  f.vencimento)  
     	FROM cartoes_faturas  f
     WHERE f.empresa_id = p_empresa_id
-      AND f.vencimento  = p_data;
-  
- 
+      AND f.vencimento  = p_data; 
 END;
 $$;

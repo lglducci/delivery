@@ -1,7 +1,7 @@
  CREATE OR REPLACE FUNCTION contab.ff_consolidar_diario_staging( 
     p_empresa_id bigint
 ) 
-RETURNS void
+RETURNS  SETOF contab.diario
 LANGUAGE plpgsql
 AS $$
 DECLARE
@@ -47,5 +47,11 @@ BEGIN
     WHERE empresa_id = p_empresa_id
       AND lote_id = v_lote_id;
 
+
+  RETURN QUERY
+    SELECT *
+    FROM contab.diario 
+    WHERE empresa_id = p_empresa_id
+      AND lote_id = v_lote_id;
 END;
 $$;
