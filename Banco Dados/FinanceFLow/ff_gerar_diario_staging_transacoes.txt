@@ -42,7 +42,12 @@ BEGIN
         t.data_movimento::date,
 
         /* modelo vem da categoria (sua decisão de projeto) */
-        cg.grupo_contabil        AS modelo_codigo,
+      
+    COALESCE(
+  NULLIF(t.evento_codigo, ''),
+  cg.grupo_contabil
+) AS modelo_codigo,
+
 
         COALESCE(t.descricao, '') AS historico,
         'TRX-' || t.id::text      AS doc_ref,
