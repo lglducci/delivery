@@ -14,7 +14,7 @@ DECLARE
   v_transacao_id  BIGINT;
   v_resultado     JSONB := '[]'::jsonb;
  v_cat_id BIGINT;
-
+   v_evento_codigo         TEXT;
 BEGIN
 
   IF p_faturas IS NULL THEN
@@ -39,10 +39,12 @@ v_cat_id := ff_get_categoria_id(p_empresa_id, 'Pagamento de Fatura', 'saida');
       --------------------------------------------------------------------
       SELECT f.valor_total,
              c.nome,
-             f.status
+             f.status,
+              f.evento_codigo 
         INTO v_valor_fatura,
              v_cartao_nome,
-             v_status
+             v_status,
+              v_evento_codigo
         FROM cartoes_faturas f
         JOIN cartoes c ON c.id = f.cartao_id
        WHERE f.id = v_fatura_id
@@ -73,7 +75,9 @@ v_cat_id := ff_get_categoria_id(p_empresa_id, 'Pagamento de Fatura', 'saida');
         data_movimento,
         origem,
       categoria_id,
-      fatura_id    
+      fatura_id    ,
+     evento_codigo 
+         
       )
       VALUES (
         p_empresa_id,
@@ -84,7 +88,8 @@ v_cat_id := ff_get_categoria_id(p_empresa_id, 'Pagamento de Fatura', 'saida');
         CURRENT_DATE,
         'web',
        v_cat_id ,
-      v_fatura_id     
+      v_fatura_id  ,
+        v_evento_codigo   
       )
       RETURNING id INTO v_transacao_id;
 

@@ -15,7 +15,7 @@ BEGIN
     UPDATE contas_a_receber
     SET 
       status = 'recebido',
-      data_recebimento = CURRENT_DATE
+      vencimento = CURRENT_DATE
     WHERE id = v_id 
       AND empresa_id = p_empresa_id;
 
@@ -28,7 +28,8 @@ BEGIN
       valor,
       data_movimento,
       descricao,
-      receber_id
+      receber_id,
+    evento_codigo
     )
     SELECT 
       empresa_id,
@@ -38,7 +39,8 @@ BEGIN
       valor,
       CURRENT_DATE,
       descricao,
-      id
+      id,
+     evento_codigo
     FROM contas_a_receber
     WHERE id = v_id;
 

@@ -144,7 +144,8 @@ CREATE TABLE transacoes (
     origem TEXT DEFAULT 'manual',
     criado_em TIMESTAMP DEFAULT now(),
     pagar_id BIGINT,
-    receber_id BIGINT
+    receber_id BIGINT,
+    fatura_id BIGINT
 );
 
  alter table public.transacoes add column evento_codigo text;
