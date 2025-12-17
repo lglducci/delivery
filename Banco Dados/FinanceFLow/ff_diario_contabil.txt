@@ -1,0 +1,41 @@
+CREATE OR REPLACE FUNCTION contab.ff_diario_contabil(
+    p_empresa_id BIGINT,
+    p_data_ini   DATE,
+    p_data_fim   DATE
+)
+RETURNS TABLE (
+    data_mov      DATE,
+    diario_id     BIGINT,
+    conta_codigo  TEXT,
+    conta_nome    TEXT,
+    historico     TEXT,
+    debito        NUMERIC(14,2),
+    credito       NUMERIC(14,2),
+    modelo_codigo TEXT
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        l.data_mov,
+        l.diario_id,
+        c.codigo       AS conta_codigo,
+        c.nome         AS conta_nome,
+        l.historico,
+        l.debito,
+        l.credito,
+        m.codigo       AS modelo_codigo
+    FROM contab.lancamentos l
+    JOIN contab.contas c
+         ON c.id = l.conta_id
+    LEFT JOIN contab.modelos m
+         ON m.id = l.modelo_id
+    WHERE l.empresa_id = p_empresa_id
+      AND l.data_mov BETWEEN p_data_ini AND p_data_fim
+    ORDER BY
+        l.data_mov,
+        l.diario_id,
+        l.id;
+END;
+$$;

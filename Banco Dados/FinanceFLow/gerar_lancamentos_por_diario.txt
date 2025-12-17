@@ -1,0 +1,97 @@
+ CREATE OR REPLACE FUNCTION contab.gerar_lancamentos_por_diario(
+    p_diario_id BIGINT,
+    p_empresa_id BIGINT
+)
+RETURNS void
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_diario        contab.diario%ROWTYPE;
+  v_modelo        contab.modelos%ROWTYPE;
+  r_linha         contab.modelos_linhas%ROWTYPE;
+  v_valor_base    NUMERIC(14,2);
+  v_valor_final   NUMERIC(14,2);
+  v_lote          INT;
+BEGIN
+  -- carrega diário
+  SELECT * INTO v_diario
+  FROM contab.diario
+  WHERE id = p_diario_id AND empresa_id = p_empresa_id;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Diário % não encontrado.', p_diario_id;
+  END IF;
+
+  -- carrega modelo
+  SELECT * INTO v_modelo
+  FROM contab.modelos
+  WHERE codigo = v_diario.modelo_codigo
+    AND empresa_id = p_empresa_id
+    AND ativo = TRUE;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Modelo % não encontrado/ativo.', v_diario.modelo_codigo;
+  END IF;
+
+  -- processa linhas do modelo
+  FOR r_linha IN
+    SELECT * FROM contab.modelos_linhas
+    WHERE modelo_id = v_modelo.id
+      AND empresa_id = p_empresa_id
+    ORDER BY ordem
+  LOOP
+    -- fonte de valor
+    CASE r_linha.fonte_valor
+      WHEN 'TOTAL'   THEN v_valor_base := v_diario.valor_total;
+      WHEN 'CUSTO'   THEN v_valor_base := v_diario.valor_custo;
+      WHEN 'IMPOSTO' THEN v_valor_base := v_diario.valor_imposto;
+      WHEN 'DESCONTO'THEN v_valor_base := v_diario.desconto;
+      ELSE
+        IF position('OUTROS.' IN r_linha.fonte_valor) = 1 THEN
+          v_valor_base := COALESCE(
+            (v_diario.outros ->> substring(r_linha.fonte_valor FROM 8))::NUMERIC,
+            0
+          );
+        ELSE
+          RAISE EXCEPTION 'Fonte valor inválida: %', r_linha.fonte_valor;
+        END IF;
+    END CASE;
+
+    v_valor_final := ROUND(COALESCE(v_valor_base,0) * COALESCE(r_linha.fator,1),2);
+
+    IF v_valor_final <> 0 THEN
+      INSERT INTO contab.lancamentos (
+        empresa_id, diario_id, data_mov, conta_id,
+        historico, debito, credito, modelo_id
+      )
+      VALUES (
+        p_empresa_id,
+        v_diario.id,
+        v_diario.data_mov,
+        r_linha.conta_id,
+        v_diario.historico,
+        CASE WHEN r_linha.dc='D' THEN v_valor_final ELSE 0 END,
+        CASE WHEN r_linha.dc='C' THEN v_valor_final ELSE 0 END,
+        v_modelo.id
+      );
+    END IF;
+  END LOOP;
+
+  -- gerar lote
+  SELECT COALESCE(MAX(lote),0) + 1
+  INTO v_lote
+  FROM contab.lote
+  WHERE empresa_id = p_empresa_id;
+
+  -- atualizar diário e lançamentos
+  UPDATE contab.diario
+     SET lote = v_lote
+   WHERE id = p_diario_id;
+
+  UPDATE contab.lancamentos
+     SET lote = v_lote
+   WHERE diario_id = p_diario_id;
+
+   
+END;
+$$;

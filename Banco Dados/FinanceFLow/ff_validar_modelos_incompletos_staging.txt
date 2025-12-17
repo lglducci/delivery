@@ -1,0 +1,41 @@
+CREATE OR REPLACE FUNCTION contab.ff_validar_modelos_incompletos_staging(
+    p_empresa_id BIGINT,
+    p_data_ini   DATE,
+    p_data_fim   DATE
+)
+RETURNS VOID
+LANGUAGE plpgsql
+AS $$
+BEGIN
+
+    -- 1) MARCA COMO ERRO AS LINHAS DO STAGING
+    --    CUJO MODELO POSSUI CONTAS XPTO
+    WITH modelos_invalidos AS (
+        SELECT DISTINCT
+            ds.id            AS staging_id,
+            ds.modelo_codigo
+        FROM contab.diario_staging ds
+        JOIN contab.modelos m
+             ON m.codigo = ds.modelo_codigo
+            AND m.empresa_id = ds.empresa_id
+        JOIN contab.modelos_linhas ml
+             ON ml.modelo_id = m.id
+            AND ml.empresa_id = ds.empresa_id
+        JOIN contab.contas c
+             ON c.id = ml.conta_id
+        WHERE ds.empresa_id = p_empresa_id
+          AND ds.data_mov BETWEEN p_data_ini AND p_data_fim
+          AND c.codigo IN ('XPTO_C','XPTO_D')
+    )
+    UPDATE contab.diario_staging ds
+    SET
+        status = 'erro',
+        validacao =
+            'Modelo contábil incompleto: o modelo "' ||
+            mi.modelo_codigo ||
+            '" utiliza conta(s) temporária(s) (XPTO). Corrija o mapeamento.'
+    FROM modelos_invalidos mi
+    WHERE ds.id = mi.staging_id;
+
+END;
+$$;

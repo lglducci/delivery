@@ -47,8 +47,11 @@ BEGIN
            AND s.data_mov   = v_dia
            AND (s.lote_id IS NULL OR s.lote_id <> v_lote_id);
     END LOOP;
-
+ 
     PERFORM  contab.ff_diario_staging_conciliar_automatico( p_empresa_id ,  v_lote_id); 
+ 
+     PERFORM   contab.ff_validar_modelos_incompletos_staging( p_empresa_id , p_data_ini, p_data_fim );
+
 
   RETURN QUERY
     SELECT *

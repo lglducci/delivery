@@ -1,0 +1,42 @@
+CREATE OR REPLACE FUNCTION contab.ff_relatorio_balanco(
+  p_empresa_id bigint,
+  p_data_corte date
+)
+RETURNS TABLE (
+  grupo text,          -- ATIVO / PASSIVO / PATRIMONIO_LIQUIDO
+  conta_codigo text,
+  conta_nome text,
+  saldo numeric(14,2)
+)
+LANGUAGE sql
+STABLE
+AS $$
+  SELECT
+    CASE
+      WHEN c.tipo = 'ATIVO' THEN 'ATIVO'
+      WHEN c.tipo = 'PASSIVO' THEN 'PASSIVO'
+      ELSE 'PATRIMONIO_LIQUIDO'
+    END AS grupo,
+    c.codigo AS conta_codigo,
+    c.nome   AS conta_nome,
+    SUM(
+      CASE
+        WHEN c.natureza = 'D' THEN l.debito - l.credito
+        ELSE l.credito - l.debito
+      END
+    )::numeric(14,2) AS saldo
+  FROM contab.lancamentos l
+  JOIN contab.contas c ON c.id = l.conta_id
+  WHERE l.empresa_id = p_empresa_id
+    AND l.data_mov <= p_data_corte
+    AND c.analitica = true
+  GROUP BY
+    grupo, c.codigo, c.nome
+  HAVING SUM(
+    CASE
+      WHEN c.natureza = 'D' THEN l.debito - l.credito
+      ELSE l.credito - l.debito
+    END
+  ) <> 0
+  ORDER BY grupo, c.codigo;
+$$;

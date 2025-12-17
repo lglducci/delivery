@@ -1,0 +1,50 @@
+ CREATE OR REPLACE FUNCTION contab.ff_relatorio_razao(
+  p_empresa_id bigint,
+  p_data_ini date,
+  p_data_fim date,
+  p_filtro text DEFAULT NULL
+)
+RETURNS TABLE (
+  data_mov date,
+  conta_id bigint,
+  conta_codigo text,
+  conta_nome text,
+  historico text,
+  debito numeric(14,2),
+  credito numeric(14,2),
+  saldo numeric(14,2),
+  diario_id bigint,
+  modelo_codigo text
+)
+LANGUAGE sql
+STABLE
+AS $$
+  SELECT
+    r.data_mov,
+    r.conta_id,
+    r.conta_codigo,
+    r.conta_nome,
+    r.historico,
+    r.debito,
+    r.credito,
+
+    -- 🔑 SALDO ACUMULADO
+    SUM(r.debito - r.credito)
+      OVER (
+        PARTITION BY r.conta_id
+        ORDER BY r.data_mov, r.diario_id
+        ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+      )::numeric(14,2) AS saldo,
+
+    r.diario_id,
+    r.modelo_codigo
+  FROM contab.vw_razao r
+  WHERE r.empresa_id = p_empresa_id
+    AND r.data_mov BETWEEN p_data_ini AND p_data_fim
+    AND (
+      p_filtro IS NULL OR btrim(p_filtro) = ''
+      OR r.conta_codigo ILIKE '%' || p_filtro || '%'
+      OR r.conta_nome   ILIKE '%' || p_filtro || '%'
+    )
+  ORDER BY r.conta_codigo, r.data_mov, r.diario_id;
+$$;
