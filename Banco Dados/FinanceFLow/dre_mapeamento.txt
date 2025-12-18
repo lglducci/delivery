@@ -1,0 +1,25 @@
+DROP TABLE IF EXISTS contab.dre_mapeamento CASCADE;
+
+CREATE TABLE contab.dre_mapeamento (
+  empresa_id   BIGINT NOT NULL REFERENCES public.empresas(id),
+  conta_prefix TEXT   NOT NULL,
+  grupo        TEXT   NOT NULL,
+  ordem        INT    NOT NULL,
+  sinal        INT    NOT NULL, -- 1 = D-C, -1 = C-D
+  PRIMARY KEY (empresa_id, conta_prefix)
+);
+
+CREATE INDEX dre_mapeamento_empresa_prefix_idx
+ON contab.dre_mapeamento (empresa_id, conta_prefix);
+
+
+TRUNCATE contab.dre_mapeamento;
+
+INSERT INTO contab.dre_mapeamento (empresa_id, conta_prefix, grupo, ordem, sinal) VALUES
+(1,'3.1','RECEITA_BRUTA',10,-1),
+(1,'3.2','DEDUCOES',20, 1),
+(1,'3.3','CMV_CSP',30, 1),
+(1,'3.4','DESPESAS_OPERACIONAIS',40, 1),
+(1,'3.5','RECEITAS_FINANCEIRAS',50,-1),
+(1,'3.6','DESPESAS_FINANCEIRAS',60, 1),
+(1,'3.7','IR_CSLL',70, 1);
