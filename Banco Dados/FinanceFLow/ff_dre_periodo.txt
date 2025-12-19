@@ -11,62 +11,79 @@ RETURNS TABLE (
 LANGUAGE plpgsql
 AS $$
 BEGIN
+
+  CREATE TEMP TABLE tmp_dre (
+    ord   INT,
+    grp   TEXT,
+    val   NUMERIC(18,2)
+  ) ON COMMIT DROP;
+
+  -- 1) RECEITA BRUTA (contas 4.*) -> positivo
+  INSERT INTO tmp_dre (ord, grp, val)
+  SELECT
+    10,
+    'RECEITA_BRUTA',
+    COALESCE(SUM(COALESCE(l.credito,0) - COALESCE(l.debito,0)),0)::numeric(18,2)
+  FROM contab.lancamentos l
+  JOIN contab.contas c ON c.id = l.conta_id
+  WHERE l.empresa_id = p_empresa_id
+    AND l.data_mov BETWEEN p_data_ini AND p_data_fim
+    AND c.codigo LIKE '4%';
+
+  -- 2) CUSTOS (contas 5.*) -> SEMPRE positivo
+  INSERT INTO tmp_dre (ord, grp, val)
+  SELECT
+    30,
+    'CUSTOS',
+    ABS(COALESCE(SUM(COALESCE(l.debito,0) - COALESCE(l.credito,0)),0))::numeric(18,2)
+  FROM contab.lancamentos l
+  JOIN contab.contas c ON c.id = l.conta_id
+  WHERE l.empresa_id = p_empresa_id
+    AND l.data_mov BETWEEN p_data_ini AND p_data_fim
+    AND c.codigo LIKE '5%';
+
+  -- 3) DESPESAS (contas 6.*) -> SEMPRE positivo
+  INSERT INTO tmp_dre (ord, grp, val)
+  SELECT
+    40,
+    'DESPESAS_OPERACIONAIS',
+    ABS(COALESCE(SUM(COALESCE(l.debito,0) - COALESCE(l.credito,0)),0))::numeric(18,2)
+  FROM contab.lancamentos l
+  JOIN contab.contas c ON c.id = l.conta_id
+  WHERE l.empresa_id = p_empresa_id
+    AND l.data_mov BETWEEN p_data_ini AND p_data_fim
+    AND c.codigo LIKE '6%';
+
+  -- 4) RESULTADO BRUTO = RECEITA - CUSTOS
+  INSERT INTO tmp_dre (ord, grp, val)
+  SELECT
+    50,
+    'RESULTADO_BRUTO',
+    (COALESCE((SELECT t.val FROM tmp_dre t WHERE t.grp='RECEITA_BRUTA'),0)
+     - COALESCE((SELECT t.val FROM tmp_dre t WHERE t.grp='CUSTOS'),0))::numeric(18,2);
+
+  -- 5) RESULTADO OPERACIONAL = BRUTO - DESPESAS
+  INSERT INTO tmp_dre (ord, grp, val)
+  SELECT
+    60,
+    'RESULTADO_OPERACIONAL',
+    (COALESCE((SELECT t.val FROM tmp_dre t WHERE t.grp='RESULTADO_BRUTO'),0)
+     - COALESCE((SELECT t.val FROM tmp_dre t WHERE t.grp='DESPESAS_OPERACIONAIS'),0))::numeric(18,2);
+
+  -- 6) RESULTADO LÍQUIDO (por enquanto igual ao operacional)
+  INSERT INTO tmp_dre (ord, grp, val)
+  SELECT
+    80,
+    'RESULTADO_LIQUIDO',
+    COALESCE((SELECT t.val FROM tmp_dre t WHERE t.grp='RESULTADO_OPERACIONAL'),0)::numeric(18,2);
+
   RETURN QUERY
+  SELECT
+    t.ord::BIGINT AS ordem,
+    t.grp         AS grupo,
+    t.val         AS valor_periodo
+  FROM tmp_dre t
+  ORDER BY t.ord;
 
-  WITH mov AS (
-    SELECT
-      c.codigo AS conta_codigo,
-      COALESCE(l.debito,0)  AS debito,
-      COALESCE(l.credito,0) AS credito
-    FROM contab.lancamentos l
-    JOIN contab.contas c ON c.id = l.conta_id
-    WHERE l.empresa_id = p_empresa_id
-      AND l.data_mov BETWEEN p_data_ini AND p_data_fim
-  ),
-
-  mov_map AS (
-    SELECT
-      mp.grupo,
-      mp.ordem,
-      mp.sinal,
-      CASE
-        WHEN mp.sinal =  1 THEN (m.debito - m.credito)
-        WHEN mp.sinal = -1 THEN (m.credito - m.debito)
-        ELSE 0
-      END AS valor
-    FROM mov m
-    JOIN contab.dre_mapeamento mp
-      ON m.conta_codigo LIKE mp.conta_prefix || '%'
-  ),
-
-  base AS (
-    SELECT
-      grupo,
-      ordem,
-      SUM(valor)::numeric(18,2) AS valor_periodo
-    FROM mov_map
-    GROUP BY grupo, ordem
-  ),
-
-  calc AS (
-    SELECT
-      COALESCE(SUM(CASE WHEN grupo='RECEITA_BRUTA' THEN valor_periodo END),0) AS receita,
-      COALESCE(SUM(CASE WHEN grupo='CMV_CSP' THEN valor_periodo END),0) AS custo,
-      COALESCE(SUM(CASE WHEN grupo='DESPESAS_OPERACIONAIS' THEN valor_periodo END),0) AS despesa
-    FROM base
-  )
-
-  SELECT ordem, grupo, valor_periodo FROM base
-
-  UNION ALL
-  SELECT 15,'RESULTADO_BRUTO', (receita - custo) FROM calc
-
-  UNION ALL
-  SELECT 55,'RESULTADO_OPERACIONAL', (receita - custo - despesa) FROM calc
-
-  UNION ALL
-  SELECT 80,'RESULTADO_LIQUIDO', (receita - custo - despesa) FROM calc
-
-  ORDER BY ordem;
 END;
 $$;

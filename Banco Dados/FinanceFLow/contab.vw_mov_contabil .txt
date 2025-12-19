@@ -1,0 +1,9 @@
+CREATE VIEW contab.vw_mov_contabil AS
+SELECT
+  l.empresa_id,
+  l.data_mov,
+  c.codigo AS conta_codigo,
+  c.tipo,
+  (l.debito - l.credito) AS valor
+FROM contab.lancamentos l
+JOIN contab.contas c ON c.id = l.conta_id;

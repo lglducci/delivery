@@ -1,0 +1,45 @@
+CREATE OR REPLACE FUNCTION contab.ff_balanco_niveis(
+  p_empresa_id BIGINT,
+  p_ano INT,
+  p_mes INT
+)
+RETURNS TABLE (
+  grupo TEXT,
+  saldo NUMERIC(18,2)
+)
+LANGUAGE sql
+AS $$
+WITH classif AS (
+  SELECT
+    b.*,
+    COALESCE(m.grupo,
+      CASE
+        WHEN conta_codigo LIKE '1.1%' THEN 'ATIVO_CIRC'
+        WHEN conta_codigo LIKE '1.2%' THEN 'ATIVO_NC'
+        WHEN conta_codigo LIKE '2.1%' THEN 'PASSIVO_CIRC'
+        WHEN conta_codigo LIKE '2.2%' THEN 'PASSIVO_NC'
+        WHEN conta_codigo LIKE '3%'   THEN 'PL'
+      END
+    ) AS grupo
+  FROM contab.vw_balanco_niveis_base b
+  LEFT JOIN contab.conta_mapa_balanco m
+    ON m.conta_codigo = b.conta_codigo
+  WHERE b.empresa_id = p_empresa_id
+    AND b.ano = p_ano
+    AND b.mes = p_mes
+),
+calc AS (
+  SELECT
+    grupo,
+    SUM(
+      CASE
+        WHEN grupo IN ('PASSIVO_CIRC','PASSIVO_NC','PL')
+        THEN -valor_sign
+        ELSE valor_sign
+      END
+    ) AS saldo
+  FROM classif
+  GROUP BY grupo
+)
+SELECT grupo, saldo FROM calc;
+$$;
