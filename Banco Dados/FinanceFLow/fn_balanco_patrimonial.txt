@@ -1,0 +1,79 @@
+CREATE OR REPLACE FUNCTION contab.fn_balanco_patrimonial(
+  p_empresa_id bigint,
+  p_mes_ini date
+)
+RETURNS TABLE (
+  ordem int,
+  descricao text,
+  valor_inicial numeric(18,2),
+  valor_final   numeric(18,2)
+) LANGUAGE sql AS
+$$
+WITH
+limites AS (
+  SELECT
+    p_mes_ini AS mes_ini,
+    (p_mes_ini + INTERVAL '1 month' - INTERVAL '1 day')::date AS mes_fim,
+    (p_mes_ini - INTERVAL '1 day')::date                      AS ant_fim
+),
+mov AS (
+  SELECT
+    r.data_mov::date AS data_mov,
+    r.conta_codigo,
+    COALESCE(r.debito,0)::numeric(18,2)  AS debito,
+    COALESCE(r.credito,0)::numeric(18,2) AS credito
+  FROM contab.vw_razao r
+  WHERE r.empresa_id = p_empresa_id
+),
+map AS (
+  SELECT
+    m.*,
+    bm.grupo,
+    bm.super_grupo,
+    bm.ordem,
+    bm.sinal
+  FROM mov m
+  JOIN LATERAL (
+    SELECT bm.*
+    FROM contab.bp_mapeamento bm
+    WHERE m.conta_codigo LIKE bm.conta_prefix || '%'
+    ORDER BY length(bm.conta_prefix) DESC
+    LIMIT 1
+  ) bm ON true
+),
+grupos AS (
+  SELECT
+    grupo,
+    super_grupo,
+    MIN(ordem) AS ordem,
+    SUM(CASE WHEN data_mov <= l.ant_fim
+             THEN CASE WHEN sinal=1 THEN (debito - credito)
+                       WHEN sinal=-1 THEN (credito - debito)
+                       ELSE 0 END
+             ELSE 0 END)::numeric(18,2) AS valor_inicial,
+    SUM(CASE WHEN data_mov <= l.mes_fim
+             THEN CASE WHEN sinal=1 THEN (debito - credito)
+                       WHEN sinal=-1 THEN (credito - debito)
+                       ELSE 0 END
+             ELSE 0 END
+             ELSE 0 END)::numeric(18,2) AS valor_final
+  FROM map
+  CROSS JOIN limites l
+  GROUP BY grupo, super_grupo
+),
+headers AS (
+  SELECT
+    super_grupo AS descricao,
+    MIN(CASE WHEN super_grupo = 'ATIVO' THEN 100 ELSE 200 END) AS ordem,
+    SUM(valor_inicial) AS valor_inicial,
+    SUM(valor_final)   AS valor_final
+  FROM grupos
+  GROUP BY super_grupo
+)
+SELECT h.ordem, h.descricao, h.valor_inicial, h.valor_final
+FROM headers h
+UNION ALL
+SELECT g.ordem, g.grupo AS descricao, g.valor_inicial, g.valor_final
+FROM grupos g
+ORDER BY 1, 2;
+$$;
