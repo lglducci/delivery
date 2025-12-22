@@ -1,0 +1,62 @@
+CREATE OR REPLACE FUNCTION contab.sp_fluxo_caixa_detalhado (
+    p_empresa_id BIGINT,
+    p_data_ini   DATE,
+    p_data_fim   DATE
+)
+RETURNS TABLE (
+    data_mov        DATE,
+    conta_codigo    TEXT,
+    conta_nome      TEXT,
+    historico       TEXT,
+    entrada         NUMERIC(14,2),
+    saida           NUMERIC(14,2),
+    saldo_mov       NUMERIC(14,2)
+)
+LANGUAGE sql
+AS $$
+SELECT
+    l.data_mov::date                                     AS data_mov,
+    c.codigo::text                                       AS conta_codigo,
+    c.nome                                               AS conta_nome,
+    l.historico                                          AS historico,
+
+    -- ENTRADA DE CAIXA
+    CASE
+        WHEN c.natureza = 'D' THEN COALESCE(l.debito,0)
+        ELSE COALESCE(l.credito,0)
+    END                                                  AS entrada,
+
+    -- SAÍDA DE CAIXA
+    CASE
+        WHEN c.natureza = 'D' THEN COALESCE(l.credito,0)
+        ELSE COALESCE(l.debito,0)
+    END                                                  AS saida,
+
+    -- MOVIMENTO LÍQUIDO DO CAIXA
+    CASE
+        WHEN c.natureza = 'D'
+            THEN COALESCE(l.debito,0) - COALESCE(l.credito,0)
+        ELSE
+            COALESCE(l.credito,0) - COALESCE(l.debito,0)
+    END                                                  AS saldo_mov
+
+FROM contab.lancamentos l
+JOIN contab.contas c
+  ON c.id = l.conta_id
+
+WHERE l.empresa_id = p_empresa_id
+  AND l.data_mov BETWEEN p_data_ini AND p_data_fim
+
+  -- 🔥 SOMENTE CONTAS DE CAIXA / BANCO
+  AND c.tipo = 'ATIVO'
+  AND c.analitica = TRUE
+  AND (
+        c.codigo LIKE '1.1.1%'   -- Caixa
+     OR c.codigo LIKE '1.1.2%'   -- Bancos
+  )
+
+ORDER BY
+    l.data_mov,
+    c.codigo,
+    l.id;
+$$;
