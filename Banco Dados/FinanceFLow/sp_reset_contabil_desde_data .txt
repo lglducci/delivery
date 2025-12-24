@@ -1,0 +1,41 @@
+CREATE OR REPLACE PROCEDURE contab.sp_reset_contabil_desde_data (
+    p_empresa_id BIGINT,
+    p_data_inicio  DATE DEFAULT (CURRENT_DATE - 1)
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+
+ 
+    ------------------------------------------------------------------
+    -- 1) Atualiza controle de fechamento
+    ------------------------------------------------------------------
+    UPDATE contab.controle_fechamento
+    SET ultimo_dia_processado = p_data_inicio 
+     WHERE empresa_id = p_empresa_id;
+
+ 
+
+    ------------------------------------------------------------------
+    -- 2) Apaga lançamentos contábeis
+    ------------------------------------------------------------------
+    DELETE FROM contab.lancamentos
+     WHERE empresa_id = p_empresa_id
+       AND data_mov >= p_data_inicio;
+
+    ------------------------------------------------------------------
+    -- 3) Apaga diário
+    ------------------------------------------------------------------
+    DELETE FROM contab.diario
+     WHERE empresa_id = p_empresa_id
+       AND data_mov >= p_data_inicio;
+
+    ------------------------------------------------------------------
+    -- 4) Confirma execução
+    ------------------------------------------------------------------
+    RAISE NOTICE 
+      'Reset contábil realizado para empresa %, a partir de %',
+      p_empresa_id, p_data_inicio;
+
+END;
+$$;

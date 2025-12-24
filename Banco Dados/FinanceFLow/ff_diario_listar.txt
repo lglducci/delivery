@@ -1,3 +1,6 @@
+ 
+
+ 
  CREATE OR REPLACE FUNCTION contab.ff_diario_listar(
     p_empresa_id    INTEGER,
     p_data_ini      DATE,
@@ -12,7 +15,7 @@ RETURNS TABLE (
     historico       TEXT,
     doc_ref         VARCHAR(60),
     parceiro        VARCHAR(200),
-    data_vencto     DATE,
+    data_vencto     DATE, 
     valor_total     NUMERIC(14,2),
     valor_custo     NUMERIC(14,2),
     valor_imposto   NUMERIC(14,2),
@@ -28,7 +31,7 @@ BEGIN
         d.historico,
         d.doc_ref,
         COALESCE(p.nome, '') AS parceiro,
-        d.data_vencto,
+        d.data_vencto, 
         d.valor_total,
         d.valor_custo,
         d.valor_imposto,
@@ -55,3 +58,8 @@ BEGIN
     ORDER BY d.data_mov DESC;
 END;
 $$ LANGUAGE plpgsql;
+
+ 
+
+
+ 
