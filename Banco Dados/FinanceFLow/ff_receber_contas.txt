@@ -28,8 +28,7 @@ BEGIN
       valor,
       data_movimento,
       descricao,
-      receber_id,
-    evento_codigo
+      receber_id 
     )
     SELECT 
       empresa_id,
@@ -39,8 +38,7 @@ BEGIN
       valor,
       CURRENT_DATE,
       descricao,
-      id,
-     evento_codigo
+      id 
     FROM contas_a_receber
     WHERE id = v_id;
 

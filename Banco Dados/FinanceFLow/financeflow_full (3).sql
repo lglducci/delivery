@@ -190,7 +190,8 @@ CREATE TABLE contas_a_receber (
     status TEXT NOT NULL CHECK (status IN ('aberto','recebido')),
     criado_em TIMESTAMP DEFAULT now(),
     lote_id BIGINT,
-	evento_codigo text default 'RECEBER'
+     evento_codigo text default 'RECEBER',
+    doc_ref  text 
 );
 
 CREATE SEQUENCE IF NOT EXISTS contas_a_receber_lote_seq;
@@ -200,15 +201,21 @@ ALTER TABLE contas_a_receber ALTER COLUMN lote_id SET DEFAULT nextval('contas_a_
 ---------------------------------------------------
 -- 10. CARTÕES
 ---------------------------------------------------
-CREATE TABLE cartoes (
+  drop table cartoes cascade 
+ 
+ 
+ CREATE TABLE cartoes (
     id BIGSERIAL PRIMARY KEY,
     empresa_id BIGINT NOT NULL REFERENCES empresas(id),
     nome TEXT NOT NULL,
-	nomecartao TEXT NOT NULL,
+     nomecartao TEXT NOT NULL,
+    numero   text not null, 
     bandeira TEXT,
     limite_total NUMERIC(12,2),
     fechamento_dia INT,
     vencimento_dia INT,
+    status    text not null, 
+    vencimento text not null ,
     criado_em TIMESTAMP DEFAULT now()
 );
 
@@ -243,16 +250,16 @@ CREATE TABLE cartoes_compras (
     mes_referencia DATE NOT NULL,
     valor_total NUMERIC(12,2) DEFAULT 0,
     status TEXT CHECK (status IN ('aberta','fechada','paga')) DEFAULT 'aberta',
-	vencimento  text,
+	vencimento  date,
 	numero text,  
 	data_compra DATE,
 	evento_codigo text default 'PAGAMENTO_FATURA_CARTAO',
     criado_em TIMESTAMP DEFAULT now()
 );
  
-
  
-
+drop table  cartoes_transacoes 
+ 
 
  CREATE TABLE cartoes_transacoes (
     id BIGSERIAL PRIMARY KEY,
@@ -264,9 +271,9 @@ CREATE TABLE cartoes_compras (
     parcela_num INT,
     parcela_total INT, 
     data_parcela DATE NOT NULL,
+    data_compra  date not null, 
     criado_em TIMESTAMP DEFAULT now()
 );
-
 
 ---------------------------------------------------
 -- 13. EXTRATO IMPORTADO
@@ -311,93 +318,78 @@ ALTER TABLE public.usuario_empresa ENABLE ROW LEVEL SECURITY;
 CREATE POLICY pol_usuario_empresa
 ON public.usuario_empresa
 FOR ALL TO public
-USING true
-WITH  true;
+USING (true)
+WITH  CHECK  (true);
  
 ALTER TABLE public.contas_financeiras ENABLE ROW LEVEL SECURITY;
 CREATE POLICY pol_contas_financeiras
 ON public.contas_financeiras
 FOR ALL TO public
-USING true
-WITH CHECK true;
+USING (true)
+WITH  CHECK  (true);
  
 ALTER TABLE public.categorias_gerenciais ENABLE ROW LEVEL SECURITY;
 CREATE POLICY pol_categorias_gerenciais
 ON public.categorias_gerenciais
 FOR ALL TO public
-USING true
-WITH CHECK true;
+USING (true)
+WITH  CHECK  (true);
  
 ALTER TABLE public.transacoes ENABLE ROW LEVEL SECURITY;
 CREATE POLICY pol_transacoes
 ON public.transacoes
-FOR ALL TO public
-USING (empresa_id = current_setting('app.empresa_id')::BIGINT)
-WITH CHECK (empresa_id = current_setting('app.empresa_id')::BIGINT);
+ FOR ALL TO public
+USING (true)
+WITH  CHECK  (true);
  
 ALTER TABLE public.contas_a_pagar ENABLE ROW LEVEL SECURITY;
 CREATE POLICY pol_contas_a_pagar
 ON public.contas_a_pagar
 FOR ALL TO public
-USING true
-WITH CHECK true;
+USING (true)
+WITH  CHECK  (true);
  
 ALTER TABLE public.contas_a_receber ENABLE ROW LEVEL SECURITY;
 CREATE POLICY pol_contas_a_receber
 ON public.contas_a_receber
 FOR ALL TO public
-USING true
-WITH CHECK true;
+USING (true)
+WITH  CHECK  (true);
  
 ALTER TABLE public.cartoes ENABLE ROW LEVEL SECURITY;
 CREATE POLICY pol_cartoes
 ON public.cartoes
 FOR ALL TO public
-USING true
-WITH CHECK true;
+USING (true)
+WITH  CHECK  (true);
  
 ALTER TABLE public.cartoes_faturas ENABLE ROW LEVEL SECURITY;
 CREATE POLICY pol_cartoes_faturas
 ON public.cartoes_faturas
 FOR ALL TO public
-USING true
-WITH CHECK true;
+USING (true)
+WITH  CHECK  (true);
  
 ALTER TABLE public.cartoes_transacoes ENABLE ROW LEVEL SECURITY;
 CREATE POLICY pol_cartoes_transacoes
 ON public.cartoes_transacoes
 FOR ALL TO public
-USING true
-WITH CHECK true;
+USING (true)
+WITH  CHECK  (true);
  
 ALTER TABLE public.extrato_importado ENABLE ROW LEVEL SECURITY;
 CREATE POLICY pol_extrato_importado
 ON public.extrato_importado
 FOR ALL TO public
-USING true
-WITH CHECK true;
+USING (true)
+WITH  CHECK  (true);
  
 ALTER TABLE public.pessoa ENABLE ROW LEVEL SECURITY;
 CREATE POLICY pol_pessoa
 ON public.pessoa
 FOR ALL TO public
-USING true
-WITH CHECK true;
+USING (true)
+WITH  CHECK  (true);
 
 
-
-🔥 ETAPA 4 — Quando o usuário ou sistema criar algo, você grava o EVENTO
-Exemplo 1 — criar conta a pagar
-evento_codigo = 'CRIA_PAGAR'
-
-Exemplo 2 — pagar parcela
-evento_codigo = 'PAGAR'
-
-Exemplo 3 — compra no cartão
-evento_codigo = 'COMPRA_CARTAO'
-
-Exemplo 4 — pagamento da fatura
-evento_codigo = 'PAGAMENTO_FATURA_CARTAO'
-
-Exemplo 5 — recebimento PIX
-evento_codigo = 'RECEBIMENTO_PIX'
+ 
