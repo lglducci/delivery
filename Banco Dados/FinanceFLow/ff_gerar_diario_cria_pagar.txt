@@ -1,10 +1,11 @@
-  CREATE OR REPLACE FUNCTION contab.ff_gerar_diario_cria_pagar(
+    CREATE OR REPLACE FUNCTION contab.ff_gerar_diario_cria_pagar(
     p_empresa_id BIGINT,
     p_data    DATE 
 )
 RETURNS INTEGER
 LANGUAGE plpgsql
 AS $$
+ 
 DECLARE
     v_qtd INTEGER := 0;
 BEGIN
@@ -43,7 +44,7 @@ SELECT
     cp.empresa_id,
     MIN(cp.criado_em)::date,
     'CRIA_PAGAR',
-    'Criação de dívida do tata: ' || MAX(cp.descricao)
+    'Criação de dívida: ' || MAX(cp.descricao)
       || ' (' || MAX(cp.parcelas) || ' parcelas)',
     'CP-' || cp.lote_id,
     cp.fornecedor_id,
@@ -66,15 +67,16 @@ SELECT
          'parcelas', MAX(cp.parcelas) 
     ) 
 FROM contas_a_pagar cp
-WHERE cp.empresa_id = p_empresa_id
-  AND cp.criado_em = p_data
+WHERE cp.empresa_id = p_empresa_id 
+ AND cp.criado_em::date =  p_data 
   AND cp.status IN ('aberto', 'em_aberto')
 GROUP BY
     cp.empresa_id,
     cp.lote_id,
-    cp.fornecedor_id;
+    cp.fornecedor_id ;
 
 GET DIAGNOSTICS v_qtd = ROW_COUNT;
 RETURN v_qtd;
 END;
+ 
 $$;

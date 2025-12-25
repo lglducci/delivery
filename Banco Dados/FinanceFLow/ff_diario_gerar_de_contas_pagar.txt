@@ -1,4 +1,4 @@
- 
+   
 
  CREATE OR REPLACE FUNCTION contab.ff_diario_gerar_de_contas_pagar(
     p_empresa_id bigint,
@@ -52,7 +52,9 @@ BEGIN
      
     FROM public.contas_a_pagar c
     WHERE c.empresa_id = p_empresa_id
-      AND  c.vencimento  =  p_data   ;
+      AND  c.vencimento  =  p_data 
+      and  (   c.parcelas  = 1 and c.parcela_num = 1) 
+      and   c.status IN ('aberto', 'em_aberto');
   
 END;
 $$;
