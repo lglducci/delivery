@@ -77,7 +77,8 @@ BEGIN
             'origem', 'TRANSACOES',
             'transacao_id', t.id,
             'pagar_id', t.pagar_id,
-            'receber_id', t.receber_id
+            'receber_id', t.receber_id,
+            'conta_contabil_id',contabil_id 
         )  
     FROM public.transacoes t
     LEFT JOIN public.categorias_gerenciais cg
@@ -94,6 +95,9 @@ BEGIN
 
     LEFT JOIN public.pessoa p2
            ON p2.id = cr.fornecedor_id
+
+LEFT JOIN public.contas_financeiras cf
+       ON cf.id = t.conta_id
 
     WHERE t.empresa_id = p_empresa_id
       AND t.data_movimento = p_data ;

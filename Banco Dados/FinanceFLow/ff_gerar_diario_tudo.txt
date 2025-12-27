@@ -34,9 +34,9 @@ BEGIN
    
         -- 2) gera staging do dia (mantendo suas assinaturas atuais)
         PERFORM contab.ff_gerar_diario_staging_transacoes(p_empresa_id, v_dia);
-       PERFORM contab.ff_diario_gerar_de_contas_pagar(p_empresa_id, v_dia);
+  --   PERFORM contab.ff_diario_gerar_de_contas_pagar(p_empresa_id, v_dia);
         PERFORM contab.ff_gerar_diario_cria_pagar(p_empresa_id, v_dia );
-        PERFORM contab.ff_diario_gerar_de_contas_receber(p_empresa_id, v_dia);
+--   PERFORM contab.ff_diario_gerar_de_contas_receber(p_empresa_id, v_dia);
         PERFORM contab.ff_gerar_diario_cria_receber(p_empresa_id, v_dia);
         PERFORM contab.ff_diario_gerar_de_cartao(p_empresa_id, v_dia);
 

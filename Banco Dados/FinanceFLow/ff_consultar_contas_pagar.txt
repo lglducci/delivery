@@ -1,11 +1,10 @@
-  
-
  CREATE OR REPLACE FUNCTION ff_consultar_contas_pagar(
-  p_empresa_id    BIGINT,
-  p_status        TEXT DEFAULT NULL,
-  p_data_ini      DATE DEFAULT NULL,
-  p_data_fim      DATE DEFAULT NULL,
-  p_fornecedor_id BIGINT DEFAULT NULL
+  p_empresa_id        BIGINT,
+  p_status            TEXT DEFAULT NULL,
+  p_data_ini          DATE DEFAULT NULL,
+  p_data_fim          DATE DEFAULT NULL,
+  p_fornecedor_id     BIGINT DEFAULT NULL,
+  p_somente_vencidas  BOOLEAN DEFAULT FALSE
 )
 RETURNS TABLE (
   id BIGINT,
@@ -19,24 +18,51 @@ RETURNS TABLE (
   status TEXT
 )
 AS $$
-  SELECT
-    cp.id,
-    cp.descricao,
-    cp.valor,
-    cp.vencimento,
-    cg.nome AS categoria,
-    p.nome  AS fornecedor,
-    cp.parcelas,
-    cp.parcela_num,
-    cp.status
-  FROM contas_a_pagar cp
-  LEFT JOIN categorias_gerenciais cg ON cg.id = cp.categoria_id
-  LEFT JOIN pessoa p ON p.id = cp.fornecedor_id
-  WHERE cp.empresa_id = p_empresa_id
-    AND (p_status IS NULL OR    cp.status = p_status or p_status   ='0')
-    AND (p_data_ini IS NULL OR cp.vencimento >= p_data_ini)
-    AND (p_data_fim IS NULL OR cp.vencimento <= p_data_fim)
-    AND (p_fornecedor_id IS NULL OR p_fornecedor_id = 0  OR cp.fornecedor_id = p_fornecedor_id)
-  ORDER BY cp.vencimento ASC,  p.nome  asc,   cp.parcela_num asc   ;
-$$ LANGUAGE sql;
+SELECT
+  cp.id,
+  cp.descricao,
+  cp.valor,
+  cp.vencimento,
+  cg.nome AS categoria,
+  p.nome  AS fornecedor,
+  cp.parcelas,
+  cp.parcela_num,
+  cp.status
+FROM contas_a_pagar cp
+LEFT JOIN categorias_gerenciais cg ON cg.id = cp.categoria_id
+LEFT JOIN pessoa p ON p.id = cp.fornecedor_id
+WHERE cp.empresa_id = p_empresa_id
 
+  -- STATUS
+  AND (
+        p_status IS NULL 
+        OR p_status = '0'
+        OR cp.status = p_status
+      )
+
+  -- FORNECEDOR
+  AND (
+        p_fornecedor_id IS NULL 
+        OR p_fornecedor_id = 0
+        OR cp.fornecedor_id = p_fornecedor_id
+      )
+
+  -- 🔥 REGRA CENTRAL
+  AND (
+        -- MODO NORMAL (usa período)
+        (p_somente_vencidas = FALSE
+          AND (p_data_ini IS NULL OR cp.vencimento >= p_data_ini)
+          AND (p_data_fim IS NULL OR cp.vencimento <= p_data_fim)
+        )
+
+        OR
+
+        -- MODO VENCIDAS
+        (p_somente_vencidas = TRUE
+          AND cp.vencimento < CURRENT_DATE
+          AND cp.status = 'aberto'
+        )
+      )
+
+ORDER BY cp.vencimento ASC, p.nome ASC, cp.parcela_num ASC;
+$$ LANGUAGE sql;

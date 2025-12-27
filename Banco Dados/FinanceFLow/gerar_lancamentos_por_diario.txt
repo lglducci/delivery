@@ -1,4 +1,4 @@
- CREATE OR REPLACE FUNCTION contab.gerar_lancamentos_por_diario(
+  CREATE OR REPLACE FUNCTION contab.gerar_lancamentos_por_diario(
     p_diario_id BIGINT,
     p_empresa_id BIGINT
 )
@@ -18,7 +18,8 @@ BEGIN
   SELECT * INTO v_diario
   FROM contab.diario
   WHERE id = p_diario_id
-    AND empresa_id = p_empresa_id;
+    AND empresa_id = p_empresa_id 
+    and  modelo_codigo NOT IN ('PAGAR', 'RECEBER') ;
 
   IF NOT FOUND THEN
     RAISE EXCEPTION 'Diário % não encontrado.', p_diario_id;
@@ -46,6 +47,7 @@ BEGIN
   WHERE diario_id = p_diario_id
     AND empresa_id = p_empresa_id;
 
+ 
   -- 4) Insere linhas D e C
   FOR r_linha IN
     SELECT *
@@ -80,20 +82,24 @@ BEGIN
       v_modelo.id
     );
 
-    IF r_linha.dc = 'D' THEN
-      v_deb_count := v_deb_count + 1;
-    ELSE
-      v_cred_count := v_cred_count + 1;
-    END IF;
+    	IF r_linha.dc = 'D' THEN
+     	 v_deb_count := v_deb_count + 1;
+   	 ELSE
+ 	     v_cred_count := v_cred_count + 1;
+ 	   END IF;
 
   END LOOP;
 
-  -- 5) Validação final
-  IF v_deb_count = 0 OR v_cred_count = 0 THEN
-    RAISE EXCEPTION
-      'Modelo % inválido: precisa ter ao menos 1 débito e 1 crédito.',
-      v_modelo.codigo;
-  END IF;
+      	-- 5) Validação final
+  	IF v_deb_count = 0 OR v_cred_count = 0 THEN
+   	        RAISE EXCEPTION
+  	       'Modelo % inválido: precisa ter ao menos 1 débito e 1 crédito.',
+    	         v_modelo.codigo;
+	  END IF;
+end;
+ ; 
+
+
 
 END;
 $$;

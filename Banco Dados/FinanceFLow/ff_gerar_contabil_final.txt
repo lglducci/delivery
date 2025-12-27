@@ -22,13 +22,17 @@ BEGIN
     -- 2) GERAR CONTÁBIL A PARTIR DO DIÁRIO
     ----------------------------------------------------------------
     FOR r IN
-        SELECT id, empresa_id
+        SELECT id, empresa_id, modelo_codigo
         FROM contab.diario
         WHERE data_mov BETWEEN p_data_ini AND p_data_fim
         ORDER BY id
     LOOP
-        PERFORM contab.gerar_lancamentos_por_diario(r.id, r.empresa_id);
-    END LOOP;
+      IF r.modelo_codigo IN ('PAGAR', 'RECEBER') THEN  
+          PERFORM contab.gerar_lancamentos_pagar_receber(r.id, r.empresa_id);
+         else
+            PERFORM contab.gerar_lancamentos_por_diario(r.id, r.empresa_id);
+     end if;
+   END LOOP;
 
     ----------------------------------------------------------------
     -- 3) LIMPA STAGING DO PERÍODO

@@ -83,16 +83,17 @@ CREATE TABLE contas_financeiras (
     tipo TEXT NOT NULL CHECK (tipo IN ('corrente','poupanca','carteira','caixa')),
     saldo_inicial NUMERIC(12,2) DEFAULT 0,
     criado_em TIMESTAMP DEFAULT now(),
-	  padrao boolean DEFAULT false,
-	  nro_banco text,
-	  agencia text,
-	  conta text,
-	  conjunta boolean DEFAULT false,
-	  juridica boolean DEFAULT false  
+     padrao boolean DEFAULT false,
+     nro_banco text,
+     agencia text,
+     conta text,
+     conjunta boolean DEFAULT false,
+     juridica boolean DEFAULT false  ,
+     contabil_id BIGINT  not null     
 );
 
  
-
+drop table categorias_gerenciais 
 ---------------------------------------------------
 -- 5. CATEGORIAS GERENCIAIS
 ---------------------------------------------------
@@ -101,7 +102,7 @@ CREATE TABLE categorias_gerenciais (
     empresa_id BIGINT NOT NULL REFERENCES empresas(id),
     nome TEXT NOT NULL,
     grupo_contabil TEXT NULL,
-    tipo TEXT NOT NULL CHECK (tipo IN ('entrada','saida'))
+    tipo TEXT NOT NULL CHECK (tipo IN ('entrada','saida')) 
 );
 
 
