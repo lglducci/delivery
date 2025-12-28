@@ -66,7 +66,7 @@ BEGIN
             v_sem_parceiro_cnpj
         ) AS cnpj,
 
-        NULL::date               AS data_vencto,
+        data_movimento              AS data_vencto,
         t.valor                  AS valor_total,
         0::numeric(14,2),
         0::numeric(14,2),

@@ -28,7 +28,8 @@ BEGIN
       valor,
       data_movimento,
       descricao,
-      receber_id 
+      receber_id ,
+      evento_codigo
     )
     SELECT 
       empresa_id,
@@ -38,12 +39,11 @@ BEGIN
       valor,
       CURRENT_DATE,
       descricao,
-      id 
+      id ,
+      'RECEBER'
     FROM contas_a_receber
     WHERE id = v_id;
-
  
-
   END LOOP;
 
   RETURN 'Contas recebidas com sucesso';

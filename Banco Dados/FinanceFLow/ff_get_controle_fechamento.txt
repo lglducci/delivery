@@ -1,0 +1,19 @@
+ CREATE OR REPLACE FUNCTION contab.ff_get_controle_fechamento(
+    p_empresa_id BIGINT
+)
+RETURNS date
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_controle_fechamento date;
+BEGIN
+    -- 1) Tenta buscar
+    SELECT ultimo_dia_processado
+      INTO v_controle_fechamento 
+      FROM contab.controle_fechamento
+     WHERE empresa_id = p_empresa_id 
+     LIMIT 1; 
+
+    RETURN v_controle_fechamento ;
+END;
+$$;

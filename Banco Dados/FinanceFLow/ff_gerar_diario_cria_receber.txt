@@ -68,8 +68,7 @@ SELECT
 FROM contas_a_receber cr
 WHERE cr.empresa_id = p_empresa_id
     AND cr.criado_em::date =  p_data
---_ini AND p_data_fim
-  AND cr.status IN ('aberto', 'em_aberto')
+ -- AND cr.status IN ('aberto', 'em_aberto')
 GROUP BY
     cr.empresa_id,
     cr.lote_id,

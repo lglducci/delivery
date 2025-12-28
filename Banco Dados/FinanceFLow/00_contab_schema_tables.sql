@@ -16,13 +16,14 @@ DROP TABLE IF EXISTS contab.vinculos_modelo CASCADE;
 CREATE TABLE contab.contas (
   id              	  BIGSERIAL PRIMARY KEY,
   codigo            	VARCHAR(30) NOT NULL UNIQUE,
-  empresa_id      	bigint NOT NULL REFERENCES public.empresas(id),
+  empresa_id      	bigint                  NOT NULL REFERENCES public.empresas(id),
   nome         	VARCHAR(120) NOT NULL,
-  tipo              	VARCHAR(20)  NOT NULL CHECK (tipo IN ('ATIVO','PASSIVO','PL','RECEITA','CUSTO','DESPESA')),
-  natureza        	CHAR(1)      NOT NULL CHECK (natureza IN ('D','C')),
-  nivel           	INT          NOT NULL DEFAULT 1,
-  conta_pai_id   	BIGINT       NULL REFERENCES contab.contas(id) ON DELETE SET NULL,
-  analitica       	BOOLEAN      NOT NULL DEFAULT TRUE
+  tipo              	VARCHAR(20)   NOT NULL CHECK (tipo IN ('ATIVO','PASSIVO','PL','RECEITA','CUSTO','DESPESA')),
+  natureza        	CHAR(1)             NOT NULL CHECK (natureza IN ('D','C')),
+  nivel           	INT                      NOT NULL DEFAULT 1,
+  conta_pai_id   	BIGINT                NULL REFERENCES contab.contas(id) ON DELETE SET NULL,
+  analitica       	BOOLEAN           NOT NULL DEFAULT TRUE,
+  sistema                     BOOLEAN           NOT NULL DEFAULT  FALSE
 );
 
  
@@ -62,10 +63,11 @@ CHECK (status IN ('rascunho', 'confirmado', 'processado', 'estornado','manual'))
 -----------------------------------------------------------
 CREATE TABLE contab.modelos (
   id          		BIGSERIAL PRIMARY KEY,
-  empresa_id  	    bigint NOT NULL REFERENCES public.empresas(id),
-  codigo      	    VARCHAR(40) NOT NULL UNIQUE,
-  nome       	    VARCHAR(120) NOT NULL,
-  ativo      		BOOLEAN NOT NULL DEFAULT TRUE
+  empresa_id  	     bigint NOT NULL REFERENCES public.empresas(id),
+  codigo      	     VARCHAR(40) NOT NULL UNIQUE,
+  nome       	     VARCHAR(120) NOT NULL,
+  ativo      		     BOOLEAN NOT NULL DEFAULT TRUE,
+  sistema                          BOOLEAN           NOT NULL DEFAULT  FALSE
 );
 
 -----------------------------------------------------------

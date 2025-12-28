@@ -69,7 +69,7 @@ SELECT
 FROM contas_a_pagar cp
 WHERE cp.empresa_id = p_empresa_id 
  AND cp.criado_em::date =  p_data 
-  AND cp.status IN ('aberto', 'em_aberto')
+  --AND cp.status IN ('aberto', 'em_aberto')
 GROUP BY
     cp.empresa_id,
     cp.lote_id,

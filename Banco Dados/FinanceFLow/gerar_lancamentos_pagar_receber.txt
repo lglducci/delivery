@@ -93,9 +93,9 @@ BEGIN
     -------------------------------------------------------------------
     -- 5) Limpa lançamentos anteriores
     -------------------------------------------------------------------
-    DELETE FROM contab.lancamentos
-    WHERE diario_id = p_diario_id
-      AND empresa_id = p_empresa_id;
+   -- DELETE FROM contab.lancamentos
+    --WHERE diario_id = p_diario_id
+    --  AND empresa_id = p_empresa_id;
 
     -------------------------------------------------------------------
     -- 6) Lançamentos
