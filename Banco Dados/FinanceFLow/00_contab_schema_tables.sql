@@ -174,6 +174,15 @@ CREATE TABLE contab.controle_fechamento (
 );
 
 
+CREATE TABLE IF NOT EXISTS contab.saldos_iniciais (
+  empresa_id  BIGINT NOT NULL,
+  conta_id    BIGINT NOT NULL REFERENCES contab.contas(id),
+  data_base   DATE   NOT NULL DEFAULT DATE '2000-01-01',
+  saldo       NUMERIC(14,2) NOT NULL DEFAULT 0,
+  PRIMARY KEY (empresa_id, conta_id)
+);
+
+
 
 
 INSERT INTO contab.eventos (codigo, descricao, modelo_codigo, origem) VALUES
