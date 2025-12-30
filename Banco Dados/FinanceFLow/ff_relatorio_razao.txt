@@ -1,17 +1,17 @@
- CREATE OR REPLACE FUNCTION contab.ff_relatorio_razao(
+CREATE OR REPLACE FUNCTION contab.ff_relatorio_razao(
   p_empresa_id bigint,
   p_data_ini   date,
   p_data_fim   date,
   p_filtro     text DEFAULT NULL
 )
 RETURNS TABLE (
-  ano_mes text, 
+  ano_mes        text, 
   data_mov       date,
   conta_id       bigint,
   conta_codigo   text,
   conta_nome     text,
   historico      text,
- saldo_inicial    numeric(14,2),
+  saldo_inicial  numeric(14,2),
   debito         numeric(14,2),
   credito        numeric(14,2),
   saldo          numeric(14,2),
@@ -31,7 +31,7 @@ WITH contas_filtradas AS (
     )
 ),
 
-saldo_inicial AS (
+saldo_base AS (
   SELECT
     c.id AS conta_id,
     COALESCE(si.saldo, 0)
@@ -45,8 +45,8 @@ saldo_inicial AS (
     ), 0) AS saldo_inicial
   FROM contas_filtradas c
   LEFT JOIN contab.saldos_iniciais si
-         ON si.empresa_id = p_empresa_id
-        AND si.conta_id = c.id
+    ON si.empresa_id = p_empresa_id
+   AND si.conta_id   = c.id
 ),
 
 movimentos AS (
@@ -65,34 +65,46 @@ movimentos AS (
   LEFT JOIN contab.modelos m ON m.id = l.modelo_id
   WHERE l.empresa_id = p_empresa_id
     AND l.data_mov BETWEEN p_data_ini AND p_data_fim
-)
+),
 
-SELECT '' as ano_mes, 
-  m.data_mov,
-  m.conta_id,
-  m.conta_codigo,
-  m.conta_nome,
-  m.historico,
- si.saldo_inicial, 
-  m.debito,
-  m.credito,
-   
-  -- 🔥 SALDO CORRETO
-  (
-    si.saldo_inicial
+mov_com_saldo AS (
+  SELECT
+    ''::text AS ano_mes,
+    m.*,
+    sb.saldo_inicial
     +
     SUM(m.debito - m.credito)
       OVER (
         PARTITION BY m.conta_id
         ORDER BY m.data_mov, m.diario_id
-        ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
-      )
-  )::numeric(14,2) AS saldo,
+      ) AS saldo
+  FROM movimentos m
+  JOIN saldo_base sb ON sb.conta_id = m.conta_id
+)
 
-  m.diario_id,
-  m.modelo_codigo
+SELECT
+  ano_mes,
+  data_mov,
+  conta_id,
+  conta_codigo,
+  conta_nome,
+  historico,
 
-FROM movimentos m
-JOIN saldo_inicial si ON si.conta_id = m.conta_id
-ORDER BY m.conta_codigo, m.data_mov, m.diario_id;
+  -- ✅ saldo inicial da linha (linha anterior ou saldo_base)
+  COALESCE(
+    LAG(saldo) OVER (
+      PARTITION BY conta_id
+      ORDER BY data_mov, diario_id
+    ),
+    saldo_base.saldo_inicial
+  )::numeric(14,2) AS saldo_inicial,
+
+  debito,
+  credito,
+  saldo::numeric(14,2),
+  diario_id,
+  modelo_codigo
+FROM mov_com_saldo
+JOIN saldo_base USING (conta_id)
+ORDER BY conta_codigo, data_mov, diario_id;
 $$;
