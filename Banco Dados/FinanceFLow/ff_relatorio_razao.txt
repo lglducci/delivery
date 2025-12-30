@@ -5,11 +5,13 @@
   p_filtro     text DEFAULT NULL
 )
 RETURNS TABLE (
+  ano_mes text, 
   data_mov       date,
   conta_id       bigint,
   conta_codigo   text,
   conta_nome     text,
   historico      text,
+ saldo_inicial    numeric(14,2),
   debito         numeric(14,2),
   credito        numeric(14,2),
   saldo          numeric(14,2),
@@ -65,15 +67,16 @@ movimentos AS (
     AND l.data_mov BETWEEN p_data_ini AND p_data_fim
 )
 
-SELECT
+SELECT '' as ano_mes, 
   m.data_mov,
   m.conta_id,
   m.conta_codigo,
   m.conta_nome,
   m.historico,
+ si.saldo_inicial, 
   m.debito,
   m.credito,
-
+   
   -- 🔥 SALDO CORRETO
   (
     si.saldo_inicial

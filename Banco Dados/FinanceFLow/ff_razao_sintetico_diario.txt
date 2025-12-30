@@ -1,0 +1,60 @@
+ CREATE OR REPLACE FUNCTION contab.ff_razao_sintetico_diario (
+    p_empresa_id BIGINT,
+    p_data_ini   DATE,
+    p_data_fim   DATE,
+    p_filtro     TEXT DEFAULT NULL
+)
+RETURNS TABLE (
+    data_mov       DATE,
+    conta_codigo   TEXT,
+    conta_nome     TEXT,
+    saldo_inicial  NUMERIC(14,2),
+    debito         NUMERIC(14,2),
+    credito        NUMERIC(14,2),
+    saldo    NUMERIC(14,2)
+)
+LANGUAGE sql
+STABLE
+AS $$
+WITH base AS (
+    SELECT *
+    FROM contab.ff_relatorio_razao(
+        p_empresa_id,
+        p_data_ini,
+        p_data_fim,
+        p_filtro
+    )
+),
+agrupado AS (
+    SELECT
+        data_mov,
+        conta_codigo,
+        conta_nome,
+        SUM(debito)  AS debito,
+        SUM(credito) AS credito,
+        MAX(saldo)   AS saldo
+    FROM base
+    GROUP BY data_mov, conta_codigo, conta_nome
+),
+saldo_anterior AS (
+    SELECT
+        a.*,
+        LAG(a.saldo) OVER (
+            PARTITION BY a.conta_codigo
+            ORDER BY a.data_mov
+        ) AS saldo_inicial_calc
+    FROM agrupado a
+)
+SELECT
+    data_mov,
+    conta_codigo,
+    conta_nome,
+    COALESCE(saldo_inicial_calc, saldo - debito + credito) AS saldo_inicial,
+    debito,
+    credito,
+    saldo
+FROM saldo_anterior
+ORDER BY conta_codigo, data_mov;
+$$;
+
+
