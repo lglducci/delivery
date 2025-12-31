@@ -44,9 +44,12 @@ DELETE FROM contab.lancamentos l
         PERFORM contab.ff_gerar_diario_staging_transacoes(p_empresa_id, v_dia);
   --   PERFORM contab.ff_diario_gerar_de_contas_pagar(p_empresa_id, v_dia);
         PERFORM contab.ff_gerar_diario_cria_pagar(p_empresa_id, v_dia );
---   PERFORM contab.ff_diario_gerar_de_contas_receber(p_empresa_id, v_dia);
+--     PERFORM contab.ff_diario_gerar_de_contas_receber(p_empresa_id, v_dia);
         PERFORM contab.ff_gerar_diario_cria_receber(p_empresa_id, v_dia);
-        PERFORM contab.ff_diario_gerar_de_cartao(p_empresa_id, v_dia);
+     --   PERFORM contab.ff_diario_gerar_de_cartao(p_empresa_id, v_dia);
+-- CARTÃO (NOVO MODELO CORRETO) 
+         PERFORM contab.ff_diario_compra_cartao(p_empresa_id, v_dia, v_dia);
+         PERFORM contab.ff_diario_pagamento_fatura_cartao(p_empresa_id, v_dia);
 
         -- 3) marca o lote_id único dessa execução no staging do dia
         UPDATE contab.diario_staging s
