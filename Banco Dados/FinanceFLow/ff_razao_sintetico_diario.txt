@@ -11,50 +11,118 @@ RETURNS TABLE (
     saldo_inicial  NUMERIC(14,2),
     debito         NUMERIC(14,2),
     credito        NUMERIC(14,2),
-    saldo    NUMERIC(14,2)
+    saldo          NUMERIC(14,2)
 )
 LANGUAGE sql
 STABLE
 AS $$
-WITH base AS (
-    SELECT *
-    FROM contab.ff_relatorio_razao(
-        p_empresa_id,
-        p_data_ini,
-        p_data_fim,
-        p_filtro
+WITH contas_filtradas AS (
+    SELECT c.id, c.codigo::text AS codigo, c.nome::text AS nome
+    FROM contab.contas c
+    WHERE c.empresa_id = p_empresa_id
+      AND (
+            p_filtro IS NULL OR btrim(p_filtro) = ''
+         OR c.codigo ILIKE '%' || p_filtro || '%'
+         OR c.nome   ILIKE '%' || p_filtro || '%'
+      )
+),
+
+saldo_base AS (
+    SELECT
+        c.id AS conta_id,
+        c.codigo,
+        c.nome,
+        (
+          COALESCE(si.saldo, 0)
+          +
+          COALESCE((
+              SELECT SUM(l.debito - l.credito)
+              FROM contab.lancamentos l
+              WHERE l.empresa_id = p_empresa_id
+                AND l.conta_id   = c.id
+                AND l.data_mov   < p_data_ini
+          ), 0)
+        )::numeric(14,2) AS saldo_base
+    FROM contas_filtradas c
+    LEFT JOIN contab.saldos_iniciais si
+           ON si.empresa_id = p_empresa_id
+          AND si.conta_id   = c.id
+),
+
+mov_dia AS (
+    SELECT
+        l.conta_id,
+        l.data_mov::date AS data_mov,
+        SUM(l.debito)::numeric(14,2)  AS debito,
+        SUM(l.credito)::numeric(14,2) AS credito,
+        SUM(l.debito - l.credito)::numeric(14,2) AS delta
+    FROM contab.lancamentos l
+    JOIN contas_filtradas c ON c.id = l.conta_id
+    WHERE l.empresa_id = p_empresa_id
+      AND l.data_mov BETWEEN p_data_ini AND p_data_fim
+    GROUP BY l.conta_id, l.data_mov::date
+),
+
+mov_com_saldo AS (
+    SELECT
+        sb.codigo AS conta_codigo,
+        sb.nome   AS conta_nome,
+        md.data_mov,
+        md.debito,
+        md.credito,
+        md.delta,
+        (
+          sb.saldo_base
+          +
+          SUM(md.delta) OVER (
+              PARTITION BY md.conta_id
+              ORDER BY md.data_mov
+              ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+          )
+        )::numeric(14,2) AS saldo_dia,
+        sb.saldo_base
+    FROM mov_dia md
+    JOIN saldo_base sb ON sb.conta_id = md.conta_id
+),
+
+sem_movimento AS (
+    SELECT
+        p_data_ini AS data_mov,
+        sb.codigo AS conta_codigo,
+        sb.nome   AS conta_nome,
+        sb.saldo_base AS saldo_inicial,
+        0::numeric(14,2) AS debito,
+        0::numeric(14,2) AS credito,
+        sb.saldo_base AS saldo
+    FROM saldo_base sb
+    WHERE NOT EXISTS (
+        SELECT 1
+        FROM mov_dia md
+        WHERE md.conta_id = sb.conta_id
     )
-),
-agrupado AS (
-    SELECT
-        data_mov,
-        conta_codigo,
-        conta_nome,
-        SUM(debito)  AS debito,
-        SUM(credito) AS credito,
-        MAX(saldo)   AS saldo
-    FROM base
-    GROUP BY data_mov, conta_codigo, conta_nome
-),
-saldo_anterior AS (
-    SELECT
-        a.*,
-        LAG(a.saldo) OVER (
-            PARTITION BY a.conta_codigo
-            ORDER BY a.data_mov
-        ) AS saldo_inicial_calc
-    FROM agrupado a
 )
+
 SELECT
-    data_mov,
-    conta_codigo,
-    conta_nome,
-    COALESCE(saldo_inicial_calc, saldo - debito + credito) AS saldo_inicial,
-    debito,
-    credito,
-    saldo
-FROM saldo_anterior
+    m.data_mov,
+    m.conta_codigo,
+    m.conta_nome,
+    (m.saldo_dia - m.delta)::numeric(14,2) AS saldo_inicial,
+    m.debito,
+    m.credito,
+    m.saldo_dia::numeric(14,2) AS saldo
+FROM mov_com_saldo m
+
+UNION ALL
+
+SELECT
+    s.data_mov,
+    s.conta_codigo,
+    s.conta_nome,
+    s.saldo_inicial,
+    s.debito,
+    s.credito,
+    s.saldo
+FROM sem_movimento s
+
 ORDER BY conta_codigo, data_mov;
 $$;
-
-
