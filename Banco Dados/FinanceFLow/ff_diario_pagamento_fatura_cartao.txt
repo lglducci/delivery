@@ -16,7 +16,10 @@ INSERT INTO contab.diario_staging (
     data_vencto,
     valor_total,
     status,
-    outros
+    outros,
+    valor_custo ,
+    valor_imposto,
+   desconto 
 )
 SELECT
     f.empresa_id,
@@ -29,8 +32,8 @@ SELECT
     'rascunho',
     jsonb_build_object(
         'origem', 'cartao_fatura',
-        'fatura_id', f.id
-    )
+        'fatura_id', f.id 
+    ),0,0,0
 FROM cartoes_faturas f
 WHERE f.empresa_id = p_empresa_id
   AND f.vencimento = p_data

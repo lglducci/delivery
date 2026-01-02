@@ -182,6 +182,58 @@ CREATE TABLE IF NOT EXISTS contab.saldos_iniciais (
   PRIMARY KEY (empresa_id, conta_id)
 );
 
+CREATE TABLE contab.conta_classificacao (
+    id BIGSERIAL PRIMARY KEY,
+
+    empresa_id BIGINT NOT NULL,
+    
+    conta_codigo TEXT NOT NULL,
+    -- prefixo da conta contábil (ex: 4.1, 6.3, 5.2)
+
+    tipo_dre TEXT NOT NULL,
+    -- RECEITA_BRUTA | DED_RECEITA | CMV_CSP | DESPESA_FIXA | DESPESA_VARIAVEL
+
+    fixo_variavel TEXT,
+    -- FIXO | VARIAVEL | NULL (para receitas)
+
+    natureza CHAR(1) NOT NULL,
+    -- D = Débito | C = Crédito
+
+    tipo_contab TEXT NOT NULL,
+    -- RECEITA | CUSTO | DESPESA
+
+    nome TEXT NOT NULL,
+
+    criado_em TIMESTAMP DEFAULT now(),
+
+    CONSTRAINT chk_natureza_conta_classificacao
+        CHECK (natureza IN ('D','C')),
+
+    CONSTRAINT chk_fixo_variavel_conta_classificacao
+        CHECK (fixo_variavel IN ('FIXO','VARIAVEL') OR fixo_variavel IS NULL)
+);
+
+ 
+ INSERT INTO contab.conta_classificacao
+(
+  empresa_id,
+  conta_codigo,
+  tipo_dre,
+  fixo_variavel,
+  natureza,
+  tipo_contab,
+  nome
+)
+VALUES
+  (1, '4.1',   'RECEITA_BRUTA',   NULL,        'C', 'RECEITA', 'Vendas'),
+  (1, '4.1.9', 'DED_RECEITA',     NULL,        'D', 'RECEITA', 'Impostos s/ venda'),
+
+  (1, '5.1',   'CMV_CSP',         'VARIAVEL',  'D', 'CUSTO',   'CMV Bebidas'),
+  (1, '5.2',   'CMV_CSP',         'VARIAVEL',  'D', 'CUSTO',   'CMV Refeições'),
+
+  (1, '6.1',   'DESPESA_FIXA',    'FIXO',      'D', 'DESPESA','Pessoal'),
+  (1, '6.3',   'DESPESA_FIXA',    'FIXO',      'D', 'DESPESA','Administrativo'),
+  (1, '6.4',   'DESPESA_VARIAVEL','VARIAVEL',  'D', 'DESPESA','Marketing');
 
 
 
