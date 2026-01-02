@@ -235,7 +235,9 @@ CREATE TABLE cartoes_compras (
     criado_em TIMESTAMP DEFAULT now()
 );
 
-
+ALTER TABLE cartoes_compras
+ADD COLUMN conta_contabil_id BIGINT
+REFERENCES contab.contas(id);
  
 
 
