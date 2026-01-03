@@ -19,7 +19,7 @@ BEGIN
   FROM contab.diario
   WHERE id = p_diario_id
     AND empresa_id = p_empresa_id 
-    and  modelo_codigo NOT IN ('PAGAR', 'RECEBER') ;
+    and  modelo_codigo NOT IN ('PAGAR', 'RECEBER','COMPRA_CARTAO') ;
 
   IF NOT FOUND THEN
     RAISE EXCEPTION 'Diário % não encontrado.', p_diario_id;
@@ -96,10 +96,7 @@ BEGIN
   	       'Modelo % inválido: precisa ter ao menos 1 débito e 1 crédito.',
     	         v_modelo.codigo;
 	  END IF;
-end;
- ; 
-
-
-
+ 
+ 
 END;
 $$;

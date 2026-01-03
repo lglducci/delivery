@@ -40,7 +40,8 @@ SELECT
         'transacao_id', t.id,
         'compra_id', t.compra_id,
         'parcela', t.parcela_num,
-        'total_parcelas', t.parcela_total
+        'total_parcelas', t.parcela_total,
+       'conta_contabil_id', c.conta_contabil_id
     ),
    0,
   0,

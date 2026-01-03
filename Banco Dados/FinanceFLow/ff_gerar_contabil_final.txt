@@ -27,8 +27,12 @@ BEGIN
         WHERE data_mov BETWEEN p_data_ini AND p_data_fim
         ORDER BY id
     LOOP
-      IF r.modelo_codigo IN ('PAGAR', 'RECEBER') THEN  
-          PERFORM contab.gerar_lancamentos_pagar_receber(r.id, r.empresa_id);
+      IF r.modelo_codigo IN ('PAGAR', 'RECEBER','COMPRA_CARTAO') THEN  
+           IF r.modelo_codigo IN ('PAGAR', 'RECEBER' ) THEN 
+                PERFORM contab.gerar_lancamentos_pagar_receber(r.id, r.empresa_id);
+             else
+                 PERFORM  contab.ff_gerar_lancamento_compra_cartao(r.id, r.empresa_id);
+            end if;
          else
             PERFORM contab.gerar_lancamentos_por_diario(r.id, r.empresa_id);
      end if;
