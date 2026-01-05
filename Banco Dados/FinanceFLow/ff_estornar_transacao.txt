@@ -1,19 +1,18 @@
-CREATE OR REPLACE FUNCTION ff_estornar_transacao(
-  p_empresa_id BIGINT,
-  p_transacao_id BIGINT
+ CREATE OR REPLACE FUNCTION ff_estornar_transacao(
+  p_empresa_id    BIGINT,
+  p_transacao_id  BIGINT
 )
 RETURNS TEXT
 LANGUAGE plpgsql
 AS $$
 DECLARE
-  v_pagar_id BIGINT;
-  v_receber_id BIGINT;
-  v_fatura_id BIGINT;
+  v_transacao     transacoes%ROWTYPE;
 BEGIN
-
-  -- Buscar origem da transação
-  SELECT pagar_id, receber_id, fatura_id
-    INTO v_pagar_id, v_receber_id, v_fatura_id
+  ------------------------------------------------------------------
+  -- 1) Buscar transação original
+  ------------------------------------------------------------------
+  SELECT *
+    INTO v_transacao
     FROM transacoes
    WHERE id = p_transacao_id
      AND empresa_id = p_empresa_id;
@@ -22,35 +21,94 @@ BEGIN
     RAISE EXCEPTION 'Transação % não encontrada.', p_transacao_id;
   END IF;
 
-  -- Se veio de contas a pagar → reabrir
-  IF v_pagar_id IS NOT NULL THEN
+  ------------------------------------------------------------------
+  -- 2) SE FOR NO MESMO DIA → DELETE (correção operacional)
+  ------------------------------------------------------------------
+  IF v_transacao.data_mov = current_date THEN
+
+    -- Reabre origens
+    IF v_transacao.pagar_id IS NOT NULL THEN
+      UPDATE contas_a_pagar
+         SET status = 'aberto'
+       WHERE id = v_transacao.pagar_id
+         AND empresa_id = p_empresa_id;
+    END IF;
+
+    IF v_transacao.receber_id IS NOT NULL THEN
+      UPDATE contas_a_receber
+         SET status = 'aberto'
+       WHERE id = v_transacao.receber_id
+         AND empresa_id = p_empresa_id;
+    END IF;
+
+    IF v_transacao.fatura_id IS NOT NULL THEN
+      UPDATE cartoes_faturas
+         SET status = 'aberta'
+       WHERE id = v_transacao.fatura_id
+         AND empresa_id = p_empresa_id;
+    END IF;
+
+    DELETE FROM transacoes
+     WHERE id = p_transacao_id;
+
+    RETURN 'TRANSACAO EXCLUIDA (MESMO DIA)';
+  END IF;
+
+  ------------------------------------------------------------------
+  -- 3) D+1 → ESTORNO (NOVA TRANSAÇÃO)
+  ------------------------------------------------------------------
+
+  -- Reabre origens (efeito de negócio)
+  IF v_transacao.pagar_id IS NOT NULL THEN
     UPDATE contas_a_pagar
        SET status = 'aberto'
-     WHERE id = v_pagar_id
+     WHERE id = v_transacao.pagar_id
        AND empresa_id = p_empresa_id;
   END IF;
 
-  -- Se veio de contas a receber → reabrir
-  IF v_receber_id IS NOT NULL THEN
+  IF v_transacao.receber_id IS NOT NULL THEN
     UPDATE contas_a_receber
        SET status = 'aberto'
-     WHERE id = v_receber_id
+     WHERE id = v_transacao.receber_id
        AND empresa_id = p_empresa_id;
   END IF;
 
-  -- Se veio de fatura → voltar para fechada
-  IF v_fatura_id IS NOT NULL THEN
+  IF v_transacao.fatura_id IS NOT NULL THEN
     UPDATE cartoes_faturas
        SET status = 'aberta'
-     WHERE id = v_fatura_id
+     WHERE id = v_transacao.fatura_id
        AND empresa_id = p_empresa_id;
   END IF;
 
-  -- Remover a transação
-  DELETE FROM transacoes
-   WHERE id = p_transacao_id;
+  -- Insere transação de ESTORNO (fato novo)
+  INSERT INTO transacoes (
+    empresa_id,
+    data_mov,
+    valor,
+    tipo,
+    origem,
+    origem_id,
+    pagar_id,
+    receber_id,
+    fatura_id,
+    transacao_origem_id,
+    historico
+  )
+  VALUES (
+    p_empresa_id,
+    current_date,
+    v_transacao.valor * -1,
+    'ESTORNO',
+    v_transacao.origem,
+    v_transacao.origem_id,
+    v_transacao.pagar_id,
+    v_transacao.receber_id,
+    v_transacao.fatura_id,
+    v_transacao.id,
+    'ESTORNO DA TRANSACAO ' || v_transacao.id
+  );
 
-  RETURN 'sucesso';
+  RETURN 'ESTORNO REALIZADO (D+1)';
 
 END;
 $$;

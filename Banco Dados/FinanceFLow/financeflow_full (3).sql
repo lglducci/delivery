@@ -238,7 +238,9 @@ CREATE TABLE cartoes_compras (
 ALTER TABLE cartoes_compras
 ADD COLUMN conta_contabil_id BIGINT
 REFERENCES contab.contas(id);
- 
+ CREATE INDEX idx_cartoes_transacoes_compra
+ON cartoes_transacoes (empresa_id, compra_id);
+
 
 
 

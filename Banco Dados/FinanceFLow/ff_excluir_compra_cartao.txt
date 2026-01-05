@@ -1,37 +1,74 @@
-CREATE OR REPLACE FUNCTION ff_excluir_compra_cartao(
-  p_empresa_id BIGINT,
-  p_id BIGINT
+ CREATE OR REPLACE FUNCTION ff_excluir_compra_cartao(
+    p_empresa_id BIGINT,
+    p_compra_id  BIGINT
 )
-RETURNS TEXT
+RETURNS VOID
 LANGUAGE plpgsql
 AS $$
 DECLARE
-  v_fatura_id BIGINT;
-  v_valor NUMERIC;
-  v_total_parcelas INT;
+    v_fatura_id      BIGINT;
+    v_status_fatura  TEXT;
+    v_valor_total    NUMERIC(12,2);
 BEGIN
-  -- 1) Buscar dados da transação
-  SELECT fatura_id, valor
-    INTO v_fatura_id, v_valor
-  FROM cartoes_compras
-  WHERE id = p_transacao_id
-    AND empresa_id = p_empresa_id;
+    ------------------------------------------------------------
+    -- 1) Localiza fatura da compra
+    ------------------------------------------------------------
+    SELECT t.fatura_id
+      INTO v_fatura_id
+      FROM cartoes_transacoes t
+     WHERE t.compra_id  = p_compra_id
+       AND t.empresa_id = p_empresa_id
+     LIMIT 1;
 
-  IF v_fatura_id IS NULL THEN
-    RETURN 'TRANSACAO_NAO_ENCONTRADA';
-  END IF;
+    IF v_fatura_id IS NULL THEN
+        RAISE EXCEPTION
+          'Compra % não possui transações vinculadas.', p_compra_id;
+    END IF;
 
-  -- 2) Remover valor da fatura
-  UPDATE cartoes_faturas
-     SET valor_total = COALESCE(valor_total,0) - v_valor
-   WHERE id = v_fatura_id
-     AND empresa_id = p_empresa_id;
+    ------------------------------------------------------------
+    -- 2) Valida status da fatura
+    ------------------------------------------------------------
+    SELECT status
+      INTO v_status_fatura
+      FROM cartoes_faturas
+     WHERE id = v_fatura_id
+       AND empresa_id = p_empresa_id;
 
-  -- 3) Excluir transação
-  DELETE FROM cartoes_transacoes
-   WHERE id = p_transacao_id
-     AND empresa_id = p_empresa_id;
+    IF lower(v_status_fatura) <> 'aberta' THEN
+        RAISE EXCEPTION
+          'Compra só pode ser excluída se a fatura estiver ABERTA.';
+    END IF;
 
-  RETURN 'OK';
+    ------------------------------------------------------------
+    -- 3) Soma valor das transações da compra
+    ------------------------------------------------------------
+    SELECT COALESCE(SUM(valor), 0)
+      INTO v_valor_total
+      FROM cartoes_transacoes
+     WHERE compra_id  = p_compra_id
+       AND empresa_id = p_empresa_id;
+
+    ------------------------------------------------------------
+    -- 4) Atualiza valor da fatura
+    ------------------------------------------------------------
+    UPDATE cartoes_faturas
+       SET valor_total = valor_total - v_valor_total
+     WHERE id = v_fatura_id
+       AND empresa_id = p_empresa_id;
+
+    ------------------------------------------------------------
+    -- 5) Exclui transações
+    ------------------------------------------------------------
+    DELETE FROM cartoes_transacoes
+     WHERE compra_id  = p_compra_id
+       AND empresa_id = p_empresa_id;
+
+    ------------------------------------------------------------
+    -- 6) Exclui compra
+    ------------------------------------------------------------
+    DELETE FROM cartoes_compras
+     WHERE id = p_compra_id
+       AND empresa_id = p_empresa_id;
+
 END;
 $$;

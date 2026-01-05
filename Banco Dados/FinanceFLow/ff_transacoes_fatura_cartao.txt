@@ -16,22 +16,44 @@ DECLARE
 BEGIN
     v_mes_ref := to_char(p_referencia, 'YYYY-MM');
 
-    SELECT 
-        f.id,
-        c.nome,
-        jsonb_build_object(
-            'id',            f.id,
+  SELECT 
+       f.id,
+       c.nome,
+       jsonb_build_object(
+           'id',            f.id,
             'mes_referencia',f.mes_referencia,
             'status',        f.status,
-            'valor_total',   f.valor_total
-        )::json
-    INTO v_fatura_id, v_cartao_nome, v_fatura
+           'valor_total',   f.valor_total
+       )::json
+   INTO v_fatura_id, v_cartao_nome, v_fatura
     FROM cartoes_faturas f
     JOIN cartoes c ON c.id = f.cartao_id
-    WHERE f.empresa_id = p_empresa_id
+   WHERE f.empresa_id = p_empresa_id
       AND c.id         = p_cartao_id
-      AND to_char(f.mes_referencia,'YYYY-MM') = v_mes_ref
+      AND to_char(f.mes_referencia,'YYYY-MM') = v_mes_ref   
     LIMIT 1;
+
+ 
+
+--    SELECT
+  --      f.id,
+--        c.nome,
+--        jsonb_build_object(
+--            'id',             f.id,
+--            'mes_referencia', f.mes_referencia,
+--            'status',         f.status,
+--            'valor_total',    f.valor_total
+--        )::json
+--    INTO v_fatura_id, v_cartao_nome, v_fatura
+ --   FROM cartoes_faturas f
+--    JOIN cartoes c ON c.id = f.cartao_id
+  --  WHERE f.empresa_id = p_empresa_id
+--      AND c.id         = p_cartao_id
+--      AND f.status     = 'ABERTA'
+--      AND f.mes_referencia >= date_trunc('month', p_referencia)
+ --   ORDER BY f.mes_referencia
+ --   LIMIT 1;
+
 
     IF v_fatura_id IS NULL THEN
         RETURN json_build_object(
