@@ -64,7 +64,8 @@ SELECT
         'origem', 'CONTAS_PAGAR',
         'evento', 'CRIA_PAGAR', 
         'data criacao', MIN(cp.criado_em),
-         'parcelas', MAX(cp.parcelas) 
+         'parcelas', MAX(cp.parcelas) ,
+         'contabil_id', cp.contabil_id
     ) 
 FROM contas_a_pagar cp
 WHERE cp.empresa_id = p_empresa_id 

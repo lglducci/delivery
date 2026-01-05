@@ -83,8 +83,14 @@ CREATE TABLE contab.modelos_linhas (
   fonte_valor   	VARCHAR(30) NOT NULL,
   valor_fixo     	NUMERIC(14,2),
   fator          	NUMERIC(10,4) NOT NULL DEFAULT 1.0,
-  obrigatorio    	BOOLEAN NOT NULL DEFAULT TRUE
+  obrigatorio    	BOOLEAN NOT NULL DEFAULT TRUE,
+ codigo_estorno       TEXT null,
+perna_fixa BOOLEAN NOT NULL DEFAULT TRUE
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS ux_modelos_linhas_unq
+ON contab.modelos_linhas (empresa_id, modelo_id, conta_id, dc);
+ 
 
 -----------------------------------------------------------
 -- 6) LANÇAMENTOS

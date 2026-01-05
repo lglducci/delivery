@@ -1,0 +1,135 @@
+CREATE OR REPLACE FUNCTION contab.gerar_lancamentos_estorno(
+    p_diario_id  BIGINT,
+    p_empresa_id BIGINT
+)
+RETURNS void
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_diario               contab.diario%ROWTYPE;
+    v_modelo               contab.modelos%ROWTYPE;
+    v_valor                NUMERIC(14,2);
+    v_conta_variavel_id    BIGINT;
+    r_linha                contab.modelos_linhas%ROWTYPE;
+BEGIN
+    ------------------------------------------------------------------
+    -- 1) Diário (já existe)
+    ------------------------------------------------------------------
+    SELECT *
+      INTO v_diario
+      FROM contab.diario
+     WHERE id = p_diario_id
+       AND empresa_id = p_empresa_id;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Diário % não encontrado.', p_diario_id;
+    END IF;
+
+    IF v_diario.modelo_codigo NOT LIKE 'ESTORNO_%' THEN
+        RAISE EXCEPTION
+            'Diário % não é de estorno (%).',
+            p_diario_id,
+            v_diario.modelo_codigo;
+    END IF;
+
+    v_valor := v_diario.valor_total;
+
+    IF v_valor IS NULL OR v_valor <= 0 THEN
+        RAISE EXCEPTION 'Valor inválido no diário %.', p_diario_id;
+    END IF;
+
+    ------------------------------------------------------------------
+    -- 2) Modelo de estorno
+    ------------------------------------------------------------------
+    SELECT *
+      INTO v_modelo
+      FROM contab.modelos
+     WHERE codigo = v_diario.modelo_codigo
+       AND empresa_id = p_empresa_id
+       AND ativo = TRUE;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION
+            'Modelo de estorno % não encontrado.',
+            v_diario.modelo_codigo;
+    END IF;
+
+    ------------------------------------------------------------------
+    -- 3) Conta variável (se existir)
+    ------------------------------------------------------------------
+    v_conta_variavel_id :=
+        (v_diario.outros ->> 'conta_contabil_id')::BIGINT;
+
+    ------------------------------------------------------------------
+    -- 4) Geração dos lançamentos (genérico)
+    ------------------------------------------------------------------
+    FOR r_linha IN
+        SELECT *
+          FROM contab.modelos_linhas
+         WHERE modelo_id = v_modelo.id
+           AND empresa_id = p_empresa_id
+    LOOP
+
+        -- Resolve conta
+        IF r_linha.perna_fixa THEN
+            IF r_linha.conta_id IS NULL THEN
+                RAISE EXCEPTION
+                    'Modelo % com perna_fixa=true sem conta definida.',
+                    v_modelo.codigo;
+            END IF;
+
+            INSERT INTO contab.lancamentos (
+                empresa_id,
+                diario_id,
+                data_mov,
+                conta_id,
+                historico,
+                debito,
+                credito,
+                modelo_id
+            )
+            VALUES (
+                p_empresa_id,
+                v_diario.id,
+                v_diario.data_mov,
+                r_linha.conta_id,
+                v_diario.historico,
+                CASE WHEN r_linha.dc = 'D' THEN v_valor ELSE 0 END,
+                CASE WHEN r_linha.dc = 'C' THEN v_valor ELSE 0 END,
+                v_modelo.id
+            );
+
+        ELSE
+            -- Perna variável
+            IF v_conta_variavel_id IS NULL THEN
+                RAISE EXCEPTION
+                    'Conta contábil variável não informada no diário %.',
+                    p_diario_id;
+            END IF;
+
+            INSERT INTO contab.lancamentos (
+                empresa_id,
+                diario_id,
+                data_mov,
+                conta_id,
+                historico,
+                debito,
+                credito,
+                modelo_id
+            )
+            VALUES (
+                p_empresa_id,
+                v_diario.id,
+                v_diario.data_mov,
+                v_conta_variavel_id,
+                v_diario.historico,
+                CASE WHEN r_linha.dc = 'D' THEN v_valor ELSE 0 END,
+                CASE WHEN r_linha.dc = 'C' THEN v_valor ELSE 0 END,
+                v_modelo.id
+            );
+        END IF;
+
+    END LOOP;
+
+END;
+$$;
