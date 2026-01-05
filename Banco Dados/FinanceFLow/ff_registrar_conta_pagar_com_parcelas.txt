@@ -1,13 +1,14 @@
     CREATE OR REPLACE FUNCTION ff_registrar_conta_pagar_com_parcelas(
-  p_empresa_id     BIGINT,
-  p_descricao      TEXT,
-  p_valor_total    NUMERIC,
-  p_vencimento     DATE,
-  p_categoria      TEXT DEFAULT NULL,
-  p_parcelas       INT DEFAULT 1,
-  p_fornecedor_id  BIGINT DEFAULT NULL,
-  p_categoria_id   BIGINT DEFAULT NULL,
-  p_doc_ref   text DEFAULT NULL
+  p_empresa_id     	BIGINT,
+  p_descricao      	TEXT,
+  p_valor_total    	NUMERIC,
+  p_vencimento   	  DATE,
+  p_categoria     	 TEXT DEFAULT NULL,
+  p_parcelas     	  INT DEFAULT 1,
+  p_fornecedor_id  	BIGINT DEFAULT NULL,
+  p_categoria_id    	 BIGINT DEFAULT NULL,
+  p_doc_ref              	text DEFAULT NULL,
+ p_contabil_id   	BIGINT DEFAULT NULL 
 )
 RETURNS BIGINT
 LANGUAGE plpgsql
@@ -68,7 +69,8 @@ BEGIN
             status,
             fornecedor_id,
            lote_id ,
-          doc_ref 
+          doc_ref ,
+         contabil_id
         )
         VALUES (
             p_empresa_id,
@@ -81,7 +83,8 @@ BEGIN
             'aberto',
             p_fornecedor_id,
            v_lote_id ,
-         p_doc_ref 
+           p_doc_ref ,
+           p_contabil_id   
         )
         RETURNING id INTO v_id;
 

@@ -6,7 +6,9 @@ RETURNS TEXT
 LANGUAGE plpgsql
 AS $$
 DECLARE
-  v_transacao     transacoes%ROWTYPE;
+  v_transacao       transacoes%ROWTYPE;
+  v_evento_estorno  TEXT;
+  v_tipo_estorno    TEXT;
 BEGIN
   ------------------------------------------------------------------
   -- 1) Buscar transação original
@@ -22,11 +24,32 @@ BEGIN
   END IF;
 
   ------------------------------------------------------------------
-  -- 2) SE FOR NO MESMO DIA → DELETE (correção operacional)
+  -- 2) Descobrir EVENTO REVERSO a partir do EVENTO DA TRANSAÇÃO
+  ------------------------------------------------------------------
+  SELECT m.codigo_estorno
+    INTO v_evento_estorno
+    FROM contab.modelos m
+   WHERE m.empresa_id = p_empresa_id
+     AND m.codigo = v_transacao.evento_codigo;
+
+  -- se não houver reverso → estorno genérico
+  v_evento_estorno := COALESCE(v_evento_estorno, 'ESTORNO');
+
+  ------------------------------------------------------------------
+  -- 3) Tipo reverso (ENTRADA <-> SAIDA)
+  ------------------------------------------------------------------
+  v_tipo_estorno :=
+    CASE
+      WHEN upper(coalesce(v_transacao.tipo,'')) = 'ENTRADA' THEN 'SAIDA'
+      WHEN upper(coalesce(v_transacao.tipo,'')) = 'SAIDA'   THEN 'ENTRADA'
+      ELSE v_transacao.tipo
+    END;
+
+  ------------------------------------------------------------------
+  -- 4) MESMO DIA → DELETE (correção operacional)
   ------------------------------------------------------------------
   IF v_transacao.data_mov = current_date THEN
 
-    -- Reabre origens
     IF v_transacao.pagar_id IS NOT NULL THEN
       UPDATE contas_a_pagar
          SET status = 'aberto'
@@ -55,10 +78,10 @@ BEGIN
   END IF;
 
   ------------------------------------------------------------------
-  -- 3) D+1 → ESTORNO (NOVA TRANSAÇÃO)
+  -- 5) D+1 → ESTORNO (novo fato financeiro)
   ------------------------------------------------------------------
 
-  -- Reabre origens (efeito de negócio)
+  -- Reabre origens (regra de negócio)
   IF v_transacao.pagar_id IS NOT NULL THEN
     UPDATE contas_a_pagar
        SET status = 'aberto'
@@ -80,12 +103,13 @@ BEGIN
        AND empresa_id = p_empresa_id;
   END IF;
 
-  -- Insere transação de ESTORNO (fato novo)
+  -- Insere transação de estorno
   INSERT INTO transacoes (
     empresa_id,
     data_mov,
     valor,
     tipo,
+    evento_codigo,
     origem,
     origem_id,
     pagar_id,
@@ -97,8 +121,9 @@ BEGIN
   VALUES (
     p_empresa_id,
     current_date,
-    v_transacao.valor * -1,
-    'ESTORNO',
+    abs(v_transacao.valor),
+    v_tipo_estorno,
+    v_evento_estorno,
     v_transacao.origem,
     v_transacao.origem_id,
     v_transacao.pagar_id,
@@ -109,6 +134,5 @@ BEGIN
   );
 
   RETURN 'ESTORNO REALIZADO (D+1)';
-
 END;
 $$;

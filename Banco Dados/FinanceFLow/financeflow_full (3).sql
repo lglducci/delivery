@@ -174,6 +174,15 @@ CREATE TABLE contas_a_pagar (
 CREATE SEQUENCE IF NOT EXISTS contas_a_pagar_lote_seq;
 ALTER TABLE contas_a_pagar ALTER COLUMN lote_id SET DEFAULT nextval('contas_a_pagar_lote_seq');
 
+ALTER TABLE contas_a_pagar
+ADD COLUMN conta_contabil_id BIGINT;
+
+ALTER TABLE contas_a_pagar
+ADD CONSTRAINT fk_contas_a_pagar_conta_contabil
+FOREIGN KEY (conta_contabil_id)
+REFERENCES contab.contas(id);
+
+
 
 ---------------------------------------------------
 -- 9. CONTAS A RECEBER
@@ -197,6 +206,15 @@ CREATE TABLE contas_a_receber (
 
 CREATE SEQUENCE IF NOT EXISTS contas_a_receber_lote_seq;
 ALTER TABLE contas_a_receber ALTER COLUMN lote_id SET DEFAULT nextval('contas_a_receber_lote_seq');
+
+ALTER TABLE contas_a_receber
+ADD COLUMN conta_contabil_id BIGINT;
+
+ALTER TABLE contas_a_receber
+ADD CONSTRAINT fk_contas_a_receber_conta_contabil
+FOREIGN KEY (conta_contabil_id)
+REFERENCES contab.contas(id);
+
 
 
 ---------------------------------------------------
