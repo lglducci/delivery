@@ -74,7 +74,8 @@ WHERE cp.empresa_id = p_empresa_id
 GROUP BY
     cp.empresa_id,
     cp.lote_id,
-    cp.fornecedor_id ;
+    cp.fornecedor_id,
+    cp.contabil_id ;
 
 GET DIAGNOSTICS v_qtd = ROW_COUNT;
 RETURN v_qtd;

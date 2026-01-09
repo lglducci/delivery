@@ -11,14 +11,8 @@ DECLARE
 BEGIN
   FOR v_id IN SELECT json_array_elements_text(p_lista_ids)::BIGINT LOOP
 
-    -- Atualiza conta a pagar
-    UPDATE contas_a_pagar
-    SET 
-      status = 'pago',
-      vencimento = CURRENT_DATE
-    WHERE id = v_id 
-      AND empresa_id = p_empresa_id;
 
+     
     -- Insere transação
     INSERT INTO transacoes(
       empresa_id,
@@ -29,7 +23,8 @@ BEGIN
       data_movimento,
       descricao,
       pagar_id ,
-     evento_codigo
+     evento_codigo,
+    origem 
     )
     SELECT 
       empresa_id,
@@ -40,15 +35,19 @@ BEGIN
       CURRENT_DATE,
       descricao,
       id ,
-    'PAGAR'
+    'PAGAR',
+   'Pagamento'
     FROM contas_a_pagar
-    WHERE id = v_id;
+    WHERE id = v_id 
+and status = 'aberto';
 
-    -- Atualiza saldo
-  --  PERFORM ff_atualiza_saldo(
-    --  (SELECT conta_id FROM contas_a_pagar WHERE id = v_id),
-    --  - (SELECT valor FROM contas_a_pagar WHERE id = v_id)
-    --);
+    -- Atualiza conta a pagar
+    UPDATE contas_a_pagar
+    SET 
+      status = 'pago',
+      data_pagamento = CURRENT_DATE
+    WHERE id = v_id 
+      AND empresa_id = p_empresa_id; 
 
   END LOOP;
 

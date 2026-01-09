@@ -73,7 +73,8 @@ WHERE cr.empresa_id = p_empresa_id
 GROUP BY
     cr.empresa_id,
     cr.lote_id,
-    cr.fornecedor_id;
+    cr.fornecedor_id,
+   cr.contabil_id;
  
 
  

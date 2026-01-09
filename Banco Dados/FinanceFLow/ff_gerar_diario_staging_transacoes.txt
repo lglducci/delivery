@@ -78,7 +78,8 @@ BEGIN
             'transacao_id', t.id,
             'pagar_id', t.pagar_id,
             'receber_id', t.receber_id,
-            'conta_contabil_id',contabil_id 
+            'conta_contabil_id',cf.contabil_id ,
+            'categoria_id', t.categoria_id
         )  
     FROM public.transacoes t
     LEFT JOIN public.categorias_gerenciais cg

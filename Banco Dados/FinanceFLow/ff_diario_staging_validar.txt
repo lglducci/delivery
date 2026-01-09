@@ -63,8 +63,8 @@ BEGIN
                 END IF;
             END IF;
         END IF;
-
-        --------------------------------------------------------------------
+ 
+         --------------------------------------------------------------------
         -- 2) MODELO
         --------------------------------------------------------------------
         SELECT EXISTS(
@@ -74,9 +74,15 @@ BEGIN
               AND codigo = r.modelo_codigo
         ) INTO v_modelo_exists;
 
+        -- Se for ESTORNO, considera que o modelo existe por definição
+        IF r.modelo_codigo = 'ESTORNO' THEN
+            v_modelo_exists := true;
+        END IF;
+
         IF NOT v_modelo_exists THEN
             v_msg := COALESCE(v_msg, '') || 'Modelo inexistente; ';
         END IF;
+
 
         --------------------------------------------------------------------
         -- 3) VALOR

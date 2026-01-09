@@ -2,6 +2,9 @@
 -- FINANCE-FLOW – SCRIPT COMPLETO REVISADO
 ---------------------------------------------------
 
+SELECT current_database();
+SHOW timezone;
+ALTER DATABASE NOME_DO_BANCO SET timezone = 'America/Sao_Paulo';
 -- ORDEM IMPORTANTE: CRIAR BASE E TABELAS MESTRES PRIMEIRO
 ---------------------------------------------------
 
@@ -151,6 +154,10 @@ CREATE TABLE transacoes (
 
  alter table public.transacoes add column evento_codigo text;
 
+ALTER TABLE transacoes
+ADD COLUMN origem_id BIGINT NULL
+REFERENCES transacoes(id);
+
 ---------------------------------------------------
 -- 8. CONTAS A PAGAR
 ---------------------------------------------------
@@ -168,18 +175,19 @@ CREATE TABLE contas_a_pagar (
     criado_em TIMESTAMP DEFAULT now(),
     lote_id BIGINT,
     doc_ref  text null,
-   evento_codigo text default 'PAGAR'
+   evento_codigo text default 'PAGAR',
+  data_pagamento date null 
 );
 
 CREATE SEQUENCE IF NOT EXISTS contas_a_pagar_lote_seq;
 ALTER TABLE contas_a_pagar ALTER COLUMN lote_id SET DEFAULT nextval('contas_a_pagar_lote_seq');
 
 ALTER TABLE contas_a_pagar
-ADD COLUMN conta_contabil_id BIGINT;
+ADD COLUMN contabil_id BIGINT;
 
 ALTER TABLE contas_a_pagar
 ADD CONSTRAINT fk_contas_a_pagar_conta_contabil
-FOREIGN KEY (conta_contabil_id)
+FOREIGN KEY (contabil_id)
 REFERENCES contab.contas(id);
 
 
@@ -201,18 +209,19 @@ CREATE TABLE contas_a_receber (
     criado_em TIMESTAMP DEFAULT now(),
     lote_id BIGINT,
      evento_codigo text default 'RECEBER',
-    doc_ref  text 
+    doc_ref  text,
+     data_recebimento date null  
 );
 
 CREATE SEQUENCE IF NOT EXISTS contas_a_receber_lote_seq;
 ALTER TABLE contas_a_receber ALTER COLUMN lote_id SET DEFAULT nextval('contas_a_receber_lote_seq');
 
 ALTER TABLE contas_a_receber
-ADD COLUMN conta_contabil_id BIGINT;
+ADD COLUMN contabil_id BIGINT;
 
 ALTER TABLE contas_a_receber
 ADD CONSTRAINT fk_contas_a_receber_conta_contabil
-FOREIGN KEY (conta_contabil_id)
+FOREIGN KEY (contabil_id)
 REFERENCES contab.contas(id);
 
 
@@ -276,6 +285,7 @@ ON cartoes_transacoes (empresa_id, compra_id);
 	vencimento  date,
 	numero text,  
 	data_compra DATE,
+	data_pagamento date null, 
 	evento_codigo text default 'PAGAMENTO_FATURA_CARTAO',
     criado_em TIMESTAMP DEFAULT now()
 );

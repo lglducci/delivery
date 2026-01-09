@@ -106,9 +106,7 @@ CREATE TABLE contab.lancamentos (
   credito      	    NUMERIC(14,2) NOT NULL DEFAULT 0,
   modelo_id         BIGINT REFERENCES contab.modelos(id) ON DELETE SET NULL,
   criado_em         TIMESTAMP DEFAULT now(),
-  tipo_automacao    TEXT  CHECK (tipo_automacao IN ('FINANCEIRO_PADRAO','NAO_FINANCEIR')),
-  CHECK ((debito > 0 AND credito = 0) OR (credito > 0 AND debito = 0))
-);
+  origem                TEXT   default null );
 
  
  

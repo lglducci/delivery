@@ -25,7 +25,7 @@ BEGIN
              ON c.id = ml.conta_id
         WHERE ds.empresa_id = p_empresa_id
           AND ds.data_mov BETWEEN p_data_ini AND p_data_fim
-          AND c.codigo IN ('XPTO_C','XPTO_D')
+          AND c.codigo IN ('XPTO_C','XPTO_D')    
     )
     UPDATE contab.diario_staging ds
     SET
@@ -35,7 +35,8 @@ BEGIN
             mi.modelo_codigo ||
             '" utiliza conta(s) temporária(s) (XPTO). Corrija o mapeamento.'
     FROM modelos_invalidos mi
-    WHERE ds.id = mi.staging_id;
+    WHERE ds.id = mi.staging_id
+     and modelo_codigo <> 'ESTORNO';
 
 END;
 $$;

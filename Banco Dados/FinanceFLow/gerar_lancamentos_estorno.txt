@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION contab.gerar_lancamentos_estorno(
+ CREATE OR REPLACE FUNCTION contab.gerar_lancamentos_estorno(
     p_diario_id  BIGINT,
     p_empresa_id BIGINT
 )
@@ -10,10 +10,22 @@ DECLARE
     v_modelo               contab.modelos%ROWTYPE;
     v_valor                NUMERIC(14,2);
     v_conta_variavel_id    BIGINT;
-    r_linha                contab.modelos_linhas%ROWTYPE;
+
+    -- Linha fixa e variável do modelo
+    v_linha_fixa           contab.modelos_linhas%ROWTYPE;
+    v_linha_var            contab.modelos_linhas%ROWTYPE;
+
+    -- Controles
+    v_qtd_fixa             INT;
+    v_qtd_var              INT;
+
+    -- DC do modelo (fixa) e DC que será usado no ESTORNO
+    v_dc_fixa_modelo       CHAR(1);
+    v_dc_fixa_estorno      CHAR(1);
+    v_dc_var_estorno       CHAR(1);
 BEGIN
     ------------------------------------------------------------------
-    -- 1) Diário (já existe)
+    -- PASSO 1) Carrega o diário e valida que é ESTORNO_*
     ------------------------------------------------------------------
     SELECT *
       INTO v_diario
@@ -26,20 +38,16 @@ BEGIN
     END IF;
 
     IF v_diario.modelo_codigo NOT LIKE 'ESTORNO_%' THEN
-        RAISE EXCEPTION
-            'Diário % não é de estorno (%).',
-            p_diario_id,
-            v_diario.modelo_codigo;
+        RAISE EXCEPTION 'Diário % não é de estorno (%).', p_diario_id, v_diario.modelo_codigo;
     END IF;
 
     v_valor := v_diario.valor_total;
-
     IF v_valor IS NULL OR v_valor <= 0 THEN
         RAISE EXCEPTION 'Valor inválido no diário %.', p_diario_id;
     END IF;
 
     ------------------------------------------------------------------
-    -- 2) Modelo de estorno
+    -- PASSO 2) Carrega o modelo (o próprio ESTORNO_* do diário)
     ------------------------------------------------------------------
     SELECT *
       INTO v_modelo
@@ -49,87 +57,143 @@ BEGIN
        AND ativo = TRUE;
 
     IF NOT FOUND THEN
-        RAISE EXCEPTION
-            'Modelo de estorno % não encontrado.',
-            v_diario.modelo_codigo;
+        RAISE EXCEPTION 'Modelo % não encontrado.', v_diario.modelo_codigo;
     END IF;
 
     ------------------------------------------------------------------
-    -- 3) Conta variável (se existir)
+    -- PASSO 3) Pega a conta contábil variável vinda do diário.outros
+    -- (essa é a "perna variável" que você escolhe na operação)
     ------------------------------------------------------------------
-    v_conta_variavel_id :=
-        (v_diario.outros ->> 'conta_contabil_id')::BIGINT;
+    v_conta_variavel_id := (v_diario.outros ->> 'conta_contabil_id')::BIGINT;
 
     ------------------------------------------------------------------
-    -- 4) Geração dos lançamentos (genérico)
+    -- PASSO 4) Garante que o modelo tem EXATAMENTE:
+    --  - 1 linha perna_fixa = true
+    --  - 1 linha perna_fixa = false
     ------------------------------------------------------------------
-    FOR r_linha IN
-        SELECT *
-          FROM contab.modelos_linhas
-         WHERE modelo_id = v_modelo.id
-           AND empresa_id = p_empresa_id
-    LOOP
+    SELECT COUNT(*) INTO v_qtd_fixa
+      FROM contab.modelos_linhas
+     WHERE modelo_id = v_modelo.id
+       AND empresa_id = p_empresa_id
+       AND perna_fixa = TRUE;
 
-        -- Resolve conta
-        IF r_linha.perna_fixa THEN
-            IF r_linha.conta_id IS NULL THEN
-                RAISE EXCEPTION
-                    'Modelo % com perna_fixa=true sem conta definida.',
-                    v_modelo.codigo;
-            END IF;
+    SELECT COUNT(*) INTO v_qtd_var
+      FROM contab.modelos_linhas
+     WHERE modelo_id = v_modelo.id
+       AND empresa_id = p_empresa_id
+       AND perna_fixa = FALSE;
 
-            INSERT INTO contab.lancamentos (
-                empresa_id,
-                diario_id,
-                data_mov,
-                conta_id,
-                historico,
-                debito,
-                credito,
-                modelo_id
-            )
-            VALUES (
-                p_empresa_id,
-                v_diario.id,
-                v_diario.data_mov,
-                r_linha.conta_id,
-                v_diario.historico,
-                CASE WHEN r_linha.dc = 'D' THEN v_valor ELSE 0 END,
-                CASE WHEN r_linha.dc = 'C' THEN v_valor ELSE 0 END,
-                v_modelo.id
-            );
+    IF v_qtd_fixa <> 1 OR v_qtd_var <> 1 THEN
+        RAISE EXCEPTION
+          'Modelo % inválido. Precisa ter 1 perna_fixa e 1 perna_variavel. (fixa=% / var=%)',
+          v_modelo.codigo, v_qtd_fixa, v_qtd_var;
+    END IF;
 
-        ELSE
-            -- Perna variável
-            IF v_conta_variavel_id IS NULL THEN
-                RAISE EXCEPTION
-                    'Conta contábil variável não informada no diário %.',
-                    p_diario_id;
-            END IF;
+    ------------------------------------------------------------------
+    -- PASSO 5) Carrega as duas linhas (fixa e variável)
+    ------------------------------------------------------------------
+    SELECT *
+      INTO v_linha_fixa
+      FROM contab.modelos_linhas
+     WHERE modelo_id = v_modelo.id
+       AND empresa_id = p_empresa_id
+       AND perna_fixa = TRUE;
 
-            INSERT INTO contab.lancamentos (
-                empresa_id,
-                diario_id,
-                data_mov,
-                conta_id,
-                historico,
-                debito,
-                credito,
-                modelo_id
-            )
-            VALUES (
-                p_empresa_id,
-                v_diario.id,
-                v_diario.data_mov,
-                v_conta_variavel_id,
-                v_diario.historico,
-                CASE WHEN r_linha.dc = 'D' THEN v_valor ELSE 0 END,
-                CASE WHEN r_linha.dc = 'C' THEN v_valor ELSE 0 END,
-                v_modelo.id
-            );
-        END IF;
+    SELECT *
+      INTO v_linha_var
+      FROM contab.modelos_linhas
+     WHERE modelo_id = v_modelo.id
+       AND empresa_id = p_empresa_id
+       AND perna_fixa = FALSE;
 
-    END LOOP;
+    IF v_linha_fixa.conta_id IS NULL THEN
+        RAISE EXCEPTION 'Modelo %: perna_fixa=true sem conta_id.', v_modelo.codigo;
+    END IF;
+
+    IF v_conta_variavel_id IS NULL THEN
+        RAISE EXCEPTION 'Diário %: conta_contabil_id (perna variável) não informada em outros.', p_diario_id;
+    END IF;
+
+    ------------------------------------------------------------------
+    -- PASSO 6) REGRA CORRETA DO ESTORNO (O QUE VOCÊ PEDIU):
+    --
+    -- 6.1) Descobre o DC da PERNA FIXA no modelo
+    -- 6.2) Inverte (D vira C / C vira D) -> isso é o estorno
+    -- 6.3) A PERNA VARIÁVEL é SEMPRE o OPOSTO da fixa já invertida
+    --
+    -- IMPORTANTE:
+    --  - Aqui NÃO usamos o dc da linha variável para decidir lado.
+    --  - A variável é espelho da fixa, ponto.
+    ------------------------------------------------------------------
+    v_dc_fixa_modelo := UPPER(TRIM(v_linha_fixa.dc));
+
+    IF v_dc_fixa_modelo NOT IN ('D','C') THEN
+        RAISE EXCEPTION 'Modelo %: dc inválido na perna fixa (%).', v_modelo.codigo, v_linha_fixa.dc;
+    END IF;
+
+    -- Inverte a perna fixa para o ESTORNO
+    v_dc_fixa_estorno :=
+      CASE
+        WHEN v_dc_fixa_modelo = 'D' THEN 'C'
+        ELSE 'D'
+      END;
+
+    -- Perna variável é o oposto da fixa (já invertida)
+    v_dc_var_estorno :=
+      CASE
+        WHEN v_dc_fixa_estorno = 'D' THEN 'C'
+        ELSE 'D'
+      END;
+
+    ------------------------------------------------------------------
+    -- PASSO 7) Insere os 2 lançamentos (SEM LOOP, SEM DUPLICAR)
+    --  - Lançamento 1: perna fixa (conta do modelo)
+    --  - Lançamento 2: perna variável (conta do diário.outros)
+    ------------------------------------------------------------------
+
+    -- 7.1) PERNA FIXA (inverteu o lado)
+    INSERT INTO contab.lancamentos (
+        empresa_id,
+        diario_id,
+        data_mov,
+        conta_id,
+        historico,
+        debito,
+        credito,
+        modelo_id
+    )
+    VALUES (
+        p_empresa_id,
+        v_diario.id,
+        v_diario.data_mov,
+        v_linha_fixa.conta_id,
+        'ESTORNO - ' || v_diario.historico,
+        CASE WHEN v_dc_fixa_estorno = 'D' THEN v_valor ELSE 0 END,
+        CASE WHEN v_dc_fixa_estorno = 'C' THEN v_valor ELSE 0 END,
+        v_modelo.id
+    );
+
+    -- 7.2) PERNA VARIÁVEL (sempre o oposto da fixa)
+    INSERT INTO contab.lancamentos (
+        empresa_id,
+        diario_id,
+        data_mov,
+        conta_id,
+        historico,
+        debito,
+        credito,
+        modelo_id
+    )
+    VALUES (
+        p_empresa_id,
+        v_diario.id,
+        v_diario.data_mov,
+        v_conta_variavel_id,
+        'ESTORNO - ' || v_diario.historico,
+        CASE WHEN v_dc_var_estorno = 'D' THEN v_valor ELSE 0 END,
+        CASE WHEN v_dc_var_estorno = 'C' THEN v_valor ELSE 0 END,
+        v_modelo.id
+    );
 
 END;
 $$;

@@ -9,6 +9,8 @@ DECLARE
   v_transacao       transacoes%ROWTYPE;
   v_evento_estorno  TEXT;
   v_tipo_estorno    TEXT;
+  v_estorno_id BIGINT;
+
 BEGIN
   ------------------------------------------------------------------
   -- 1) Buscar transação original
@@ -24,7 +26,7 @@ BEGIN
   END IF;
 
   ------------------------------------------------------------------
-  -- 2) Descobrir EVENTO REVERSO a partir do EVENTO DA TRANSAÇÃO
+  -- 2) Descobrir EVENTO REVERSO pelo MODELO
   ------------------------------------------------------------------
   SELECT m.codigo_estorno
     INTO v_evento_estorno
@@ -32,41 +34,44 @@ BEGIN
    WHERE m.empresa_id = p_empresa_id
      AND m.codigo = v_transacao.evento_codigo;
 
-  -- se não houver reverso → estorno genérico
+  -- fallback (segurança)
   v_evento_estorno := COALESCE(v_evento_estorno, 'ESTORNO');
 
   ------------------------------------------------------------------
-  -- 3) Tipo reverso (ENTRADA <-> SAIDA)
+  -- 3) Tipo reverso (entrada <-> saída)
   ------------------------------------------------------------------
   v_tipo_estorno :=
     CASE
-      WHEN upper(coalesce(v_transacao.tipo,'')) = 'ENTRADA' THEN 'SAIDA'
-      WHEN upper(coalesce(v_transacao.tipo,'')) = 'SAIDA'   THEN 'ENTRADA'
+      WHEN lower(v_transacao.tipo) = 'entrada' THEN 'saida'
+      WHEN lower(v_transacao.tipo) = 'saida'   THEN 'entrada'
       ELSE v_transacao.tipo
     END;
 
   ------------------------------------------------------------------
-  -- 4) MESMO DIA → DELETE (correção operacional)
+  -- 4) MESMO DIA → DELETE (erro operacional)
   ------------------------------------------------------------------
-  IF v_transacao.data_mov = current_date THEN
+  IF v_transacao.data_movimento = current_date THEN
 
     IF v_transacao.pagar_id IS NOT NULL THEN
       UPDATE contas_a_pagar
-         SET status = 'aberto'
+         SET status = 'aberto',
+              data_pagamento = null 
        WHERE id = v_transacao.pagar_id
          AND empresa_id = p_empresa_id;
     END IF;
 
     IF v_transacao.receber_id IS NOT NULL THEN
       UPDATE contas_a_receber
-         SET status = 'aberto'
+         SET status = 'aberto',
+                data_recebimento = null 
        WHERE id = v_transacao.receber_id
          AND empresa_id = p_empresa_id;
     END IF;
 
     IF v_transacao.fatura_id IS NOT NULL THEN
       UPDATE cartoes_faturas
-         SET status = 'aberta'
+         SET status = 'aberta',
+                data_pagamento = null 
        WHERE id = v_transacao.fatura_id
          AND empresa_id = p_empresa_id;
     END IF;
@@ -74,65 +79,77 @@ BEGIN
     DELETE FROM transacoes
      WHERE id = p_transacao_id;
 
-    RETURN 'TRANSACAO EXCLUIDA (MESMO DIA)';
+    RETURN 'sucesso';
   END IF;
 
   ------------------------------------------------------------------
   -- 5) D+1 → ESTORNO (novo fato financeiro)
   ------------------------------------------------------------------
 
-  -- Reabre origens (regra de negócio)
+  -- Reabre origens
   IF v_transacao.pagar_id IS NOT NULL THEN
     UPDATE contas_a_pagar
-       SET status = 'aberto'
+       SET status = 'aberto',
+              data_pagamento = null 
      WHERE id = v_transacao.pagar_id
        AND empresa_id = p_empresa_id;
   END IF;
 
   IF v_transacao.receber_id IS NOT NULL THEN
     UPDATE contas_a_receber
-       SET status = 'aberto'
+       SET status = 'aberto',
+        data_recebimento = null 
      WHERE id = v_transacao.receber_id
        AND empresa_id = p_empresa_id;
   END IF;
 
   IF v_transacao.fatura_id IS NOT NULL THEN
     UPDATE cartoes_faturas
-       SET status = 'aberta'
+       SET status = 'aberta',
+              data_pagamento = null 
      WHERE id = v_transacao.fatura_id
        AND empresa_id = p_empresa_id;
   END IF;
 
-  -- Insere transação de estorno
+  ------------------------------------------------------------------
+  -- 6) Insere transação de ESTORNO
+  ------------------------------------------------------------------
   INSERT INTO transacoes (
     empresa_id,
-    data_mov,
-    valor,
+    conta_id,
+    categoria_id,
     tipo,
-    evento_codigo,
+    valor,
+    descricao,
+    data_movimento,
     origem,
-    origem_id,
     pagar_id,
     receber_id,
     fatura_id,
-    transacao_origem_id,
-    historico
+    evento_codigo
   )
   VALUES (
     p_empresa_id,
-    current_date,
-    abs(v_transacao.valor),
+    v_transacao.conta_id,
+    v_transacao.categoria_id,
     v_tipo_estorno,
-    v_evento_estorno,
-    v_transacao.origem,
-    v_transacao.origem_id,
+    v_transacao.valor,
+    'ESTORNO DA TRANSACAO ' || v_transacao.id,
+    current_date,
+    'estorno',
     v_transacao.pagar_id,
     v_transacao.receber_id,
     v_transacao.fatura_id,
-    v_transacao.id,
-    'ESTORNO DA TRANSACAO ' || v_transacao.id
-  );
+    v_evento_estorno
+  ) 
+RETURNING id INTO v_estorno_id;
 
-  RETURN 'ESTORNO REALIZADO (D+1)';
+UPDATE transacoes
+   SET origem_id = v_estorno_id
+ WHERE id = v_transacao.id
+   AND empresa_id = p_empresa_id;
+
+  RETURN 'sucesso';
+
 END;
 $$;

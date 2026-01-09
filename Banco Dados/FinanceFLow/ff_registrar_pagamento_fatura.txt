@@ -87,14 +87,15 @@ v_cat_id := ff_get_categoria_id(p_empresa_id, 'Pagamento de Fatura', 'saida');
         'Pagamento fatura cartão ' || v_cartao_nome,
         CURRENT_DATE,
         'web',
-       v_cat_id ,
-      v_fatura_id  ,
+         v_cat_id ,
+        v_fatura_id  ,
         v_evento_codigo   
       )
       RETURNING id INTO v_transacao_id;
 
       UPDATE cartoes_faturas
-         SET status = 'paga'
+         SET status = 'paga',
+      data_pagamento = CURRENT_DATE 
        WHERE id = v_fatura_id;
 
       v_resultado := v_resultado || jsonb_build_object(

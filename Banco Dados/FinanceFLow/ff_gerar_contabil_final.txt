@@ -6,51 +6,42 @@
 RETURNS VOID
 LANGUAGE plpgsql
 AS $$
- 
 DECLARE
-    v_proximo_dia DATE;
     r RECORD;
 BEGIN
-
-
-  DELETE FROM contab.lancamentos 
+    ----------------------------------------------------------------
+    -- 1) LIMPA LANÇAMENTOS DO PERÍODO
+    ----------------------------------------------------------------
+    DELETE FROM contab.lancamentos
     WHERE empresa_id = p_empresa_id
       AND data_mov BETWEEN p_data_ini AND p_data_fim;
 
-
     ----------------------------------------------------------------
-    -- 2) GERAR CONTÁBIL A PARTIR DO DIÁRIO
+    -- 2) PROCESSA DIÁRIO
     ----------------------------------------------------------------
     FOR r IN
         SELECT id, empresa_id, modelo_codigo
         FROM contab.diario
-        WHERE data_mov BETWEEN p_data_ini AND p_data_fim
+        WHERE empresa_id = p_empresa_id
+          AND data_mov BETWEEN p_data_ini AND p_data_fim
         ORDER BY id
     LOOP
-      IF r.modelo_codigo IN ('PAGAR', 'RECEBER','COMPRA_CARTAO','PAGAMENTO_FATURA_CARTAO') THEN  
-           IF r.modelo_codigo IN ('PAGAR', 'RECEBER' ) THEN 
-                PERFORM contab.gerar_lancamentos_pagar_receber(r.id, r.empresa_id);
-             else
-                   IF r.modelo_codigo IN ('COMPRA_CARTAO' ) THEN 
-                        PERFORM  contab.ff_gerar_lancamento_compra_cartao(r.id, r.empresa_id);
-                  else 
-                        PERFORM   contab.ff_gerar_lancamento_pagto_fatura_cartao(r.id, r.empresa_id);
-                end if; 
-            end if;
-         else
-            PERFORM contab.gerar_lancamentos_por_diario(r.id, r.empresa_id);
-     end if;
-   END LOOP;
+        PERFORM contab.dispatch_gerar_lancamentos(
+            r.id,
+            r.empresa_id,
+            r.modelo_codigo
+        );
+    END LOOP;
 
     ----------------------------------------------------------------
-    -- 3) LIMPA STAGING DO PERÍODO
+    -- 3) LIMPA STAGING
     ----------------------------------------------------------------
     DELETE FROM contab.diario_staging
     WHERE empresa_id = p_empresa_id
       AND data_mov BETWEEN p_data_ini AND p_data_fim;
 
     ----------------------------------------------------------------
-    -- 4) ATUALIZA DIÁRIO DO PERÍODO
+    -- 4) ATUALIZA DIÁRIO
     ----------------------------------------------------------------
     UPDATE contab.diario
     SET status = 'processado'
@@ -59,13 +50,10 @@ BEGIN
       AND status = 'rascunho';
 
     ----------------------------------------------------------------
-    -- 5) ATUALIZA ÚLTIMO PROCESSAMENTO
+    -- 5) CONTROLE DE FECHAMENTO
     ----------------------------------------------------------------
-    v_proximo_dia := p_data_fim + INTERVAL '1 day';
-
     UPDATE contab.controle_fechamento
-    SET ultimo_dia_processado = v_proximo_dia
+    SET ultimo_dia_processado = p_data_fim + 1
     WHERE empresa_id = p_empresa_id;
 END;
-
 $$;

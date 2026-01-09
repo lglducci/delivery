@@ -1,3 +1,5 @@
+
+
 CREATE OR REPLACE FUNCTION ff_receber_contas(
   p_empresa_id BIGINT,
   p_lista_ids JSON,
@@ -11,13 +13,7 @@ DECLARE
 BEGIN
   FOR v_id IN SELECT json_array_elements_text(p_lista_ids)::BIGINT LOOP
 
-    -- Atualiza conta a receber
-    UPDATE contas_a_receber
-    SET 
-      status = 'recebido',
-      vencimento = CURRENT_DATE
-    WHERE id = v_id 
-      AND empresa_id = p_empresa_id;
+ 
 
     -- Insere transação
     INSERT INTO transacoes(
@@ -42,7 +38,16 @@ BEGIN
       id ,
       'RECEBER'
     FROM contas_a_receber
-    WHERE id = v_id;
+    WHERE id = v_id
+ and status = 'aberto';
+
+    -- Atualiza conta a receber
+    UPDATE contas_a_receber
+    SET 
+      status = 'recebido',
+      data_recebimento = CURRENT_DATE
+    WHERE id = v_id 
+      AND empresa_id = p_empresa_id;
  
   END LOOP;
 
