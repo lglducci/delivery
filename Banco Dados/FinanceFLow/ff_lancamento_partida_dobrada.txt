@@ -1,0 +1,70 @@
+CREATE OR REPLACE FUNCTION contab.ff_lancamento_partida_dobrada (
+    p_empresa_id        BIGINT,
+    p_conta_debito_id   BIGINT,
+    p_conta_credito_id  BIGINT,
+    p_valor             NUMERIC(14,2),
+    p_historico         TEXT,
+    p_data_lanc         DATE DEFAULT CURRENT_DATE
+)
+RETURNS VOID
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_lote_id BIGINT;
+BEGIN
+    -- validações básicas
+    IF p_valor <= 0 THEN
+        RAISE EXCEPTION 'Valor deve ser maior que zero';
+    END IF;
+
+    IF p_conta_debito_id = p_conta_credito_id THEN
+        RAISE EXCEPTION 'Conta débito e crédito não podem ser a mesma';
+    END IF;
+
+ 
+
+    -- 🔴 DÉBITO
+    INSERT INTO contab.lancamentos (
+        empresa_id,
+       diario_id, 
+        data_mov,
+        conta_id,
+        debito,
+        credito, 
+        historico, 
+        criado_em
+    ) VALUES (
+        p_empresa_id,
+       0,
+        p_data_lanc,
+        p_conta_debito_id,
+        p_valor,
+        0, 
+        p_historico,
+     
+        NOW()
+    );
+
+    -- 🔵 CRÉDITO
+    INSERT INTO contab.lancamentos (
+        empresa_id,
+       diario_id, 
+        data_mov,
+        conta_id,
+        debito,
+        credito, 
+        historico, 
+        criado_em
+    ) VALUES (
+        p_empresa_id,
+        0, 
+        p_data_lanc,
+        p_conta_credito_id, 
+        0,
+         p_valor,
+        p_historico, 
+        NOW()
+    );
+
+END;
+$$;
