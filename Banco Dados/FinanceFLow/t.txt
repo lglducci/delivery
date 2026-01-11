@@ -1,0 +1,118 @@
+CREATE OR REPLACE FUNCTION contab.contabilizar_tributo_apurado(
+    p_apuracao_id     BIGINT,
+    p_tipo_lancamento TEXT DEFAULT 'NORMAL'  -- NORMAL | ESTORNO
+)
+RETURNS VOID
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_apu        contab.tributo_apuracao%ROWTYPE;
+    v_trib       contab.tributos%ROWTYPE;
+    v_debito_id  BIGINT;
+    v_credito_id BIGINT;
+BEGIN
+    ------------------------------------------------------------------
+    -- 1) CARREGA APURAÇÃO
+    ------------------------------------------------------------------
+    SELECT *
+    INTO v_apu
+    FROM contab.tributo_apuracao
+    WHERE id = p_apuracao_id;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Apuração não encontrada (id=%)', p_apuracao_id;
+    END IF;
+
+    ------------------------------------------------------------------
+    -- 2) BLOQUEIA DUPLICIDADE
+    ------------------------------------------------------------------
+    IF v_apu.contabilizado = TRUE THEN
+        RAISE EXCEPTION 'Apuração já contabilizada (id=%)', p_apuracao_id;
+    END IF;
+
+    ------------------------------------------------------------------
+    -- 3) CARREGA TRIBUTO
+    ------------------------------------------------------------------
+    SELECT *
+    INTO v_trib
+    FROM contab.tributos
+    WHERE id = v_apu.tributo_id;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Tributo não encontrado (id=%)', v_apu.tributo_id;
+    END IF;
+
+    IF v_trib.conta_debito_id IS NULL
+       OR v_trib.conta_credito_id IS NULL THEN
+        RAISE EXCEPTION 'Tributo sem contas configuradas (id=%)', v_trib.id;
+    END IF;
+
+    ------------------------------------------------------------------
+    -- 4) DEFINE DÉBITO / CRÉDITO (NORMAL x ESTORNO)
+    ------------------------------------------------------------------
+    IF UPPER(p_tipo_lancamento) = 'ESTORNO' THEN
+        v_debito_id  := v_trib.conta_credito_id;
+        v_credito_id := v_trib.conta_debito_id;
+    ELSE
+        v_debito_id  := v_trib.conta_debito_id;
+        v_credito_id := v_trib.conta_credito_id;
+    END IF;
+
+    ------------------------------------------------------------------
+    -- 5) INSERE DÉBITO
+    ------------------------------------------------------------------
+    INSERT INTO contab.lancamentos (
+        empresa_id,
+        data_lanc,
+        conta_id,
+        valor,
+        historico,
+        origem,
+        origem_id,
+        criado_em
+    )
+    VALUES (
+        v_apu.empresa_id,
+        v_apu.data_fim,
+        v_debito_id,
+        v_apu.valor_apurado,
+        'Apuração tributo ' || v_trib.nome,
+        'TRIBUTO_APURACAO',
+        v_apu.id,
+        NOW()
+    );
+
+    ------------------------------------------------------------------
+    -- 6) INSERE CRÉDITO
+    ------------------------------------------------------------------
+    INSERT INTO contab.lancamentos (
+        empresa_id,
+        data_lanc,
+        conta_id,
+        valor,
+        historico,
+        origem,
+        origem_id,
+        criado_em
+    )
+    VALUES (
+        v_apu.empresa_id,
+        v_apu.data_fim,
+        v_credito_id,
+        v_apu.valor_apurado,
+        'Apuração tributo ' || v_trib.nome,
+        'TRIBUTO_APURACAO',
+        v_apu.id,
+        NOW()
+    );
+
+    ------------------------------------------------------------------
+    -- 7) MARCA COMO CONTABILIZADO
+    ------------------------------------------------------------------
+    UPDATE contab.tributo_apuracao
+    SET contabilizado = TRUE,
+        contabilizado_em = NOW()
+    WHERE id = v_apu.id;
+
+END;
+$$;

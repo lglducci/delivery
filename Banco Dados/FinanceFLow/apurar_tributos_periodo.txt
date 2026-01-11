@@ -1,0 +1,73 @@
+   CREATE OR REPLACE FUNCTION contab.apurar_tributos_periodo(
+    p_empresa_id BIGINT,
+    p_data_ini   DATE,
+    p_data_fim   DATE
+)
+RETURNS VOID
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    r_tributo RECORD;
+    v_base    NUMERIC(14,2);
+    v_valor   NUMERIC(14,2);
+BEGIN
+    ------------------------------------------------------------------
+    -- 1) LOOP NOS TRIBUTOS ATIVOS
+    ------------------------------------------------------------------
+    FOR r_tributo IN
+        SELECT
+            t.id       AS tributo_id,
+            a.aliquota AS aliquota
+        FROM contab.tributos t
+        JOIN contab.tributo_aliquotas a
+          ON a.tributo_id = t.id
+         AND a.empresa_id = p_empresa_id
+         AND p_data_fim BETWEEN a.data_ini AND COALESCE(a.data_fim, p_data_fim)
+        WHERE t.ativo = true
+    LOOP
+
+        ------------------------------------------------------------------
+        -- 2) BASE = RECEITA (CRÉDITO EM CONTAS DE RESULTADO)
+        ------------------------------------------------------------------
+        SELECT COALESCE(SUM(l.credito), 0)
+        INTO v_base
+        FROM contab.lancamentos l
+        JOIN contab.contas c ON c.id = l.conta_id
+        WHERE l.empresa_id = p_empresa_id
+          AND l.data_mov BETWEEN p_data_ini AND p_data_fim
+          AND c.tipo = 'RECEITA'
+          AND l.credito > 0;
+
+        ------------------------------------------------------------------
+        -- 3) CALCULA VALOR DO TRIBUTO
+        ------------------------------------------------------------------
+        v_valor := ROUND(v_base * (r_tributo.aliquota / 100), 2);
+
+        ------------------------------------------------------------------
+        -- 4) GRAVA APURAÇÃO
+        ------------------------------------------------------------------
+        INSERT INTO contab.tributo_apuracao (
+            empresa_id,
+            tributo_id,
+            data_ini,
+            data_fim,
+            base_calculo,
+            aliquota,
+            valor_apurado,
+            status
+        ) VALUES (
+            p_empresa_id,
+            r_tributo.tributo_id,
+            p_data_ini,
+            p_data_fim,
+            v_base,
+            r_tributo.aliquota,
+            v_valor,
+            'APURADO'
+        );
+
+    END LOOP;
+END;
+$$;
+
+ 

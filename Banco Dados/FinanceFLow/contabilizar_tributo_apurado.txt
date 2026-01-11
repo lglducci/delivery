@@ -1,0 +1,72 @@
+ create or replace function contab.apurar_tributos(
+  p_empresa_id bigint,
+  p_periodo_ini date,
+  p_periodo_fim date,
+  p_base_total numeric default null   -- opcional pra teste
+)
+returns bigint
+language plpgsql
+as $$
+declare
+  v_apuracao_id bigint;
+  r record;
+  v_base numeric(14,2);
+  v_valor numeric(14,2);
+begin
+  if p_periodo_fim < p_periodo_ini then
+    raise exception 'Período inválido (% - %)', p_periodo_ini, p_periodo_fim;
+  end if;
+
+  -- cria header
+  insert into contab.tributos_apuracoes (empresa_id, periodo_ini, periodo_fim, status)
+  values (p_empresa_id, p_periodo_ini, p_periodo_fim, 'ABERTA')
+  returning id into v_apuracao_id;
+
+  -- BASE: aqui é o único lugar que você vai plugar sua regra real.
+  -- Hoje: se não mandar p_base_total, assume 0 só pra não quebrar.
+  v_base := coalesce(p_base_total, 0);
+
+  -- tributos vigentes no período + regra contábil
+  for r in
+    select
+      t.id as tributo_id,
+      t.codigo,
+      t.nome,
+      v.id as vigencia_id,
+      v.aliquota,
+      rc.conta_debito_id,
+      rc.conta_credito_id
+    from contab.tributos t
+    join contab.tributos_vigencias v
+      on v.tributo_id = t.id
+     and v.empresa_id = p_empresa_id
+     and v.vigencia_ini <= p_periodo_fim
+     and (v.vigencia_fim is null or v.vigencia_fim >= p_periodo_ini)
+    join contab.tributos_regras_contabeis rc
+      on rc.tributo_id = t.id
+     and rc.empresa_id = p_empresa_id
+     and rc.ativo = true
+     and (rc.vigencia_id is null or rc.vigencia_id = v.id)
+    where t.empresa_id = p_empresa_id
+      and t.ativo = true
+  loop
+    v_valor := round(v_base * r.aliquota, 2);
+
+    insert into contab.tributos_apuracoes_itens (
+      apuracao_id, empresa_id,
+      tributo_id, vigencia_id,
+      base_calculo, aliquota, valor_apurado,
+      conta_debito_id, conta_credito_id,
+      historico
+    ) values (
+      v_apuracao_id, p_empresa_id,
+      r.tributo_id, r.vigencia_id,
+      v_base, r.aliquota, v_valor,
+      r.conta_debito_id, r.conta_credito_id,
+      'Apuração '||r.codigo||' período '||to_char(p_periodo_ini,'DD/MM/YYYY')||' a '||to_char(p_periodo_fim,'DD/MM/YYYY')
+    );
+  end loop;
+
+  return v_apuracao_id;
+end;
+$$;
