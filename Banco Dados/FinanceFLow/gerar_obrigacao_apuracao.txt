@@ -1,0 +1,60 @@
+   CREATE OR REPLACE FUNCTION contab.gerar_obrigacoes_apuradas(
+    p_empresa_id BIGINT
+)
+RETURNS VOID
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    r RECORD;
+    v_vencimento DATE;
+BEGIN
+    ------------------------------------------------------------------
+    -- LOOP NAS APURAÇÕES JÁ APURADAS E SEM OBRIGAÇÃO
+    ------------------------------------------------------------------
+    FOR r IN
+        SELECT *
+        FROM contab.tributo_apuracao
+        WHERE empresa_id = p_empresa_id
+          AND status = 'APURADO'
+          AND obrigacao_gerada = false
+    LOOP
+
+        -- REGRA SIMPLES DE VENCIMENTO (EXEMPLO: mês seguinte)
+        v_vencimento := (date_trunc('month', r.data_fim) 
+                          + interval '1 month'
+                          + interval '10 day')::date;
+
+        ------------------------------------------------------------------
+        -- INSERE OBRIGAÇÃO
+        ------------------------------------------------------------------
+        INSERT INTO contab.tributo_obrigacoes (
+            empresa_id,
+            tributo_id,
+            data_ini,
+            data_fim,
+            valor,
+            vencimento,
+            status
+        ) VALUES (
+            r.empresa_id,
+            r.tributo_id,
+            r.data_ini,
+            r.data_fim,
+            r.valor_apurado,
+            v_vencimento,
+            'EM_ABERTO'
+        );
+
+        ------------------------------------------------------------------
+        -- MARCA APURAÇÃO COMO JÁ GERADA
+        ------------------------------------------------------------------
+        UPDATE contab.tributo_apuracao
+        SET obrigacao_gerada = true,
+        status = 'OBRIGACAO_GERADA'
+        WHERE id = r.id;
+
+    END LOOP;
+END;
+$$;
+
+ 

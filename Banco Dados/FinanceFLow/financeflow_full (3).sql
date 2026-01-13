@@ -109,6 +109,8 @@ CREATE TABLE categorias_gerenciais (
 );
 
 
+alter table categorias_gerenciais add meu_negocio bool default false ;
+
 ---------------------------------------------------
 -- 6. PESSOA (Cliente / Fornecedor)
 ---------------------------------------------------

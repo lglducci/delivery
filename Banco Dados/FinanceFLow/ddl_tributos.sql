@@ -147,3 +147,32 @@ CREATE TABLE contab.tributo_aliquotas (
       REFERENCES contab.tributos(id)
 );
 
+
+
+CREATE TABLE contab.tributo_obrigacoes (
+    id BIGSERIAL PRIMARY KEY,
+    empresa_id BIGINT NOT NULL,
+    tributo_id BIGINT NOT NULL,
+
+    data_ini DATE NOT NULL,
+    data_fim DATE NOT NULL,
+
+    valor NUMERIC(14,2) NOT NULL,
+    vencimento DATE NOT NULL,
+
+    origem_apuracao_id BIGINT NOT NULL,
+
+    status TEXT NOT NULL DEFAULT 'ABERTA', 
+    -- ABERTA | PAGA | CANCELADA
+
+    criada_em TIMESTAMP NOT NULL DEFAULT now()
+);
+
+
+
+ALTER TABLE contab.tributo_apuracao
+ADD COLUMN obrigacao_gerada BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN obrigacao_id BIGINT NULL,
+ADD COLUMN data_apuracao TIMESTAMP DEFAULT now(),
+ADD COLUMN status TEXT DEFAULT 'APURADO';
+

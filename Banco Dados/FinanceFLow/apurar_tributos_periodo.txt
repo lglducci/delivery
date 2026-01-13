@@ -1,19 +1,73 @@
-   CREATE OR REPLACE FUNCTION contab.apurar_tributos_periodo(
+  CREATE OR REPLACE FUNCTION contab.apurar_tributos_periodo(
     p_empresa_id BIGINT,
-    p_data_ini   DATE,
     p_data_fim   DATE
 )
-RETURNS VOID
+RETURNS TABLE (
+    empresa     BIGINT,
+    tributo     BIGINT,
+    codigo      text, 
+    data_inicial       DATE,
+    data_final       DATE,
+    base_calculo   NUMERIC(14,2),
+    aliquota_apurada       NUMERIC(6,2),
+    valor_apurado  NUMERIC(14,2),
+    situacao         TEXT
+)
 LANGUAGE plpgsql
 AS $$
 DECLARE
-    r_tributo RECORD;
-    v_base    NUMERIC(14,2);
-    v_valor   NUMERIC(14,2);
+    v_data_ini   DATE;
+    v_ultima_fim DATE;
+    r_tributo    RECORD;
+    v_base       NUMERIC(14,2);
+    v_valor      NUMERIC(14,2);
 BEGIN
-    ------------------------------------------------------------------
-    -- 1) LOOP NOS TRIBUTOS ATIVOS
-    ------------------------------------------------------------------
+    -------------------------------------------------------
+    -- 1) ÚLTIMA DATA PROCESSADA (≠ APURADO)
+    -------------------------------------------------------
+    SELECT MAX(a.data_fim)
+    INTO v_ultima_fim
+    FROM contab.tributo_apuracao a
+    WHERE empresa_id = p_empresa_id
+      AND status <> 'APURADO';
+
+    -------------------------------------------------------
+    -- 2) DEFINIÇÃO DA DATA INICIAL
+    -------------------------------------------------------
+    IF v_ultima_fim IS NOT NULL THEN
+        v_data_ini := v_ultima_fim + INTERVAL '1 day';
+    ELSE
+        SELECT MIN(data_mov)
+        INTO v_data_ini
+        FROM contab.lancamentos
+        WHERE empresa_id = p_empresa_id;
+
+        IF v_data_ini IS NULL THEN
+            -- não existe movimentação
+            RETURN;
+        END IF;
+    END IF;
+
+    -------------------------------------------------------
+    -- 3) VALIDA PERÍODO
+    -------------------------------------------------------
+    IF p_data_fim < v_data_ini THEN
+        RAISE EXCEPTION
+            'Data final (%) menor que data inicial automática (%).',
+            p_data_fim, v_data_ini;
+    END IF;
+
+    -------------------------------------------------------
+    -- 4) LIMPA APURAÇÕES REPROCESSÁVEIS
+    -------------------------------------------------------
+    DELETE FROM contab.tributo_apuracao
+    WHERE empresa_id = p_empresa_id
+      AND status = 'APURADO'
+      AND data_ini >= v_data_ini;
+
+    -------------------------------------------------------
+    -- 5) LOOP NOS TRIBUTOS ATIVOS
+    -------------------------------------------------------
     FOR r_tributo IN
         SELECT
             t.id       AS tributo_id,
@@ -26,26 +80,23 @@ BEGIN
         WHERE t.ativo = true
     LOOP
 
-        ------------------------------------------------------------------
-        -- 2) BASE = RECEITA (CRÉDITO EM CONTAS DE RESULTADO)
-        ------------------------------------------------------------------
+        ---------------------------------------------------
+        -- 6) BASE = RECEITA
+        ---------------------------------------------------
         SELECT COALESCE(SUM(l.credito), 0)
         INTO v_base
         FROM contab.lancamentos l
         JOIN contab.contas c ON c.id = l.conta_id
         WHERE l.empresa_id = p_empresa_id
-          AND l.data_mov BETWEEN p_data_ini AND p_data_fim
+          AND l.data_mov BETWEEN v_data_ini AND p_data_fim
           AND c.tipo = 'RECEITA'
           AND l.credito > 0;
 
-        ------------------------------------------------------------------
-        -- 3) CALCULA VALOR DO TRIBUTO
-        ------------------------------------------------------------------
         v_valor := ROUND(v_base * (r_tributo.aliquota / 100), 2);
 
-        ------------------------------------------------------------------
-        -- 4) GRAVA APURAÇÃO
-        ------------------------------------------------------------------
+        ---------------------------------------------------
+        -- 7) INSERE APURAÇÃO
+        ---------------------------------------------------
         INSERT INTO contab.tributo_apuracao (
             empresa_id,
             tributo_id,
@@ -58,7 +109,7 @@ BEGIN
         ) VALUES (
             p_empresa_id,
             r_tributo.tributo_id,
-            p_data_ini,
+            v_data_ini,
             p_data_fim,
             v_base,
             r_tributo.aliquota,
@@ -67,7 +118,30 @@ BEGIN
         );
 
     END LOOP;
+
+    -------------------------------------------------------
+    -- 8) RETORNA APURAÇÕES GERADAS
+    -------------------------------------------------------
+    RETURN QUERY
+    
+SELECT
+    ta.empresa_id,
+    ta.tributo_id,
+    t.codigo, 
+    ta.data_ini,
+    ta.data_fim,
+    ta.base_calculo,
+    ta.aliquota,
+    ta.valor_apurado,
+    ta.status
+FROM contab.tributo_apuracao ta
+inner join contab.tributos t 
+on t.id =ta.tributo_id 
+and t.empresa_id  = ta.empresa_id
+WHERE ta.empresa_id = p_empresa_id
+  AND ta.data_ini = v_data_ini
+  AND ta.data_fim = p_data_fim
+  AND ta.status = 'APURADO';
+
 END;
 $$;
-
- 
