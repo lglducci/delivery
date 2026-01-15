@@ -1,0 +1,174 @@
+ CREATE OR REPLACE PROCEDURE contab.criar_receita_meu_negocio (
+    p_empresa_id        BIGINT,
+    p_categoria_nome    TEXT,
+    p_token_modelo      TEXT,      -- EX: VENDA_LAZANHA
+    p_conta_debito_id   BIGINT      -- CAIXA / BANCO / CLIENTES (À VISTA)
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_categoria_id             BIGINT;
+    v_conta_receita_id         BIGINT;
+    v_conta_pai_receita_id     BIGINT;
+
+    v_conta_cartao_id          BIGINT; -- 1.1.12
+    v_conta_receita_aprop_id   BIGINT; -- 2.1.9
+
+    v_modelo_vista_id          BIGINT;
+    v_modelo_prazo_id          BIGINT;
+BEGIN
+    ------------------------------------------------------------------
+    -- 0) CONTAS FIXAS DO SISTEMA
+    ------------------------------------------------------------------
+    SELECT id INTO v_conta_pai_receita_id
+      FROM contab.contas
+     WHERE empresa_id = p_empresa_id
+       AND codigo = '5.1'
+     LIMIT 1;
+
+    IF v_conta_pai_receita_id IS NULL THEN
+        RAISE EXCEPTION 'Conta pai 5.1 não encontrada (empresa %)', p_empresa_id;
+    END IF;
+
+    SELECT id INTO v_conta_cartao_id
+      FROM contab.contas
+     WHERE empresa_id = p_empresa_id
+       AND codigo = '1.1.12'
+     LIMIT 1;
+
+    IF v_conta_cartao_id IS NULL THEN
+        RAISE EXCEPTION 'Conta 1.1.12 (Cartões a Receber) não encontrada';
+    END IF;
+
+    SELECT id INTO v_conta_receita_aprop_id
+      FROM contab.contas
+     WHERE empresa_id = p_empresa_id
+       AND codigo = '2.1.9'
+     LIMIT 1;
+
+    IF v_conta_receita_aprop_id IS NULL THEN
+        RAISE EXCEPTION 'Conta 2.1.9 (Receita a Apropriar) não encontrada';
+    END IF;
+
+    ------------------------------------------------------------------
+    -- 1) CATEGORIA GERENCIAL
+    ------------------------------------------------------------------
+    INSERT INTO categorias_gerenciais (
+        empresa_id,
+        nome,
+        tipo,
+        meu_negocio,
+        grupo_contabil
+    )
+    VALUES (
+        p_empresa_id,
+        p_categoria_nome,
+        'entrada',
+        TRUE,
+        p_token_modelo
+    )
+    RETURNING id INTO v_categoria_id;
+
+    ------------------------------------------------------------------
+    -- 2) CONTA CONTÁBIL RECEITA (5.1.x)
+    ------------------------------------------------------------------
+    INSERT INTO contab.contas (
+        empresa_id,
+        codigo,
+        nome,
+        tipo,
+        natureza,
+        nivel,
+        conta_pai_id,
+        analitica,
+        sistema
+    )
+    VALUES (
+        p_empresa_id,
+        '5.1.' || v_categoria_id,
+        p_categoria_nome,
+        'RECEITA',
+        'C',
+        3,
+        v_conta_pai_receita_id,
+        TRUE,
+        FALSE
+    )
+    RETURNING id INTO v_conta_receita_id;
+
+    ------------------------------------------------------------------
+    -- 3) MODELO À VISTA
+    ------------------------------------------------------------------
+    INSERT INTO contab.modelos (
+        empresa_id,
+        codigo,
+        nome,
+        ativo,
+        sistema
+    )
+    VALUES (
+        p_empresa_id,
+        p_token_modelo,
+        p_categoria_nome || ' (À Vista)',
+        TRUE,
+        FALSE
+    )
+    RETURNING id INTO v_modelo_vista_id;
+
+    ------------------------------------------------------------------
+    -- 4) MODELO A PRAZO (FILHO DO À VISTA)
+    ------------------------------------------------------------------
+    INSERT INTO contab.modelos (
+        empresa_id,
+        codigo,
+        nome,
+        ativo,
+        sistema,
+        modelo_prazo_id
+    )
+    VALUES (
+        p_empresa_id,
+        p_token_modelo || '_PRAZO',
+        p_categoria_nome || ' (A Prazo)',
+        TRUE,
+        FALSE,
+        v_modelo_vista_id
+    )
+    RETURNING id INTO v_modelo_prazo_id;
+
+    ------------------------------------------------------------------
+    -- 5) MODELO LINHAS – À VISTA
+    ------------------------------------------------------------------
+    INSERT INTO contab.modelos_linhas (
+        modelo_id, empresa_id, ordem,
+        conta_id, dc, fonte_valor, perna_fixa
+    )
+    VALUES
+    (
+        v_modelo_vista_id, p_empresa_id, 1,
+        p_conta_debito_id, 'D', 'VALOR_TOTAL', FALSE
+    ),
+    (
+        v_modelo_vista_id, p_empresa_id, 2,
+        v_conta_receita_id, 'C', 'VALOR_TOTAL', TRUE
+    );
+
+    ------------------------------------------------------------------
+    -- 6) MODELO LINHAS – A PRAZO (PROVISÃO)
+    ------------------------------------------------------------------
+    INSERT INTO contab.modelos_linhas (
+        modelo_id, empresa_id, ordem,
+        conta_id, dc, fonte_valor, perna_fixa
+    )
+    VALUES
+    (
+        v_modelo_prazo_id, p_empresa_id, 1,
+        v_conta_cartao_id, 'D', 'VALOR_TOTAL', FALSE
+    ),
+    (
+        v_modelo_prazo_id, p_empresa_id, 2,
+        v_conta_receita_aprop_id, 'C', 'VALOR_TOTAL', TRUE
+    );
+
+END;
+$$;

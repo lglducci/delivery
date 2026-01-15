@@ -227,6 +227,10 @@ FOREIGN KEY (contabil_id)
 REFERENCES contab.contas(id);
 
 
+ ALTER TABLE public.contas_a_receber
+ADD COLUMN forma_recebimento TEXT NULL,      -- PIX | DINHEIRO | DEBITO | CREDITO | FIADO
+ADD COLUMN conta_id BIGINT NULL,             -- contas_financeiras.id (onde vai cair)
+ADD COLUMN canal TEXT NULL;                  -- CARTAO | CLIENTE | OPERADORA
 
 ---------------------------------------------------
 -- 10. CARTÕES
@@ -327,6 +331,20 @@ CREATE TABLE extrato_importado (
 
 
  
+CREATE TABLE  config_meios_recebimento (
+    id BIGSERIAL PRIMARY KEY,
+    empresa_id BIGINT NOT NULL REFERENCES empresas(id),
+
+    tipo TEXT NOT NULL CHECK (
+        tipo IN ('DINHEIRO','PIX','DEBITO','CREDITO','FIADO')
+    ), 
+    descricao TEXT NOT NULL, 
+    dias_liquidacao INT NOT NULL DEFAULT 0,   -- D+0, D+1, D+30
+    taxa_percentual NUMERIC(5,2) NOT NULL DEFAULT 0.00, 
+    conta_financeira_id BIGINT NULL REFERENCES contab.contas(id), 
+    conta_provisao_id BIGINT NULL REFERENCES contab.contas(id), 
+    ativo BOOLEAN NOT NULL DEFAULT TRUE
+);
 
 
 

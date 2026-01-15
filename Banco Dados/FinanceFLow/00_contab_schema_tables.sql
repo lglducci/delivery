@@ -68,7 +68,14 @@ CREATE TABLE contab.modelos (
   nome       	     VARCHAR(120) NOT NULL,
   ativo      		     BOOLEAN NOT NULL DEFAULT TRUE,
   sistema                          BOOLEAN           NOT NULL DEFAULT  FALSE
+ codigo_estorno           TEXT  NULL, 
+tipo_automacao           TEXT NULL  
 );
+
+ALTER TABLE contab.modelos
+ADD COLUMN modelo_prazo_id BIGINT
+REFERENCES contab.modelos(id);
+
 
 -----------------------------------------------------------
 -- 5) MODELOS LINHAS
