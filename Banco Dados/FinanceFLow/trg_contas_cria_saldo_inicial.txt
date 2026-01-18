@@ -1,0 +1,21 @@
+CREATE OR REPLACE FUNCTION contab.trg_contas_cria_saldo_inicial()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  INSERT INTO contab.saldos_iniciais (
+    empresa_id,
+    conta_id,
+    saldo_inicial,
+    criado_em
+  )
+  VALUES (
+    NEW.empresa_id,
+    NEW.id,
+    0,
+    NOW()
+  );
+
+  RETURN NEW;
+END;
+$$;

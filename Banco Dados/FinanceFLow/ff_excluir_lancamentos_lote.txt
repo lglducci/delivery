@@ -1,0 +1,39 @@
+ CREATE OR REPLACE FUNCTION contab.ff_excluir_lancamentos_lote( 
+    p_empresa_id BIGINT,
+    p_lote_id    BIGINT
+)
+RETURNS VOID
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_qtd INT;
+BEGIN
+    -- valida existência do lote
+    IF NOT EXISTS (
+        SELECT 1
+        FROM contab.lancamentos
+        WHERE empresa_id = p_empresa_id
+          AND lote_id = p_lote_id
+    ) THEN
+        RAISE EXCEPTION
+            'Lote % não encontrado para empresa %',
+            p_lote_id, p_empresa_id;
+    END IF;
+
+    -- exclusão
+    DELETE
+      FROM contab.lancamentos
+     WHERE empresa_id = p_empresa_id
+       AND lote_id = p_lote_id;
+
+    GET DIAGNOSTICS v_qtd = ROW_COUNT;
+
+    -- proteção mínima
+    IF v_qtd < 2 THEN
+        RAISE NOTICE
+            'Atenção: lote % excluído com apenas % linha(s)',
+            p_lote_id, v_qtd;
+    END IF;
+
+END;
+$$;

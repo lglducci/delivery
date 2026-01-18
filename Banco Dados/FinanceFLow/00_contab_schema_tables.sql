@@ -115,8 +115,16 @@ CREATE TABLE contab.lancamentos (
   criado_em         TIMESTAMP DEFAULT now(),
   origem                TEXT   default null );
 
- 
- 
+ ALTER TABLE contab.lancamentos
+ADD COLUMN lote_id BIGINT;
+
+
+CREATE SEQUENCE contab.lote_id_seq
+START 1;
+
+ ALTER TABLE contab.lancamentos
+ALTER COLUMN lote_id SET DEFAULT nextval('contab.lote_id_seq');
+
 
   
 /*drop table contab.diario_staging cascade 
