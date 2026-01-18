@@ -1,0 +1,27 @@
+  CREATE OR REPLACE FUNCTION contab.dashboard_ultimos_lancamentos (
+    p_empresa_id BIGINT,
+    p_limit INT DEFAULT 20
+)
+RETURNS TABLE (
+    data_lanc DATE,
+    codigo TEXT,
+    nome TEXT,
+    debito NUMERIC,
+    credito NUMERIC,
+    historico TEXT
+)
+LANGUAGE sql
+AS $$
+SELECT
+    l.data_mov,
+    c.codigo,
+    c.nome,
+    l.debito,
+    l.credito,
+    l.historico
+FROM contab.lancamentos l
+JOIN contab.contas c ON c.id = l.conta_id
+WHERE l.empresa_id = p_empresa_id
+ORDER BY l.data_mov DESC, l.id DESC
+LIMIT p_limit;
+$$;

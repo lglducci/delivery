@@ -1,61 +1,95 @@
-CREATE TABLE public.perfis (
-    id        BIGSERIAL PRIMARY KEY,
-    codigo    VARCHAR(30) NOT NULL UNIQUE,  -- CONTABIL | FINANCEIRO | VENDAS | TOTAL
-    nome      VARCHAR(100) NOT NULL,
-    criado_em TIMESTAMP DEFAULT now()
+
+  CREATE TABLE public.menus (
+  id               	BIGSERIAL,
+  codigo       	TEXT,
+  titulo		 TEXT,
+  rota 		TEXT,
+  parent_codigo 	TEXT,
+  tipo 		TEXT,           -- ITEM | GROUP
+  icon 		TEXT,           -- IconHome, IconMoney etc
+  nivel 		INT,
+  ordem 		INT,
+  visible 		BOOLEAN,
+  ativo 		BOOLEAN
 );
 
 
- 
 
 
-CREATE TABLE public.usuario_empresa_perfil (
+ CREATE TABLE public.modulos (
     id          BIGSERIAL PRIMARY KEY,
-    usuario_id  BIGINT NOT NULL REFERENCES public.usuarios(id),
-    empresa_id  BIGINT NOT NULL REFERENCES public.empresas(id),
+    codigo      VARCHAR(30) UNIQUE NOT NULL,
+    nome        VARCHAR(100) NOT NULL,
+    ativo       BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+
+CREATE TABLE public.perfis (
+    id          BIGSERIAL PRIMARY KEY,
+    codigo      VARCHAR(30) UNIQUE NOT NULL,
+    nome        VARCHAR(100) NOT NULL,
+    ativo       BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+
+CREATE TABLE public.menu_itens (
+    id              BIGSERIAL PRIMARY KEY,
+    codigo          VARCHAR(50) UNIQUE NOT NULL,
+    titulo          VARCHAR(120) NOT NULL,
+    rota            VARCHAR(200),
+    icon            VARCHAR(50),
+    modulo_id       BIGINT NOT NULL REFERENCES public.modulos(id),
+    parent_id       BIGINT NULL REFERENCES public.menu_itens(id),
+    ordem           INT NOT NULL DEFAULT 0,
+    ativo           BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+
+
+
+CREATE TABLE public.perfil_menu (
     perfil_id   BIGINT NOT NULL REFERENCES public.perfis(id),
-
-    UNIQUE (usuario_id, empresa_id)
+    menu_id     BIGINT NOT NULL REFERENCES public.menu_itens(id),
+    permitido   BOOLEAN NOT NULL DEFAULT TRUE,
+    PRIMARY KEY (perfil_id, menu_id)
 );
 
 
-CREATE TABLE public.sidebar_itens (
-    id        BIGSERIAL PRIMARY KEY,
-    codigo    VARCHAR(50) NOT NULL UNIQUE,
-    titulo    VARCHAR(100) NOT NULL,
-    rota      VARCHAR(200) NOT NULL,
-    modulo    VARCHAR(30) NOT NULL, -- CONTABIL | FINANCEIRO | VENDAS
-    ordem     INT NOT NULL DEFAULT 0,
-    ativo     BOOLEAN DEFAULT TRUE
-);
 
- 
 
-CREATE TABLE public.perfil_sidebar (
-    perfil_id       BIGINT REFERENCES public.perfis(id),
-    sidebar_item_id BIGINT REFERENCES public.sidebar_itens(id),
-    PRIMARY KEY (perfil_id, sidebar_item_id)
+
+
+CREATE TABLE public.empresa_perfil (
+  empresa_id  BIGINT NOT NULL REFERENCES public.empresas(id) ON DELETE CASCADE,
+  perfil_id   BIGINT NOT NULL REFERENCES public.perfis(id),
+  ativo       BOOLEAN NOT NULL DEFAULT TRUE,
+  criado_em   TIMESTAMP NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (empresa_id)
 );
 
 
-INSERT INTO public.perfis (codigo, nome) VALUES
-('CONTABIL',   'Perfil Contábil'),
-('FINANCEIRO', 'Perfil Financeiro'),
-('VENDAS',     'Perfil Vendas'),
-('TOTAL',      'Perfil Administrador');
 
-INSERT INTO public.sidebar_itens (codigo, titulo, rota, modulo, ordem) VALUES
-('DASH_CONTABIL', 'Dashboard Contábil', '/contabil/dashboard', 'CONTABIL', 1),
-('DIARIO',        'Diário Contábil',    '/contabil/diario',    'CONTABIL', 2),
-('RAZAO',         'Razão',              '/contabil/razao',     'CONTABIL', 3),
-('BALANCETE',     'Balancete',          '/contabil/balancete', 'CONTABIL', 4),
-('DRE',           'DRE',                '/contabil/dre',       'CONTABIL', 5);
+CREATE OR REPLACE VIEW public.vw_menu_empresa AS
+SELECT
+  ep.empresa_id,
+  mi.id,
+  mi.codigo,
+  mi.titulo,
+  mi.rota,
+  mi.icon,
+  mi.parent_id,
+  mi.ordem,
+  m.codigo AS modulo
+FROM public.empresa_perfil ep
+JOIN public.perfil_menu pm
+  ON pm.perfil_id = ep.perfil_id
+ AND pm.permitido = TRUE
+JOIN public.menu_itens mi
+  ON mi.id = pm.menu_id
+ AND mi.ativo = TRUE
+JOIN public.modulos m
+  ON m.id = mi.modulo_id
+WHERE ep.ativo = TRUE;
 
- 
-INSERT INTO public.perfil_sidebar (perfil_id, sidebar_item_id)
-SELECT p.id, s.id
-FROM public.perfis p
-JOIN public.sidebar_itens s ON s.modulo = 'CONTABIL'
-WHERE p.codigo = 'CONTABIL';
 
 

@@ -1,0 +1,101 @@
+BEGIN;
+
+-- =========================================================
+-- TABELA DE MENUS
+-- =========================================================
+
+DROP TABLE IF EXISTS public.menus CASCADE;
+
+CREATE TABLE public.menus (
+  id              BIGSERIAL PRIMARY KEY,
+  codigo          TEXT NOT NULL UNIQUE,
+  titulo          TEXT NOT NULL,
+  rota            TEXT,
+  parent_codigo   TEXT,
+  tipo            TEXT NOT NULL CHECK (tipo IN ('ITEM','GROUP')),
+  icon            TEXT,
+  nivel           INT NOT NULL,
+  ordem           INT NOT NULL,
+  visible         BOOLEAN NOT NULL DEFAULT true,
+  ativo           BOOLEAN NOT NULL DEFAULT true
+);
+
+-- =========================================================
+-- MENUS NÍVEL 1
+-- =========================================================
+
+INSERT INTO public.menus
+(codigo, titulo, rota, parent_codigo, tipo, icon, nivel, ordem, visible, ativo)
+VALUES
+('MENU_VISAO_GERAL',    'Visão Geral',        '/dashboard',         NULL, 'ITEM',  'IconHome',     1, 1, true, true),
+('MENU_DASH_CONTABIL', 'Dashboard Contábil', '/dashboardcontabil', NULL, 'ITEM',  'IconHome',     1, 2, true, true),
+
+('MENU_FINANCEIRO',    'Transações Financeiras', NULL, NULL, 'GROUP', 'IconMoney',    1, 3, true, true),
+('MENU_CONTABIL',      'Contábil',               NULL, NULL, 'GROUP', 'IconBuilding', 1, 4, true, true),
+('MENU_TRIBUTOS',      'Apurações/Obrigações',   NULL, NULL, 'GROUP', 'IconBuilding', 1, 5, true, true),
+('MENU_CADASTRO',      'Cadastro',               NULL, NULL, 'GROUP', 'IconFolder',   1, 6, true, true),
+
+('MENU_RELATORIOS',    'Relatórios', '/reports', NULL, 'ITEM', 'IconChart', 1, 7, true, true),
+('MENU_CONFIG',        'Configurações', NULL, NULL, 'GROUP', 'IconBuilding', 1, 8, true, true);
+
+-- =========================================================
+-- SUBMENUS – FINANCEIRO
+-- =========================================================
+
+INSERT INTO public.menus
+(codigo, titulo, rota, parent_codigo, tipo, icon, nivel, ordem, visible, ativo)
+VALUES
+('FIN_LANCAMENTOS',     'Lançamentos',        '/transactions',         'MENU_FINANCEIRO', 'ITEM', 'IconDoc',             2, 1, true, true),
+('FIN_PAGAR',           'Contas a Pagar',     '/contas-pagar',         'MENU_FINANCEIRO', 'ITEM', 'IconArrowUp',         2, 2, true, true),
+('FIN_RECEBER',         'Contas a Receber',   '/contas-receber',       'MENU_FINANCEIRO', 'ITEM', 'IconArrowDown',       2, 3, true, true),
+('FIN_FATURAS',         'Faturas',             '/faturas-cartao',      'MENU_FINANCEIRO', 'ITEM', 'IconCard',            2, 4, true, true),
+('FIN_CARTAO_TRANS',    'Transações Cartão',   '/cartao-transacoes',   'MENU_FINANCEIRO', 'ITEM', 'IconCardTransaction', 2, 5, true, true),
+('FIN_TITULOS',         'Títulos Vencidos',    '/titulos-vencidos',    'MENU_FINANCEIRO', 'ITEM', 'IconBook',            2, 6, true, true),
+('FIN_RECEITA_RAPIDA',  'Receita Rápida',      '/registrareceitarapida','MENU_FINANCEIRO', 'ITEM', 'IconBook',            2, 7, true, true);
+
+-- =========================================================
+-- SUBMENUS – CONTÁBIL
+-- =========================================================
+
+INSERT INTO public.menus
+(codigo, titulo, rota, parent_codigo, tipo, icon, nivel, ordem, visible, ativo)
+VALUES
+('CTB_DIARIO',       'Diário Contábil',        '/diario',                 'MENU_CONTABIL', 'ITEM', 'IconClipboard', 2, 1, true, true),
+('CTB_PROCESSAR',    'Processar Contábil',     '/processar-diario',       'MENU_CONTABIL', 'ITEM', 'IconRefresh',   2, 2, true, true),
+('CTB_LANC_SALDO',   'Lanctos Ctb - Saldo',    '/lancamentos-contabeis',  'MENU_CONTABIL', 'ITEM', 'IconDoc',       2, 3, true, true),
+('CTB_LANC',         'Lanctos Contábeis',      '/relatorios/diario',      'MENU_CONTABIL', 'ITEM', 'IconDoc',       2, 4, true, true);
+
+-- =========================================================
+-- SUBMENUS – TRIBUTOS
+-- =========================================================
+
+INSERT INTO public.menus
+(codigo, titulo, rota, parent_codigo, tipo, icon, nivel, ordem, visible, ativo)
+VALUES
+('TRIB_APURACAO', 'Apuração de Tributos', '/tributos/apuracao', 'MENU_TRIBUTOS', 'ITEM', 'IconClipboard', 2, 1, true, true);
+
+-- =========================================================
+-- SUBMENUS – CADASTRO
+-- =========================================================
+
+INSERT INTO public.menus
+(codigo, titulo, rota, parent_codigo, tipo, icon, nivel, ordem, visible, ativo)
+VALUES
+('CAD_PESSOAS',     'Fornecedores / Clientes', '/providers-clients',  'MENU_CADASTRO', 'ITEM', 'IconUsers', 2, 1, true, true),
+('CAD_CATEGORIAS',  'Categorias Gerenciais',   '/contasgerenciais',   'MENU_CADASTRO', 'ITEM', 'IconTag',   2, 2, true, true),
+('CAD_CONTAS_FIN',  'Contas Financeiras',      '/saldos',             'MENU_CADASTRO', 'ITEM', 'IconBank',  2, 3, true, true),
+('CAD_CARTOES',     'Cartões',                 '/cards',              'MENU_CADASTRO', 'ITEM', 'IconCard',  2, 4, true, true),
+('CAD_CONTAS_CTB',  'Contas Contábeis',        '/contascontabeis',    'MENU_CADASTRO', 'ITEM', 'IconFile',  2, 5, true, true),
+('CAD_MODELO_CTB',  'Modelo Contábil',         '/mapeamento-contabil','MENU_CADASTRO', 'ITEM', 'IconMap',   2, 6, true, true);
+
+-- =========================================================
+-- SUBMENUS – CONFIGURAÇÕES
+-- =========================================================
+
+INSERT INTO public.menus
+(codigo, titulo, rota, parent_codigo, tipo, icon, nivel, ordem, visible, ativo)
+VALUES
+('CFG_TRIBUTOS', 'Tributos',     '/tributos/tributos',     'MENU_CONFIG', 'ITEM', 'IconMap', 2, 1, true, true),
+('CFG_NEGOCIO',  'Meu Negócio',   '/meunegocio/meunegocio', 'MENU_CONFIG', 'ITEM', 'IconMap', 2, 2, true, true);
+
+COMMIT;

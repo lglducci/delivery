@@ -1,0 +1,42 @@
+CREATE OR REPLACE PROCEDURE util.reset_sequence_by_max(
+    p_schema TEXT,
+    p_table  TEXT,
+    p_column TEXT DEFAULT 'id'
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_seq_name TEXT;
+    v_sql      TEXT;
+    v_max_id   BIGINT;
+BEGIN
+    -- 1️⃣ Descobre o nome da sequence
+    SELECT pg_get_serial_sequence(
+        format('%I.%I', p_schema, p_table),
+        p_column
+    )
+    INTO v_seq_name;
+
+    IF v_seq_name IS NULL THEN
+        RAISE EXCEPTION
+            'Nenhuma sequence encontrada para %.%.%',
+            p_schema, p_table, p_column;
+    END IF;
+
+    -- 2️⃣ Busca o MAX(id)
+    v_sql := format(
+        'SELECT COALESCE(MAX(%I), 0) FROM %I.%I',
+        p_column, p_schema, p_table
+    );
+
+    EXECUTE v_sql INTO v_max_id;
+
+    -- 3️⃣ Atualiza a sequence para MAX + 1
+    EXECUTE format(
+        'SELECT setval(%L, %s, false)',
+        v_seq_name,
+        v_max_id + 1
+    );
+
+END;
+$$;

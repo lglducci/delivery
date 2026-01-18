@@ -1,0 +1,22 @@
+ CREATE OR REPLACE FUNCTION contab.dashboard_resumo_periodo (
+    p_empresa_id BIGINT,
+    p_data_ini DATE,
+    p_data_fim DATE
+)
+RETURNS TABLE (
+    total_debito NUMERIC,
+    total_credito NUMERIC,
+    resultado NUMERIC,
+    qtd_lancamentos BIGINT
+)
+LANGUAGE sql
+AS $$
+SELECT
+    COALESCE(SUM(l.debito), 0)  AS total_debito,
+    COALESCE(SUM(l.credito), 0) AS total_credito,
+    COALESCE(SUM(l.credito - l.debito), 0) AS resultado,
+    COUNT(*) AS qtd_lancamentos
+FROM contab.lancamentos l
+WHERE l.empresa_id = p_empresa_id
+  AND l.data_lanc BETWEEN p_data_ini AND p_data_fim;
+$$;
