@@ -1,24 +1,49 @@
-create or replace function  contab.ff_excluir_modelo(
-    p_empresa_id int,
-    p_modelo_id  int
+ CREATE OR REPLACE FUNCTION contab.ff_excluir_modelo(
+    p_empresa_id INT,
+    p_modelo_id  INT
 )
-returns json as $$
-declare
-begin
-    -- 1) EXCLUI AS LINHAS DO MODELO
-    delete from contab.modelos_linhas
-    where empresa_id = p_empresa_id
-      and modelo_id  = p_modelo_id;
+RETURNS JSON
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_modelo_prazo_id INT;
+BEGIN
+    -- 1️⃣ Verifica se existe modelo PRAZO ligado a este modelo
+    SELECT id
+      INTO v_modelo_prazo_id
+      FROM contab.modelos
+     WHERE empresa_id = p_empresa_id
+       AND modelo_prazo_id = p_modelo_id
+     LIMIT 1;
 
-    -- 2) EXCLUI O MODELO
-    delete from contab.modelos
-    where empresa_id = p_empresa_id
-      and id         = p_modelo_id;
+    -- 2️⃣ Se existir PRAZO, exclui primeiro
+    IF v_modelo_prazo_id IS NOT NULL THEN
+        -- linhas do prazo
+        DELETE FROM contab.modelos_linhas
+        WHERE empresa_id = p_empresa_id
+          AND modelo_id  = v_modelo_prazo_id;
 
-    return json_build_object(
+        -- modelo prazo
+        DELETE FROM contab.modelos
+        WHERE empresa_id = p_empresa_id
+          AND id         = v_modelo_prazo_id;
+    END IF;
+
+    -- 3️⃣ Exclui linhas do modelo principal
+    DELETE FROM contab.modelos_linhas
+    WHERE empresa_id = p_empresa_id
+      AND modelo_id  = p_modelo_id;
+
+    -- 4️⃣ Exclui o modelo principal
+    DELETE FROM contab.modelos
+    WHERE empresa_id = p_empresa_id
+      AND id         = p_modelo_id;
+
+    RETURN json_build_object(
         'ok', true,
         'message', 'Modelo excluído com sucesso',
-        'modelo_id', p_modelo_id
+        'modelo_id', p_modelo_id,
+        'modelo_prazo_excluido', v_modelo_prazo_id IS NOT NULL
     );
-end;
-$$ language plpgsql;
+END;
+$$;

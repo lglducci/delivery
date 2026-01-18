@@ -1,4 +1,10 @@
-  create or replace function contab.ff_criar_modelo(p_empresa_id int, p_nome text, p_token text, p_tipo_automacao text )
+  create or replace function contab.ff_criar_modelo
+(p_empresa_id int, 
+ p_nome text, 
+ p_token text, 
+ p_conta_cred  int,
+p_conta_deb int,
+ p_tipo_automacao text )
 returns int as $$
 declare
     v_modelo_id int;
@@ -15,29 +21,29 @@ begin
     from contab.contas
     where empresa_id = p_empresa_id and codigo = 'XPTO_D';
 
-    if v_conta_deb is null then
-        insert into contab.contas (empresa_id, codigo, nome, tipo, natureza, nivel)
-        values (p_empresa_id, 'XPTO_D', 'Conta Padrão Débito', 'ATIVO', 'D', 1)
-        returning id into v_conta_deb;
-    end if;
+  --  if v_conta_deb is null then
+  --      insert into contab.contas (empresa_id, codigo, nome, tipo, natureza, nivel)
+  --      values (p_empresa_id, 'XPTO_D', 'Conta Padrão Débito', 'ATIVO', 'D', 1)
+   --     returning id into v_conta_deb;
+   -- end if;
 
     -- garante conta fake crédito
-    select id into v_conta_cred
-    from contab.contas
-    where empresa_id = p_empresa_id and codigo = 'XPTO_C';
+ --   select id into v_conta_cred
+ --   from contab.contas
+ --   where empresa_id = p_empresa_id and codigo = 'XPTO_C';
 
-    if v_conta_cred is null then
-        insert into contab.contas (empresa_id, codigo, nome, tipo, natureza, nivel)
-        values (p_empresa_id, 'XPTO_C', 'Conta Padrão Crédito', 'ATIVO', 'C', 1)
-        returning id into v_conta_cred;
-    end if;
+   -- if v_conta_cred is null then
+  --insert into contab.contas (empresa_id, codigo, nome, tipo, natureza, nivel)
+   --     values (p_empresa_id, 'XPTO_C', 'Conta Padrão Crédito', 'ATIVO', 'C', 1)
+  --      returning id into v_conta_cred;
+  --  end if;
 
     -- insere as duas linhas do modelo
     insert into contab.modelos_linhas (empresa_id, modelo_id, conta_id, dc ,fonte_valor, valor_fixo)
-    values (p_empresa_id, v_modelo_id, v_conta_deb, 'D','Total',null );
+    values (p_empresa_id, v_modelo_id, p_conta_deb , 'D','Total',null );
 
     insert into contab.modelos_linhas (empresa_id, modelo_id, conta_id, dc  ,fonte_valor, valor_fixo)
-    values (p_empresa_id, v_modelo_id, v_conta_cred, 'C','Total',null );
+    values (p_empresa_id, v_modelo_id, p_conta_cred  , 'C','Total',null );
 
     return v_modelo_id;
 end;

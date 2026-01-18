@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE util.reset_sequence_by_max(
+CREATE OR REPLACE PROCEDURE  reset_sequence_by_max(
     p_schema TEXT,
     p_table  TEXT,
     p_column TEXT DEFAULT 'id'
