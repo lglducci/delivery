@@ -1,4 +1,4 @@
- CREATE OR REPLACE FUNCTION contab.ff_dre_periodo(
+  CREATE OR REPLACE FUNCTION contab.ff_dre_periodo(
   p_empresa_id BIGINT,
   p_data_ini   DATE,
   p_data_fim   DATE
@@ -18,7 +18,7 @@ BEGIN
     val   NUMERIC(18,2)
   ) ON COMMIT DROP;
 
-  -- 1) RECEITA BRUTA (contas 4.*) -> positivo
+  -- 1) RECEITA BRUTA (contas 5.*) -> positivo
   INSERT INTO tmp_dre (ord, grp, val)
   SELECT
     10,
@@ -28,9 +28,9 @@ BEGIN
   JOIN contab.contas c ON c.id = l.conta_id
   WHERE l.empresa_id = p_empresa_id
     AND l.data_mov BETWEEN p_data_ini AND p_data_fim
-    AND c.codigo LIKE '4%';
+    AND c.codigo LIKE '5%';
 
-  -- 2) CUSTOS (contas 5.*) -> SEMPRE positivo
+  -- 2) CUSTOS (ex: 6.1.*) -> positivo
   INSERT INTO tmp_dre (ord, grp, val)
   SELECT
     30,
@@ -40,9 +40,9 @@ BEGIN
   JOIN contab.contas c ON c.id = l.conta_id
   WHERE l.empresa_id = p_empresa_id
     AND l.data_mov BETWEEN p_data_ini AND p_data_fim
-    AND c.codigo LIKE '5%';
+    AND c.codigo LIKE '6.1%';
 
-  -- 3) DESPESAS (contas 6.*) -> SEMPRE positivo
+  -- 3) DESPESAS (6.2.* em diante)
   INSERT INTO tmp_dre (ord, grp, val)
   SELECT
     40,
@@ -52,36 +52,36 @@ BEGIN
   JOIN contab.contas c ON c.id = l.conta_id
   WHERE l.empresa_id = p_empresa_id
     AND l.data_mov BETWEEN p_data_ini AND p_data_fim
-    AND c.codigo LIKE '6%';
+    AND c.codigo LIKE '6.2%';
 
   -- 4) RESULTADO BRUTO = RECEITA - CUSTOS
   INSERT INTO tmp_dre (ord, grp, val)
   SELECT
     50,
     'RESULTADO_BRUTO',
-    (COALESCE((SELECT t.val FROM tmp_dre t WHERE t.grp='RECEITA_BRUTA'),0)
-     - COALESCE((SELECT t.val FROM tmp_dre t WHERE t.grp='CUSTOS'),0))::numeric(18,2);
+    COALESCE((SELECT t.val FROM tmp_dre t WHERE t.grp='RECEITA_BRUTA'),0)
+    - COALESCE((SELECT t.val FROM tmp_dre t WHERE t.grp='CUSTOS'),0);
 
   -- 5) RESULTADO OPERACIONAL = BRUTO - DESPESAS
   INSERT INTO tmp_dre (ord, grp, val)
   SELECT
     60,
     'RESULTADO_OPERACIONAL',
-    (COALESCE((SELECT t.val FROM tmp_dre t WHERE t.grp='RESULTADO_BRUTO'),0)
-     - COALESCE((SELECT t.val FROM tmp_dre t WHERE t.grp='DESPESAS_OPERACIONAIS'),0))::numeric(18,2);
+    COALESCE((SELECT t.val FROM tmp_dre t WHERE t.grp='RESULTADO_BRUTO'),0)
+    - COALESCE((SELECT t.val FROM tmp_dre t WHERE t.grp='DESPESAS_OPERACIONAIS'),0);
 
-  -- 6) RESULTADO LÍQUIDO (por enquanto igual ao operacional)
+  -- 6) RESULTADO LÍQUIDO
   INSERT INTO tmp_dre (ord, grp, val)
   SELECT
     80,
     'RESULTADO_LIQUIDO',
-    COALESCE((SELECT t.val FROM tmp_dre t WHERE t.grp='RESULTADO_OPERACIONAL'),0)::numeric(18,2);
+    COALESCE((SELECT t.val FROM tmp_dre t WHERE t.grp='RESULTADO_OPERACIONAL'),0);
 
   RETURN QUERY
   SELECT
-    t.ord::BIGINT AS ordem,
-    t.grp         AS grupo,
-    t.val         AS valor_periodo
+    t.ord::BIGINT,
+    t.grp,
+    t.val
   FROM tmp_dre t
   ORDER BY t.ord;
 

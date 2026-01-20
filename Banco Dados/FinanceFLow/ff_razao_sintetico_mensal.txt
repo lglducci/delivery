@@ -1,11 +1,12 @@
- CREATE OR REPLACE FUNCTION contab.ff_razao_sintetico_diario (
+ CREATE OR REPLACE FUNCTION contab.ff_razao_sintetico_mensal (
     p_empresa_id BIGINT,
     p_data_ini   DATE,
     p_data_fim   DATE,
     p_filtro     TEXT DEFAULT NULL
 )
 RETURNS TABLE (
-    data_mov       DATE,
+    conta_id       BIGINT,           -- ✅ ÚNICA ADIÇÃO
+    mes_ano        TEXT,
     conta_codigo   TEXT,
     conta_nome     TEXT,
     saldo_inicial  NUMERIC(14,2),
@@ -17,45 +18,64 @@ LANGUAGE sql
 STABLE
 AS $$
 WITH base AS (
-    -- fonte correta e já validada
-    SELECT *
-    FROM contab.ff_relatorio_razao(
-        p_empresa_id,
-        p_data_ini,
-        p_data_fim,
-        p_filtro
-    )
+  SELECT
+    r.data_mov,
+    r.conta_id,
+    r.conta_codigo,
+    r.conta_nome,
+    r.debito,
+    r.credito
+  FROM contab.ff_relatorio_razao(
+    p_empresa_id,
+    p_data_ini,
+    p_data_fim,
+    p_filtro
+  ) r
 ),
 
-agrupado AS (
-    SELECT
-        data_mov,
-        conta_codigo,
-        conta_nome,
+mensal AS (
+  SELECT
+    date_trunc('month', data_mov)::date AS mes_ini,
+    conta_id,
+    conta_codigo,
+    conta_nome,
+    SUM(debito)::numeric(14,2)  AS debito_mes,
+    SUM(credito)::numeric(14,2) AS credito_mes
+  FROM base
+  GROUP BY 1,2,3,4
+),
 
-        -- 🔑 saldo inicial REAL do dia
-        MIN(saldo_inicial) AS saldo_inicial,
-
-        SUM(debito)  AS debito,
-        SUM(credito) AS credito,
-
-        -- 🔑 saldo final REAL do dia
-        MAX(saldo)   AS saldo
-    FROM base
-    GROUP BY
-        data_mov,
-        conta_codigo,
-        conta_nome
+saldo_mes AS (
+  SELECT
+    m.*,
+    (
+      -- saldo de implantação
+      COALESCE(si.saldo, 0)
+      +
+      -- movimentos anteriores ao mês
+      COALESCE((
+        SELECT SUM(l.debito - l.credito)
+        FROM contab.lancamentos l
+        WHERE l.empresa_id = p_empresa_id
+          AND l.conta_id   = m.conta_id
+          AND l.data_mov  < m.mes_ini
+      ), 0)
+    )::numeric(14,2) AS saldo_inicial
+  FROM mensal m
+  LEFT JOIN contab.saldos_iniciais si
+    ON si.empresa_id = p_empresa_id
+   AND si.conta_id   = m.conta_id
 )
 
 SELECT
-    data_mov,
-    conta_codigo,
-    conta_nome,
-    saldo_inicial,
-    debito,
-    credito,
-    saldo
-FROM agrupado
-ORDER BY conta_codigo, data_mov;
+  conta_id,                                         -- ✅ AQUI
+  to_char(mes_ini, 'MM/YYYY') AS mes_ano,
+  conta_codigo,
+  conta_nome,
+  saldo_inicial,
+  debito_mes  AS debito,
+  credito_mes AS credito,
+  (saldo_inicial + debito_mes - credito_mes)::numeric(14,2) AS saldo
+FROM saldo_mes
+ORDER BY mes_ini, conta_codigo;
 $$;
