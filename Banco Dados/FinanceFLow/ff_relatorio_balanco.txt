@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION contab.ff_relatorio_balanco(
+  CREATE OR REPLACE FUNCTION contab.ff_relatorio_balanco(
   p_empresa_id bigint,
   p_data_corte date
 )
@@ -13,9 +13,9 @@ STABLE
 AS $$
   SELECT
     CASE
-      WHEN c.tipo = 'ATIVO' THEN 'ATIVO'
+      WHEN c.tipo = 'ATIVO'   THEN 'ATIVO'
       WHEN c.tipo = 'PASSIVO' THEN 'PASSIVO'
-      ELSE 'PATRIMONIO_LIQUIDO'
+      WHEN c.tipo = 'PL'      THEN 'PATRIMONIO_LIQUIDO'
     END AS grupo,
     c.codigo AS conta_codigo,
     c.nome   AS conta_nome,
@@ -30,6 +30,7 @@ AS $$
   WHERE l.empresa_id = p_empresa_id
     AND l.data_mov <= p_data_corte
     AND c.analitica = true
+    AND c.tipo IN ('ATIVO','PASSIVO','PL')   -- 🔥 CHAVE DA CORREÇÃO
   GROUP BY
     grupo, c.codigo, c.nome
   HAVING SUM(

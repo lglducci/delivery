@@ -1,0 +1,23 @@
+CREATE OR REPLACE FUNCTION contab.trg_contas_analitica_auto()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  ------------------------------------------------------------------
+  -- REGRA 1: toda conta nova nasce analítica
+  ------------------------------------------------------------------
+  NEW.analitica := true;
+
+  ------------------------------------------------------------------
+  -- REGRA 2: se existir conta pai, ela vira sintética
+  ------------------------------------------------------------------
+  IF NEW.conta_pai_id IS NOT NULL THEN
+    UPDATE contab.contas
+    SET analitica = false
+    WHERE id = NEW.conta_pai_id
+      AND empresa_id = NEW.empresa_id;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;

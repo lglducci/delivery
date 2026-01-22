@@ -1,0 +1,35 @@
+CREATE OR REPLACE FUNCTION contab.trg_contas_garante_pai()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_pai_codigo TEXT;
+  v_pai_id BIGINT;
+BEGIN
+  -- se não tem pai explícito, tenta deduzir pelo código
+  IF NEW.conta_pai_id IS NULL THEN
+
+    -- remove último nível do código (ex: 6.1.1.1.2 -> 6.1.1.1)
+    v_pai_codigo :=
+      regexp_replace(NEW.codigo, '\.[^.]+$', '');
+
+    -- se ainda sobrou algo, tenta achar o pai
+    IF v_pai_codigo <> NEW.codigo THEN
+      SELECT id INTO v_pai_id
+      FROM contab.contas
+      WHERE empresa_id = NEW.empresa_id
+        AND codigo = v_pai_codigo;
+
+      IF FOUND THEN
+        NEW.conta_pai_id := v_pai_id;
+      ELSE
+        RAISE EXCEPTION
+          'Conta pai % não existe. Crie antes.', v_pai_codigo;
+      END IF;
+    END IF;
+
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
