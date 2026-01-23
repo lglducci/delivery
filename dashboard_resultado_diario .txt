@@ -1,0 +1,21 @@
+ CREATE OR REPLACE FUNCTION contab.dashboard_resultado_diario (
+    p_empresa_id BIGINT,
+    p_data_ini DATE,
+    p_data_fim DATE
+)
+RETURNS TABLE (
+    data DATE,
+    resultado NUMERIC
+)
+LANGUAGE sql
+AS $$
+SELECT
+    l.data_mov AS data,
+    SUM(l.credito - l.debito) AS resultado
+FROM contab.lancamentos l
+WHERE l.empresa_id = p_empresa_id
+  AND l.data_mov BETWEEN p_data_ini AND p_data_fim
+GROUP BY l.data_mov
+ORDER BY l.data_mov;
+$$;
+ 
