@@ -1,0 +1,22 @@
+CREATE TABLE contab.apuracoes_resultado (
+  id              BIGSERIAL PRIMARY KEY,
+
+  empresa_id      BIGINT NOT NULL
+                  REFERENCES public.empresas(id),
+
+  ano             INT NOT NULL,
+  mes             INT NOT NULL CHECK (mes BETWEEN 1 AND 12),
+
+  resultado       NUMERIC(14,2) NOT NULL,
+
+  data_apuracao   TIMESTAMP NOT NULL DEFAULT now(),
+
+  usuario_id      BIGINT NULL, -- se tiver controle de usuário
+  origem          TEXT NOT NULL DEFAULT 'SISTEMA',
+
+  status          TEXT NOT NULL CHECK (status IN ('APURADO','REABERTO')),
+
+  observacao      TEXT,
+
+  UNIQUE (empresa_id, ano, mes)
+);

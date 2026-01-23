@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION contab.ff_fechar_mes(
+ CREATE OR REPLACE FUNCTION contab.ff_fechar_mes(
   p_empresa_id bigint,
   p_ano int,
   p_mes int,
@@ -14,11 +14,22 @@ DECLARE
   v_conta_resultado bigint;
   v_conta_pl bigint;
 BEGIN
+  -- 0) BLOQUEIA REPROCESSAMENTO
+  IF EXISTS (
+    SELECT 1
+    FROM contab.apuracoes_resultado
+    WHERE empresa_id = p_empresa_id
+      AND ano = p_ano
+      AND mes = p_mes
+  ) THEN
+    RAISE EXCEPTION 'Mês %/% já foi apurado.', p_mes, p_ano;
+  END IF;
+
   -- 1) Datas do mês
   v_data_ini := make_date(p_ano, p_mes, 1);
   v_data_fim := (v_data_ini + interval '1 month - 1 day')::date;
 
-  -- 2) Calcula resultado líquido do mês (usa SUA DRE)
+  -- 2) Resultado líquido do mês
   SELECT valor_periodo
   INTO v_resultado
   FROM contab.ff_dre_periodo(p_empresa_id, v_data_ini, v_data_fim)
@@ -31,17 +42,27 @@ BEGIN
   -- 3) Contas técnicas
   SELECT id INTO v_conta_resultado
   FROM contab.contas
-  WHERE codigo = '3.2.1.01' AND empresa_id = p_empresa_id;
+  WHERE codigo = '3.2.1.01'
+    AND empresa_id = p_empresa_id;
 
   SELECT id INTO v_conta_pl
   FROM contab.contas
-  WHERE codigo = '3.1.2.01' AND empresa_id = p_empresa_id;
+  WHERE codigo = '3.1.2.01'
+    AND empresa_id = p_empresa_id;
 
   IF v_conta_resultado IS NULL OR v_conta_pl IS NULL THEN
     RAISE EXCEPTION 'Contas de fechamento não configuradas.';
   END IF;
 
-  -- 4) Lançamento contábil
+  -- 4) REGISTRA A APURAÇÃO (CONTROLE)
+  INSERT INTO contab.apuracoes_resultado (
+    empresa_id, ano, mes, resultado_liquido, usuario_id
+  )
+  VALUES (
+    p_empresa_id, p_ano, p_mes, v_resultado, p_usuario_id
+  );
+
+  -- 5) LANÇAMENTOS CONTÁBEIS
   INSERT INTO contab.lancamentos (
     empresa_id,
     data_mov,
@@ -51,10 +72,22 @@ BEGIN
     historico
   )
   VALUES
-    (p_empresa_id, v_data_fim, v_conta_resultado, v_resultado, 0,
-     'Fechamento do mês ' || p_mes || '/' || p_ano),
-    (p_empresa_id, v_data_fim, v_conta_pl, 0, v_resultado,
-     'Fechamento do mês ' || p_mes || '/' || p_ano);
+    (
+      p_empresa_id,
+      v_data_fim,
+      v_conta_resultado,
+      v_resultado,
+      0,
+      'Fechamento do mês ' || p_mes || '/' || p_ano
+    ),
+    (
+      p_empresa_id,
+      v_data_fim,
+      v_conta_pl,
+      0,
+      v_resultado,
+      'Fechamento do mês ' || p_mes || '/' || p_ano
+    );
 
 END;
 $$;
