@@ -1,0 +1,73 @@
+﻿-- 1) Tabela opcional para overrides manuais de classificação do balanço
+CREATE TABLE IF NOT EXISTS contab.conta_mapa_balanco (
+  conta_codigo TEXT PRIMARY KEY,
+  grupo TEXT NOT NULL CHECK (grupo IN ('ATIVO_CIRC','ATIVO_NC','PASSIVO_CIRC','PASSIVO_NC','PL'))
+);
+
+-- 2) View de níveis (saldos) por mês + KPIs reais
+CREATE OR REPLACE VIEW contab.vw_balanco_niveis AS
+WITH norm AS (
+  -- Base mensal normalizada (ajuste aqui se sua fonte não for vw_lanc_norm)
+  SELECT ano, mes, conta_codigo, valor_sign
+  FROM contab.vw_lanc_norm
+),
+classif AS (
+  -- Classificação por override OU por prefixo do código
+  SELECT n.*,
+         COALESCE(m.grupo,
+           CASE
+             WHEN n.conta_codigo LIKE '1.1%' THEN 'ATIVO_CIRC'
+             WHEN n.conta_codigo LIKE '1.2%' THEN 'ATIVO_NC'
+             WHEN n.conta_codigo LIKE '2.1%' THEN 'PASSIVO_CIRC'
+             WHEN n.conta_codigo LIKE '2.2%' THEN 'PASSIVO_NC'
+             WHEN n.conta_codigo LIKE '2.3%' OR n.conta_codigo LIKE '3%' THEN 'PL'
+             ELSE NULL
+           END
+         ) AS grupo
+  FROM norm n
+  LEFT JOIN contab.conta_mapa_balanco m ON m.conta_codigo = n.conta_codigo
+),
+saldos_mensais AS (
+  -- Soma mensal por grupo, ajustando o sinal:
+  -- ativos têm saldo devedor (positivo no valor_sign);
+  -- passivos/PL têm saldo credor (negativo no valor_sign) → invertidos para ficarem positivos.
+  SELECT ano, mes, grupo,
+         SUM(CASE WHEN grupo IN ('PASSIVO_CIRC','PASSIVO_NC','PL') THEN -valor_sign ELSE valor_sign END) AS valor
+  FROM classif
+  WHERE grupo IS NOT NULL
+  GROUP BY 1,2,3
+),
+saldos_acum AS (
+  -- Saldos acumulados até o mês (nível na data de corte)
+  SELECT ano, mes, grupo,
+         SUM(valor) OVER (PARTITION BY grupo ORDER BY ano, mes
+                          ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS saldo
+  FROM saldos_mensais
+),
+pivot AS (
+  SELECT ano, mes,
+         SUM(CASE WHEN grupo='ATIVO_CIRC'   THEN saldo END) AS ativo_circ,
+         SUM(CASE WHEN grupo='ATIVO_NC'     THEN saldo END) AS ativo_nc,
+         SUM(CASE WHEN grupo='PASSIVO_CIRC' THEN saldo END) AS passivo_circ,
+         SUM(CASE WHEN grupo='PASSIVO_NC'   THEN saldo END) AS passivo_nc,
+         SUM(CASE WHEN grupo='PL'           THEN saldo END) AS pl
+  FROM saldos_acum
+  GROUP BY 1,2
+)
+SELECT
+  ano, mes,
+  COALESCE(ativo_circ,0)   AS ativo_circ,
+  COALESCE(ativo_nc,0)     AS ativo_nc,
+  COALESCE(passivo_circ,0) AS passivo_circ,
+  COALESCE(passivo_nc,0)   AS passivo_nc,
+  -- Se por acaso o PL não estiver sendo fechado pelo diário, usamos a identidade contábil:
+  COALESCE(pl, (COALESCE(ativo_circ,0)+COALESCE(ativo_nc,0)) - (COALESCE(passivo_circ,0)+COALESCE(passivo_nc,0))) AS pl,
+  (COALESCE(ativo_circ,0)+COALESCE(ativo_nc,0))                              AS ativo_total,
+  (COALESCE(passivo_circ,0)+COALESCE(passivo_nc,0))                          AS passivo_total,
+  CASE WHEN NULLIF(COALESCE(passivo_circ,0),0) IS NULL THEN NULL
+       ELSE (COALESCE(ativo_circ,0) / NULLIF(COALESCE(passivo_circ,0),0)) END AS liquidez_corrente,
+  CASE WHEN NULLIF((COALESCE(ativo_circ,0)+COALESCE(ativo_nc,0)),0) IS NULL THEN NULL
+       ELSE ((COALESCE(passivo_circ,0)+COALESCE(passivo_nc,0))
+              / NULLIF((COALESCE(ativo_circ,0)+COALESCE(ativo_nc,0)),0)) END  AS endividamento
+FROM pivot
+ORDER BY ano, mes;

@@ -1,0 +1,151 @@
+  CREATE OR REPLACE FUNCTION contab.ff_relatorio_razao(
+  p_empresa_id bigint,
+  p_data_ini   date,
+  p_data_fim   date,
+  p_filtro     text DEFAULT NULL
+)
+RETURNS TABLE (
+  data_mov       date,
+  conta_id       bigint,
+  conta_codigo   text,
+  conta_nome     text,
+  historico      text,
+  saldo_inicial  numeric(14,2),
+  debito         numeric(14,2),
+  credito        numeric(14,2),
+  saldo          numeric(14,2),
+  diario_id      bigint,
+  modelo_codigo  text
+)
+LANGUAGE sql
+AS $$
+WITH contas_filtradas AS (
+  SELECT c.id, c.codigo, c.nome
+  FROM contab.contas c
+  WHERE c.empresa_id = p_empresa_id
+    AND (
+      p_filtro IS NULL OR btrim(p_filtro) = ''
+      OR c.codigo ILIKE '%' || p_filtro || '%'
+      OR c.nome   ILIKE '%' || p_filtro || '%'
+    )
+),
+
+-- 1️⃣ saldo de implantação + movimentos anteriores
+saldo_base AS (
+  SELECT
+    c.id AS conta_id,
+    COALESCE(si.saldo, 0)
+    +
+    COALESCE((
+      SELECT SUM(l.debito - l.credito)
+      FROM contab.lancamentos l
+      WHERE l.empresa_id = p_empresa_id
+        AND l.conta_id   = c.id
+        AND l.data_mov  < p_data_ini
+    ), 0) AS saldo_inicial
+  FROM contas_filtradas c
+  LEFT JOIN contab.saldos_iniciais si
+    ON si.empresa_id = p_empresa_id
+   AND si.conta_id   = c.id
+),
+
+-- 2️⃣ movimentos do período
+movimentos AS (
+  SELECT
+    l.data_mov,
+    l.conta_id,
+    c.codigo AS conta_codigo,
+    c.nome   AS conta_nome,
+    l.historico,
+    l.debito,
+    l.credito,
+    l.diario_id,
+    m.codigo AS modelo_codigo
+  FROM contab.lancamentos l
+  JOIN contas_filtradas c ON c.id = l.conta_id
+  LEFT JOIN contab.modelos m ON m.id = l.modelo_id
+  WHERE l.empresa_id = p_empresa_id
+    AND l.data_mov BETWEEN p_data_ini AND p_data_fim
+),
+
+-- 3️⃣ movimentos com saldo acumulado
+movimentos_com_saldo AS (
+  SELECT
+    m.*,
+    sb.saldo_inicial
+    +
+    SUM(m.debito - m.credito)
+      OVER (
+        PARTITION BY m.conta_id
+        ORDER BY m.data_mov, m.diario_id
+      ) AS saldo
+  FROM movimentos m
+  JOIN saldo_base sb ON sb.conta_id = m.conta_id
+),
+
+-- 4️⃣ contas SEM movimento → linha fake
+contas_sem_movimento AS (
+  SELECT
+    p_data_ini        AS data_mov,
+    c.id              AS conta_id,
+    c.codigo          AS conta_codigo,
+    c.nome            AS conta_nome,
+    'SALDO INICIAL'   AS historico,
+    sb.saldo_inicial  AS saldo_inicial,
+    0::numeric        AS debito,
+    0::numeric        AS credito,
+    sb.saldo_inicial  AS saldo,
+    0::bigint         AS diario_id,
+    NULL::text        AS modelo_codigo
+  FROM contas_filtradas c
+  JOIN saldo_base sb ON sb.conta_id = c.id
+  WHERE NOT EXISTS (
+    SELECT 1
+    FROM movimentos m
+    WHERE m.conta_id = c.id
+  )
+)
+
+-- 5️⃣ resultado final
+SELECT
+  m.data_mov,
+  m.conta_id,
+  m.conta_codigo,
+  m.conta_nome,
+  m.historico,
+
+  COALESCE(
+    LAG(m.saldo) OVER (
+      PARTITION BY m.conta_id
+      ORDER BY m.data_mov, m.diario_id
+    ),
+    sb.saldo_inicial
+  )::numeric(14,2) AS saldo_inicial,
+
+  m.debito,
+  m.credito,
+  m.saldo::numeric(14,2),
+  m.diario_id,
+  m.modelo_codigo
+FROM movimentos_com_saldo m
+JOIN saldo_base sb ON sb.conta_id = m.conta_id
+
+UNION ALL
+
+SELECT
+  data_mov,
+  conta_id,
+  conta_codigo,
+  conta_nome,
+  historico,
+  saldo_inicial,
+  debito,
+  credito,
+  saldo,
+  diario_id,
+  modelo_codigo
+FROM contas_sem_movimento
+
+ORDER BY conta_codigo, data_mov, diario_id;
+$$;
+ 

@@ -1,0 +1,44 @@
+  CREATE OR REPLACE FUNCTION contab.ff_dre_periodo(
+  p_empresa_id BIGINT,
+  p_data_ini   DATE,
+  p_data_fim   DATE
+)
+RETURNS TABLE (
+  ordem BIGINT,
+  grupo TEXT,
+  valor_periodo NUMERIC(18,2)
+)
+LANGUAGE sql
+AS $$
+WITH mov AS (
+  SELECT
+    c.tipo,
+    SUM(COALESCE(l.debito,0))  AS debito,
+    SUM(COALESCE(l.credito,0)) AS credito
+  FROM contab.lancamentos l
+  JOIN contab.contas c ON c.id = l.conta_id
+  WHERE l.empresa_id = p_empresa_id
+    AND l.data_mov BETWEEN p_data_ini AND p_data_fim
+  GROUP BY c.tipo
+),
+valores AS (
+  SELECT
+    COALESCE(SUM(CASE WHEN tipo='RECEITA' THEN (credito - debito) ELSE 0 END),0)::numeric(18,2) AS receita,
+    COALESCE(SUM(CASE WHEN tipo='CUSTO'   THEN (debito - credito) ELSE 0 END),0)::numeric(18,2) AS custo,
+    COALESCE(SUM(CASE WHEN tipo='DESPESA' THEN (debito - credito) ELSE 0 END),0)::numeric(18,2) AS despesa
+  FROM mov
+)
+SELECT 10::bigint, 'RECEITA_BRUTA', receita FROM valores
+UNION ALL
+SELECT 30::bigint, 'CUSTOS', custo FROM valores
+UNION ALL
+SELECT 40::bigint, 'DESPESAS_OPERACIONAIS', despesa FROM valores
+UNION ALL
+SELECT 50::bigint, 'RESULTADO_BRUTO', (receita - custo) FROM valores
+UNION ALL
+SELECT 60::bigint, 'RESULTADO_OPERACIONAL', (receita - custo - despesa) FROM valores
+UNION ALL
+SELECT 80::bigint, 'RESULTADO_LIQUIDO', (receita - custo - despesa) FROM valores
+ORDER BY 1;
+$$;
+
