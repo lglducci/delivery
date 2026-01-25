@@ -5,7 +5,7 @@
     p_filtro     TEXT DEFAULT NULL
 )
 RETURNS TABLE (
-    conta_id       BIGINT,
+    conta_id       BIGINT,           -- ✅ ÚNICA ADIÇÃO
     mes_ano        TEXT,
     conta_codigo   TEXT,
     conta_nome     TEXT,
@@ -48,10 +48,11 @@ mensal AS (
 saldo_mes AS (
   SELECT
     m.*,
-    c.natureza,
     (
+      -- saldo de implantação
       COALESCE(si.saldo, 0)
       +
+      -- movimentos anteriores ao mês
       COALESCE((
         SELECT SUM(l.debito - l.credito)
         FROM contab.lancamentos l
@@ -61,32 +62,20 @@ saldo_mes AS (
       ), 0)
     )::numeric(14,2) AS saldo_inicial
   FROM mensal m
-  JOIN contab.contas c
-    ON c.id = m.conta_id
   LEFT JOIN contab.saldos_iniciais si
     ON si.empresa_id = p_empresa_id
    AND si.conta_id   = m.conta_id
 )
 
 SELECT
-  conta_id,
+  conta_id,                                         -- ✅ AQUI
   to_char(mes_ini, 'MM/YYYY') AS mes_ano,
   conta_codigo,
   conta_nome,
   saldo_inicial,
   debito_mes  AS debito,
   credito_mes AS credito,
-
-  CASE
-    -- contas DEVEDORAS (ativo, despesa)
-    WHEN natureza = 'D' THEN
-      saldo_inicial + debito_mes - credito_mes
-
-    -- contas CREDORAS (passivo, receita, PL)
-    WHEN natureza = 'C' THEN
-      saldo_inicial + credito_mes - debito_mes
-  END::numeric(14,2) AS saldo
-
+  (saldo_inicial + debito_mes - credito_mes)::numeric(14,2) AS saldo
 FROM saldo_mes
 ORDER BY mes_ini, conta_codigo;
 $$;

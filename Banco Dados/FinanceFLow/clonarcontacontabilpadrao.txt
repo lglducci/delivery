@@ -1,0 +1,68 @@
+ CREATE OR REPLACE FUNCTION contab.ff_clonar_plano_contas_padrao(
+  p_empresa_id BIGINT   -- empresa DESTINO
+)
+RETURNS void
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  -- 1️⃣ CLONA CONTAS (SEM conta_pai_id)
+  INSERT INTO contab.contas (
+    codigo,
+    empresa_id,
+    nome,
+    tipo,
+    natureza,
+    nivel,
+    conta_pai_id,
+    analitica,
+    sistema
+  )
+  SELECT
+    c.codigo,
+    p_empresa_id,
+    c.nome,
+    c.tipo,
+    c.natureza,
+    c.nivel,
+    NULL,               -- pai resolvido depois
+    c.analitica,
+    c.sistema
+  FROM contab.contas c
+  WHERE c.empresa_id = 1
+    AND NOT EXISTS (    -- evita duplicar
+      SELECT 1
+      FROM contab.contas x
+      WHERE x.empresa_id = p_empresa_id
+        AND x.codigo = c.codigo
+    )
+  ORDER BY c.codigo;
+
+  -- 2️⃣ RESOLVE conta_pai_id PELO CÓDIGO
+  UPDATE contab.contas filho
+  SET conta_pai_id = pai.id
+  FROM contab.contas pai
+  WHERE filho.empresa_id = p_empresa_id
+    AND pai.empresa_id   = p_empresa_id
+    AND pai.codigo = regexp_replace(filho.codigo, '\.[^.]+$', '')
+    AND filho.codigo LIKE '%.%';
+
+  -- 3️⃣ CRIA SALDOS INICIAIS = 0
+  INSERT INTO contab.saldos_iniciais (empresa_id,
+    conta_id,
+    data_base,
+    saldo
+  )
+  SELECT c.empresa_id
+    c.id,
+    CURRENT_DATE,
+    0
+  FROM contab.contas c
+  WHERE c.empresa_id = p_empresa_id
+    AND NOT EXISTS (
+      SELECT 1
+      FROM contab.saldos_iniciais s
+      WHERE s.conta_id = c.id
+    );
+
+END;
+$$;

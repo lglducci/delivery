@@ -1,0 +1,24 @@
+CREATE OR REPLACE FUNCTION contab.ff_implantar_saldo_inicial (
+    p_empresa_id BIGINT,
+    p_conta_id   BIGINT,
+    p_saldo      NUMERIC
+)
+RETURNS VOID
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    INSERT INTO contab.saldos_iniciais (
+        empresa_id,
+        conta_id,
+        saldo
+    )
+    VALUES (
+        p_empresa_id,
+        p_conta_id,
+        p_saldo
+    )
+    ON CONFLICT (empresa_id, conta_id)
+    DO UPDATE
+       SET saldo = EXCLUDED.saldo;
+END;
+$$;

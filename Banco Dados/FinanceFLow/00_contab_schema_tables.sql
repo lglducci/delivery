@@ -15,7 +15,7 @@ DROP TABLE IF EXISTS contab.vinculos_modelo CASCADE;
 -----------------------------------------------------------
 CREATE TABLE contab.contas (
   id              	  BIGSERIAL PRIMARY KEY,
-  codigo            	VARCHAR(30) NOT NULL UNIQUE,
+  codigo            	VARCHAR(30) NOT NULL  ,
   empresa_id      	bigint                  NOT NULL REFERENCES public.empresas(id),
   nome         	VARCHAR(120) NOT NULL,
   tipo              	VARCHAR(20)   NOT NULL CHECK (tipo IN ('ATIVO','PASSIVO','PL','RECEITA','CUSTO','DESPESA')),
@@ -27,6 +27,11 @@ CREATE TABLE contab.contas (
 );
 
  
+
+ ALTER TABLE contab.contas
+ADD CONSTRAINT contas_empresa_codigo_key
+UNIQUE (empresa_id, codigo);
+
 
 -----------------------------------------------------------
 -- 3) DIÁRIO
