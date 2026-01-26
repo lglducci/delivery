@@ -1,6 +1,4 @@
- DROP FUNCTION IF EXISTS contab.fn_balancete(BIGINT, DATE, DATE);
-
-CREATE OR REPLACE FUNCTION contab.fn_balancete(
+ CREATE OR REPLACE FUNCTION contab.fn_balancete(
     p_empresa_id BIGINT,
     p_data_ini   DATE,
     p_data_fim   DATE
@@ -9,25 +7,45 @@ RETURNS TABLE (
     conta_id      BIGINT,
     codigo        TEXT,
     conta_nome    TEXT,
+    saldo_inicial NUMERIC(14,2),
     total_debito  NUMERIC(14,2),
     total_credito NUMERIC(14,2),
-    saldo         NUMERIC(14,2)
+    saldo_final   NUMERIC(14,2)
 )
 LANGUAGE sql
 AS $$
-  SELECT
-    c.id AS conta_id,
+WITH saldo_ini AS (
+    SELECT
+        si.conta_id,
+        si.saldo
+    FROM contab.saldos_iniciais si
+    WHERE si.empresa_id = p_empresa_id
+),
+mov AS (
+    SELECT
+        l.conta_id,
+        SUM(l.debito)  AS debito,
+        SUM(l.credito) AS credito
+    FROM contab.lancamentos l
+    WHERE l.empresa_id = p_empresa_id
+      AND l.data_mov BETWEEN p_data_ini AND p_data_fim
+    GROUP BY l.conta_id
+)
+SELECT
+    c.id,
     c.codigo,
-    c.nome AS conta_nome,
-    SUM(l.debito)::numeric(14,2)  AS total_debito,
-    SUM(l.credito)::numeric(14,2) AS total_credito,
-    (SUM(l.debito) - SUM(l.credito))::numeric(14,2) AS saldo
-  FROM contab.lancamentos l
-  JOIN contab.contas c
-    ON c.id = l.conta_id
-   AND c.empresa_id = p_empresa_id
-  WHERE l.empresa_id = p_empresa_id
-    AND l.data_mov BETWEEN p_data_ini AND p_data_fim
-  GROUP BY c.id, c.codigo, c.nome
-  ORDER BY c.codigo;
+    c.nome,
+    COALESCE(si.saldo, 0) AS saldo_inicial,
+    COALESCE(m.debito, 0),
+    COALESCE(m.credito, 0),
+    CASE
+        WHEN c.natureza = 'D'
+        THEN COALESCE(si.saldo,0) + COALESCE(m.debito,0) - COALESCE(m.credito,0)
+        ELSE COALESCE(si.saldo,0) + COALESCE(m.credito,0) - COALESCE(m.debito,0)
+    END AS saldo_final
+FROM contab.contas c
+LEFT JOIN saldo_ini si ON si.conta_id = c.id
+LEFT JOIN mov m       ON m.conta_id  = c.id
+WHERE c.empresa_id = p_empresa_id
+ORDER BY c.codigo;
 $$;

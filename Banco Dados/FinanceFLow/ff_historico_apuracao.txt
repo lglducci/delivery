@@ -1,0 +1,30 @@
+ CREATE OR REPLACE FUNCTION contab.ff_historico_apuracao(
+  p_empresa_id bigint
+)
+RETURNS TABLE (
+  ano int,
+  mes int,
+  data_apuracao date,
+  resultado numeric(14,2)
+)
+LANGUAGE sql
+STABLE
+AS $$
+  SELECT
+    EXTRACT(YEAR FROM l.data_mov)::int  AS ano,
+    EXTRACT(MONTH FROM l.data_mov)::int AS mes,
+    l.data_mov                           AS data_apuracao,
+
+    -- 🔥 RESULTADO REAL DO MÊS
+    SUM(l.debito - l.credito)::numeric(14,2) AS resultado
+
+  FROM contab.lancamentos l
+  JOIN contab.contas c ON c.id = l.conta_id
+  WHERE l.empresa_id = p_empresa_id
+    AND c.codigo = '3.2.1.01'              -- ✅ SOMENTE RESULTADO
+    AND l.historico ILIKE 'Fechamento do mês%'
+  GROUP BY
+    ano, mes, data_apuracao
+  ORDER BY
+    ano, mes;
+$$;

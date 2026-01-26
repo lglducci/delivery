@@ -237,7 +237,31 @@ CREATE TABLE contab.conta_classificacao (
         CHECK (fixo_variavel IN ('FIXO','VARIAVEL') OR fixo_variavel IS NULL)
 );
 
+
  
+CREATE TABLE contab.lembretes (
+       id              BIGSERIAL PRIMARY KEY, 
+        empresa_id      BIGINT NOT NULL
+        REFERENCES public.empresas(id),   
+         lote_id   BIGINT NULL, 
+         tipo            VARCHAR(10) NOT NULL , 
+        descricao       TEXT NOT NULL, 
+        valor           NUMERIC(14,2) NOT NULL CHECK (valor > 0), 
+        data_vencimento DATE NOT NULL,  
+        enviado          BOOLEAN NOT NULL DEFAULT FALSE,     -- controle de envio
+       data_envio       TIMESTAMP NULL, 
+       enviar_email     BOOLEAN NOT NULL DEFAULT TRUE,
+       enviar_whatsapp  BOOLEAN NOT NULL DEFAULT TRUE, 
+       criado_em        TIMESTAMP NOT NULL DEFAULT now(),
+      criado_por       BIGINT NULL
+);
+
+CREATE INDEX idx_lembretes_empresa_venc
+    ON contab.lembretes (empresa_id, data_vencimento);
+
+CREATE INDEX idx_lembretes_enviado
+    ON contab.lembretes (enviado);
+
  INSERT INTO contab.conta_classificacao
 (
   empresa_id,

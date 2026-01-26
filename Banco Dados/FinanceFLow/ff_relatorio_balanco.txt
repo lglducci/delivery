@@ -1,9 +1,9 @@
-  CREATE OR REPLACE FUNCTION contab.ff_relatorio_balanco(
+ CREATE OR REPLACE FUNCTION contab.ff_relatorio_balanco(
   p_empresa_id bigint,
   p_data_corte date
 )
 RETURNS TABLE (
-  grupo text,          -- ATIVO / PASSIVO / PATRIMONIO_LIQUIDO
+  grupo text,
   conta_codigo text,
   conta_nome text,
   saldo numeric(14,2)
@@ -11,33 +11,44 @@ RETURNS TABLE (
 LANGUAGE sql
 STABLE
 AS $$
+WITH movimentos AS (
   SELECT
-    CASE
-      WHEN c.tipo = 'ATIVO'   THEN 'ATIVO'
-      WHEN c.tipo = 'PASSIVO' THEN 'PASSIVO'
-      WHEN c.tipo = 'PL'      THEN 'PATRIMONIO_LIQUIDO'
-    END AS grupo,
-    c.codigo AS conta_codigo,
-    c.nome   AS conta_nome,
+    l.conta_id,
     SUM(
       CASE
         WHEN c.natureza = 'D' THEN l.debito - l.credito
         ELSE l.credito - l.debito
       END
-    )::numeric(14,2) AS saldo
+    ) AS mov
   FROM contab.lancamentos l
   JOIN contab.contas c ON c.id = l.conta_id
   WHERE l.empresa_id = p_empresa_id
     AND l.data_mov <= p_data_corte
-    AND c.analitica = true
-    AND c.tipo IN ('ATIVO','PASSIVO','PL')   -- 🔥 CHAVE DA CORREÇÃO
-  GROUP BY
-    grupo, c.codigo, c.nome
-  HAVING SUM(
-    CASE
-      WHEN c.natureza = 'D' THEN l.debito - l.credito
-      ELSE l.credito - l.debito
-    END
+  GROUP BY l.conta_id
+)
+SELECT
+  CASE
+    WHEN c.tipo = 'ATIVO'   THEN 'ATIVO'
+    WHEN c.tipo = 'PASSIVO' THEN 'PASSIVO'
+    WHEN c.tipo = 'PL'      THEN 'PATRIMONIO_LIQUIDO'
+  END AS grupo,
+  c.codigo AS conta_codigo,
+  c.nome   AS conta_nome,
+  (
+    COALESCE(si.saldo, 0)
+    + COALESCE(m.mov, 0)
+  )::numeric(14,2) AS saldo
+FROM contab.contas c
+LEFT JOIN contab.saldos_iniciais si
+  ON si.empresa_id = p_empresa_id
+ AND si.conta_id   = c.id
+LEFT JOIN movimentos m
+  ON m.conta_id = c.id
+WHERE c.empresa_id = p_empresa_id
+  AND c.analitica = true
+  AND c.tipo IN ('ATIVO','PASSIVO','PL')
+  AND (
+    COALESCE(si.saldo, 0) + COALESCE(m.mov, 0)
   ) <> 0
-  ORDER BY grupo, c.codigo;
+ORDER BY grupo, c.codigo;
 $$;
