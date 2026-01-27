@@ -1,26 +1,25 @@
-  CREATE OR REPLACE FUNCTION contab.ff_relatorio_razao(
+ CREATE OR REPLACE FUNCTION contab.ff_relatorio_razao(
   p_empresa_id bigint,
   p_data_ini   date,
   p_data_fim   date,
   p_filtro     text DEFAULT NULL
 )
 RETURNS TABLE (
+  id             bigint,
   data_mov       date,
   conta_id       bigint,
   conta_codigo   text,
   conta_nome     text,
   historico      text,
   saldo_inicial  numeric(14,2),
-  debito         numeric(14,2),
-  credito        numeric(14,2),
+  valor          numeric(14,2),
   saldo          numeric(14,2),
-  diario_id      bigint,
   modelo_codigo  text
 )
 LANGUAGE sql
 AS $$
 WITH contas_filtradas AS (
-  SELECT c.id, c.codigo, c.nome
+  SELECT c.id, c.codigo, c.nome, c.natureza
   FROM contab.contas c
   WHERE c.empresa_id = p_empresa_id
     AND (
@@ -30,14 +29,17 @@ WITH contas_filtradas AS (
     )
 ),
 
--- 1️⃣ saldo de implantação + movimentos anteriores
 saldo_base AS (
   SELECT
     c.id AS conta_id,
     COALESCE(si.saldo, 0)
     +
     COALESCE((
-      SELECT SUM(l.debito - l.credito)
+      SELECT SUM(
+        CASE WHEN c.natureza = 'D' THEN l.debito - l.credito
+             ELSE l.credito - l.debito
+        END
+      )
       FROM contab.lancamentos l
       WHERE l.empresa_id = p_empresa_id
         AND l.conta_id   = c.id
@@ -49,17 +51,19 @@ saldo_base AS (
    AND si.conta_id   = c.id
 ),
 
--- 2️⃣ movimentos do período
 movimentos AS (
   SELECT
+    l.id,
     l.data_mov,
     l.conta_id,
     c.codigo AS conta_codigo,
     c.nome   AS conta_nome,
     l.historico,
-    l.debito,
-    l.credito,
-    l.diario_id,
+    c.natureza,
+    CASE
+      WHEN c.natureza = 'D' THEN l.debito - l.credito
+      ELSE l.credito - l.debito
+    END AS valor,
     m.codigo AS modelo_codigo
   FROM contab.lancamentos l
   JOIN contas_filtradas c ON c.id = l.conta_id
@@ -68,35 +72,32 @@ movimentos AS (
     AND l.data_mov BETWEEN p_data_ini AND p_data_fim
 ),
 
--- 3️⃣ movimentos com saldo acumulado
 movimentos_com_saldo AS (
   SELECT
     m.*,
     sb.saldo_inicial
     +
-    SUM(m.debito - m.credito)
+    SUM(m.valor)
       OVER (
         PARTITION BY m.conta_id
-        ORDER BY m.data_mov, m.diario_id
+        ORDER BY m.data_mov, m.id
       ) AS saldo
   FROM movimentos m
   JOIN saldo_base sb ON sb.conta_id = m.conta_id
 ),
 
--- 4️⃣ contas SEM movimento → linha fake
 contas_sem_movimento AS (
   SELECT
-    p_data_ini        AS data_mov,
-    c.id              AS conta_id,
-    c.codigo          AS conta_codigo,
-    c.nome            AS conta_nome,
-    'SALDO INICIAL'   AS historico,
-    sb.saldo_inicial  AS saldo_inicial,
-    0::numeric        AS debito,
-    0::numeric        AS credito,
-    sb.saldo_inicial  AS saldo,
-    0::bigint         AS diario_id,
-    NULL::text        AS modelo_codigo
+    0::bigint        AS id,
+    p_data_ini       AS data_mov,
+    c.id             AS conta_id,
+    c.codigo         AS conta_codigo,
+    c.nome           AS conta_nome,
+    'SALDO INICIAL'  AS historico,
+    sb.saldo_inicial AS saldo_inicial,
+    0::numeric       AS valor,
+    sb.saldo_inicial AS saldo,
+    NULL::text       AS modelo_codigo
   FROM contas_filtradas c
   JOIN saldo_base sb ON sb.conta_id = c.id
   WHERE NOT EXISTS (
@@ -106,26 +107,22 @@ contas_sem_movimento AS (
   )
 )
 
--- 5️⃣ resultado final
 SELECT
+  m.id,
   m.data_mov,
   m.conta_id,
   m.conta_codigo,
   m.conta_nome,
   m.historico,
-
   COALESCE(
     LAG(m.saldo) OVER (
       PARTITION BY m.conta_id
-      ORDER BY m.data_mov, m.diario_id
+      ORDER BY m.data_mov, m.id
     ),
     sb.saldo_inicial
   )::numeric(14,2) AS saldo_inicial,
-
-  m.debito,
-  m.credito,
+  m.valor,
   m.saldo::numeric(14,2),
-  m.diario_id,
   m.modelo_codigo
 FROM movimentos_com_saldo m
 JOIN saldo_base sb ON sb.conta_id = m.conta_id
@@ -133,19 +130,17 @@ JOIN saldo_base sb ON sb.conta_id = m.conta_id
 UNION ALL
 
 SELECT
+  id,
   data_mov,
   conta_id,
   conta_codigo,
   conta_nome,
   historico,
   saldo_inicial,
-  debito,
-  credito,
+  valor,
   saldo,
-  diario_id,
   modelo_codigo
 FROM contas_sem_movimento
 
-ORDER BY conta_codigo, data_mov, diario_id;
+ORDER BY conta_codigo, data_mov, id;
 $$;
- 

@@ -38,10 +38,12 @@ saldo_base AS (
           +
           COALESCE((
               SELECT
-                CASE
-                  WHEN c.natureza = 'D' THEN SUM(l.debito - l.credito)
-                  WHEN c.natureza = 'C' THEN SUM(l.credito - l.debito)
-                END
+                SUM(
+                  CASE
+                    WHEN c.natureza = 'D' THEN l.debito - l.credito
+                    WHEN c.natureza = 'C' THEN l.credito - l.debito
+                  END
+                )
               FROM contab.lancamentos l
               WHERE l.empresa_id = p_empresa_id
                 AND l.conta_id   = c.id
@@ -61,10 +63,12 @@ mov_dia AS (
         l.data_mov::date AS data_mov,
         SUM(l.debito)::numeric(14,2)  AS debito,
         SUM(l.credito)::numeric(14,2) AS credito,
-        CASE
-          WHEN c.natureza = 'D' THEN SUM(l.debito - l.credito)
-          WHEN c.natureza = 'C' THEN SUM(l.credito - l.debito)
-        END::numeric(14,2) AS delta
+        SUM(
+          CASE
+            WHEN c.natureza = 'D' THEN l.debito - l.credito
+            WHEN c.natureza = 'C' THEN l.credito - l.debito
+          END
+        )::numeric(14,2) AS delta
     FROM contab.lancamentos l
     JOIN contas_filtradas c ON c.id = l.conta_id
     WHERE l.empresa_id = p_empresa_id
@@ -77,6 +81,7 @@ mov_com_saldo AS (
         sb.codigo AS conta_codigo,
         sb.nome   AS conta_nome,
         md.data_mov,
+        md.conta_id,
         md.debito,
         md.credito,
         md.delta,
@@ -133,5 +138,5 @@ SELECT
     s.saldo
 FROM sem_movimento s
 
-ORDER BY conta_codigo, data_mov;
+ORDER BY data_mov, conta_codigo;
 $$;

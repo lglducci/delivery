@@ -262,6 +262,16 @@ CREATE INDEX idx_lembretes_empresa_venc
 CREATE INDEX idx_lembretes_enviado
     ON contab.lembretes (enviado);
 
+
+ALTER TABLE contab.lembretes
+ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'PENDENTE', 
+ADD COLUMN baixado_em TIMESTAMP NULL;
+
+ALTER TABLE contab.lembretes
+ADD CONSTRAINT chk_lembrete_status
+CHECK (status IN ('PENDENTE','BAIXADO','CANCELADO'));
+
+
  INSERT INTO contab.conta_classificacao
 (
   empresa_id,
