@@ -1,0 +1,107 @@
+CREATE OR REPLACE FUNCTION contab.ff_relatorio_razao_por_conta(
+  p_empresa_id bigint,
+  p_conta_id   bigint,
+  p_data_ini   date,
+  p_data_fim   date
+)
+RETURNS TABLE (
+  id                  bigint,
+  data_mov            date,
+  conta_codigo        text,
+  conta_nome          text,
+  historico           text,
+  modelo_codigo       text,
+  conta_contrapartida text,
+  saldo_inicial       numeric(14,2),
+  valor               numeric(14,2),
+  saldo_final         numeric(14,2),
+  lote_id             bigint
+)
+LANGUAGE sql
+AS $$
+WITH lancamentos_filtrados AS (
+  SELECT
+    l.id,
+    l.data_mov,
+    l.historico,
+    l.modelo_id,
+    l.lote_id,
+    l.conta_id,
+    l.debito,
+    l.credito,
+    c.codigo AS conta_codigo,
+    c.nome   AS conta_nome,
+    c.natureza,
+    CASE
+      WHEN c.natureza = 'D' THEN l.debito - l.credito
+      ELSE l.credito - l.debito
+    END AS valor
+  FROM contab.lancamentos l
+  JOIN contab.contas c ON c.id = l.conta_id
+  WHERE l.empresa_id = p_empresa_id
+    AND l.conta_id   = p_conta_id
+    AND l.data_mov BETWEEN p_data_ini AND p_data_fim
+),
+
+contrapartidas AS (
+  SELECT
+    l1.id AS id_principal,
+    c2.codigo || ' - ' || c2.nome AS conta_contrapartida
+  FROM contab.lancamentos l1
+  JOIN contab.lancamentos l2
+    ON l1.lote_id = l2.lote_id
+   AND l1.id <> l2.id
+  JOIN contab.contas c2 ON c2.id = l2.conta_id
+  WHERE l1.empresa_id = p_empresa_id
+    AND l1.conta_id   = p_conta_id
+    AND l1.data_mov BETWEEN p_data_ini AND p_data_fim
+),
+
+saldo_inicial_base AS (
+  SELECT
+    SUM(
+      COALESCE(si.saldo, 0) +
+      COALESCE(
+        CASE
+          WHEN c.natureza = 'D' THEN l.debito - l.credito
+          ELSE l.credito - l.debito
+        END, 0)
+    ) AS saldo_inicial
+  FROM contab.contas c
+  LEFT JOIN contab.saldos_iniciais si
+    ON si.empresa_id = p_empresa_id
+   AND si.conta_id   = c.id
+  LEFT JOIN contab.lancamentos l
+    ON l.empresa_id = p_empresa_id
+   AND l.conta_id   = c.id
+   AND l.data_mov  < p_data_ini
+  WHERE c.id = p_conta_id
+)
+
+SELECT
+  l.id,
+  l.data_mov,
+  l.conta_codigo,
+  l.conta_nome,
+  l.historico,
+  m.codigo AS modelo_codigo,
+  cp.conta_contrapartida,
+  sib.saldo_inicial
+    + COALESCE(
+        SUM(l.valor) OVER (
+          ORDER BY l.data_mov, l.id
+          ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING
+        ), 0
+      ) AS saldo_inicial,
+  l.valor,
+  sib.saldo_inicial
+    + SUM(l.valor) OVER (
+        ORDER BY l.data_mov, l.id
+      ) AS saldo_final,
+  l.lote_id
+FROM lancamentos_filtrados l
+LEFT JOIN contrapartidas cp ON cp.id_principal = l.id
+LEFT JOIN contab.modelos m ON m.id = l.modelo_id
+CROSS JOIN saldo_inicial_base sib
+ORDER BY l.data_mov, l.id;
+$$;
