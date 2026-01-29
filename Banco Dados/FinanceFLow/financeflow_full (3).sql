@@ -42,8 +42,12 @@ CREATE TABLE usuarios (
     nome TEXT NOT NULL,
     email TEXT UNIQUE NOT NULL,
     senha_hash TEXT NOT NULL,
+   column auth_user_id UUID NOT NULL UNIQUE,
     criado_em TIMESTAMP DEFAULT now()
 );
+
+ALTER TABLE public.usuarios
+ADD CONSTRAINT usuarios_auth_user_id_uk UNIQUE (auth_user_id);
 
 
 ---------------------------------------------------
