@@ -1,0 +1,78 @@
+CREATE DATABASE saas_vendas;
+
+CREATE TABLE saas_vendas.usuarios (
+  id BIGSERIAL PRIMARY KEY,
+  nome TEXT NOT NULL,
+  email TEXT NOT NULL UNIQUE,
+  cpf  text not null,
+  telefone  text, 
+  auth_user_id UUID NOT NULL UNIQUE,
+  senha_hash TEXT NOT NULL,
+  plano_id BIGINT REFERENCES saas_vendas.planos(id),
+  ativo BOOLEAN DEFAULT TRUE,
+  criado_em TIMESTAMP DEFAULT NOW()
+);
+
+ ALTER TABLE saas_vendas.usuarios ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Usuário acessa só o próprio registro"
+ON saas_vendas.usuarios
+FOR ALL
+USING (auth.uid() = auth_user_id);
+
+ALTER TABLE saas_vendas.usuarios
+ADD COLUMN trial_inicio TIMESTAMP DEFAULT now(),
+ADD COLUMN trial_fim TIMESTAMP DEFAULT (now() + interval '7 days') 
+
+CREATE TABLE  saas_vendas.pedidos(
+  pedido_id BIGSERIAL PRIMARY KEY,
+  usuario_id BIGINT REFERENCES saas_vendas.usuarios(id),
+ valor numeric, 
+ cobranca_id text,
+  status text  default "peding",
+  criado_em TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE saas_vendas.planos (
+  id BIGSERIAL PRIMARY KEY,
+  nome TEXT NOT NULL,
+  descricao TEXT,
+  valor_mensal NUMERIC(10, 2) NOT NULL,
+  limite_empresas INTEGER DEFAULT 1,
+  limite_usuarios INTEGER DEFAULT 1,
+  ativo BOOLEAN DEFAULT TRUE
+);
+
+
+CREATE TABLE saas_vendas.assinaturas (
+  id BIGSERIAL PRIMARY KEY,
+  usuario_id BIGINT NOT NULL REFERENCES usuarios(id),
+  plano_id BIGINT NOT NULL REFERENCES saas_vendas.planos(id),
+  data_inicio DATE NOT NULL DEFAULT CURRENT_DATE,
+  data_fim DATE,
+  status TEXT NOT NULL DEFAULT 'ativa', -- ativa, trial, cancelada, inadimplente
+  forma_pagamento TEXT, -- pix, cartao, boleto
+  id_externo_pagamento TEXT -- para integração com Mercado Pago, Stripe etc.
+);
+
+
+
+INSERT INTO saas_vendas.planos (nome, descricao, valor_mensal, limite_empresas, limite_usuarios)
+VALUES 
+  ('Básico', 'Ideal para autônomos', 29.90, 1, 1),
+  ('Empresarial', 'Para pequenas empresas', 59.90, 3, 5),
+  ('Profissional', 'Para contadores e gestores', 99.90, 10, 10);
+
+
+CREATE INDEX idx_usuarios_email ON saas_vendas.usuarios(email);
+CREATE INDEX idx_pagamentos_usuario ON saas_vendas.pagamentos(usuario_id);
+CREATE INDEX idx_assinaturas_usuario ON saas_vendas.assinaturas(usuario_id);
+
+-- permitir acesso ao schema
+GRANT USAGE ON SCHEMA saas_vendas TO anon;
+GRANT USAGE ON SCHEMA saas_vendas TO authenticated;
+
+-- permitir operações na tabela
+GRANT INSERT, SELECT, UPDATE ON saas_vendas.usuarios TO anon;
+GRANT INSERT, SELECT, UPDATE ON saas_vendas.usuarios TO authenticated;
+
