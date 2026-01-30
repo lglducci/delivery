@@ -57,6 +57,37 @@ CREATE TABLE saas_vendas.assinaturas (
 
 
 
+ CREATE TABLE saas_vendas.contas (
+  id              	  BIGSERIAL PRIMARY KEY,
+  codigo            	VARCHAR(30) NOT NULL  , 
+  nome         	VARCHAR(120) NOT NULL,
+  tipo              	VARCHAR(20)   NOT NULL CHECK (tipo IN ('ATIVO','PASSIVO','PL','RECEITA','CUSTO','DESPESA')),
+  natureza        	CHAR(1)             NOT NULL CHECK (natureza IN ('D','C')),
+  nivel           	INT                      NOT NULL DEFAULT 1,
+  conta_pai_id   	BIGINT                NULL  ,
+  analitica       	BOOLEAN           NOT NULL DEFAULT TRUE,
+  sistema                     BOOLEAN           NOT NULL DEFAULT  FALSE
+);
+
+ CREATE TABLE IF NOT EXISTS saas_vendas.saldos_iniciais (
+  
+  conta_id    BIGINT NOT NULL REFERENCES saas_vendas.contas(id),
+  data_base   DATE   NOT NULL DEFAULT DATE '2000-01-01',
+  saldo       NUMERIC(14,2) NOT NULL DEFAULT 0,
+  PRIMARY KEY  ( conta_id)
+);
+
+
+
+CREATE TABLE saas_vendas.categorias_gerenciais (
+    id BIGSERIAL PRIMARY KEY, 
+    nome TEXT NOT NULL,
+    grupo_contabil TEXT NULL,
+    tipo TEXT NOT NULL CHECK (tipo IN ('entrada','saida')) ,
+  meu_negocio bool default false 
+);  
+
+
 INSERT INTO saas_vendas.planos (nome, descricao, valor_mensal, limite_empresas, limite_usuarios)
 VALUES 
   ('Básico', 'Ideal para autônomos', 29.90, 1, 1),

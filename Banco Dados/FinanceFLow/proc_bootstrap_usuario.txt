@@ -1,0 +1,88 @@
+  CREATE OR REPLACE FUNCTION public.proc_bootstrap_usuario(
+  p_auth_user_id UUID,
+  p_nome_usuario TEXT,
+  p_email TEXT
+)
+RETURNS BIGINT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, contab, saas_vendas
+AS $$
+DECLARE
+  v_usuario_id BIGINT;
+  v_empresa_id BIGINT;
+BEGIN
+  ------------------------------------------------------------------
+  -- 1️⃣ USUÁRIO (não duplica)
+  ------------------------------------------------------------------
+  SELECT id
+    INTO v_usuario_id
+  FROM public.usuarios
+  WHERE auth_user_id = p_auth_user_id
+     OR email = p_email;
+
+  IF v_usuario_id IS NULL THEN
+    INSERT INTO public.usuarios (
+      nome,
+      email,
+      auth_user_id,
+      senha_hash
+    )
+    VALUES (
+      p_nome_usuario,
+      p_email,
+      p_auth_user_id,
+      'senha'
+    )
+    RETURNING id INTO v_usuario_id;
+  END IF;
+
+  ------------------------------------------------------------------
+  -- 2️⃣ EMPRESA PADRÃO
+  ------------------------------------------------------------------
+  INSERT INTO public.empresas (
+    nome,
+    tipo,
+    documento
+  )
+  VALUES (
+    'Minha Empresa',
+    'MEI',
+    NULL
+  )
+  RETURNING id INTO v_empresa_id;
+
+  ------------------------------------------------------------------
+  -- 3️⃣ VÍNCULO USUÁRIO x EMPRESA
+  ------------------------------------------------------------------
+  INSERT INTO public.usuario_empresa (
+    usuario_id,
+    empresa_id,
+    role,
+    escolha
+  )
+  VALUES (
+    v_usuario_id,
+    v_empresa_id,
+    'admin',
+    true
+  );
+
+  ------------------------------------------------------------------
+  -- 4️⃣ CLONA PLANO DE CONTAS PADRÃO
+  ------------------------------------------------------------------
+  PERFORM contab.ff_clonar_plano_contas_padrao(v_empresa_id);
+
+  ------------------------------------------------------------------
+  -- 5️⃣ RETORNA EMPRESA CRIADA
+  ------------------------------------------------------------------
+  RETURN v_empresa_id;
+
+EXCEPTION
+  WHEN OTHERS THEN
+    RAISE EXCEPTION
+      'Erro no bootstrap do usuário (%): %',
+      p_auth_user_id,
+      SQLERRM;
+END;
+$$;

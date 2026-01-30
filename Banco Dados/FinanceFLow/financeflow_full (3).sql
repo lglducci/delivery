@@ -110,9 +110,7 @@ CREATE TABLE categorias_gerenciais (
     nome TEXT NOT NULL,
     grupo_contabil TEXT NULL,
     tipo TEXT NOT NULL CHECK (tipo IN ('entrada','saida')) 
-);
-
-
+); 
 alter table categorias_gerenciais add meu_negocio bool default false ;
 
 ---------------------------------------------------
