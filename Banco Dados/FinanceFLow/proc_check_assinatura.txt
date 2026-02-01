@@ -1,0 +1,66 @@
+ CREATE OR REPLACE FUNCTION saas_vendas.proc_check_assinatura (
+  p_empresa_id BIGINT
+)
+RETURNS TABLE (
+  status TEXT,
+  bloquear BOOLEAN,
+  mensagem TEXT
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_hoje DATE := CURRENT_DATE;
+  v_ass saas_vendas.assinaturas%ROWTYPE;
+BEGIN
+  -- 1️⃣ Última assinatura
+  SELECT *
+  INTO v_ass
+  FROM saas_vendas.assinaturas a
+  WHERE a.empresa_id = p_empresa_id
+  ORDER BY a.data_inicio DESC
+  LIMIT 1;
+
+  -- 2️⃣ Sem assinatura
+  IF NOT FOUND THEN
+    RETURN QUERY
+    SELECT
+      'SEM_ASSINATURA',
+      TRUE,
+      'Empresa sem assinatura ativa';
+    RETURN;
+  END IF;
+
+  -- 3️⃣ Trial válido
+  IF v_ass.status = 'trial'
+     AND v_ass.data_inicio <= v_hoje
+     AND (v_ass.data_fim IS NULL OR v_ass.data_fim >= v_hoje) THEN
+    RETURN QUERY
+    SELECT
+      'TRIAL',
+      FALSE,
+      'Trial ativo até ' || COALESCE(v_ass.data_fim::text, 'indefinido');
+    RETURN;
+  END IF;
+
+  -- 4️⃣ Assinatura ativa
+  IF v_ass.status = 'ativa'
+     AND v_ass.data_inicio <= v_hoje
+     AND (v_ass.data_fim IS NULL OR v_ass.data_fim >= v_hoje) THEN
+    RETURN QUERY
+    SELECT
+      'OK',
+      FALSE,
+      'Assinatura ativa';
+    RETURN;
+  END IF;
+
+  -- 5️⃣ Expirada
+  RETURN QUERY
+  SELECT
+    'EXPIRADO',
+    TRUE,
+    'Assinatura expirada';
+
+END;
+$$;

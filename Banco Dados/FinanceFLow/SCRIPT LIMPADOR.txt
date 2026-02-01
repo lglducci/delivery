@@ -1,0 +1,29 @@
+ BEGIN;
+
+-- =========================
+-- DELETE DOS DADOS
+-- =========================
+DELETE FROM empresa_perfil;
+DELETE FROM public.usuario_empresa;
+DELETE FROM public.usuarios;
+DELETE FROM saas_vendas.usuarios;
+DELETE FROM auth.users;
+DELETE FROM contab.saldos_iniciais;
+DELETE FROM contab.contas;
+DELETE FROM empresas;
+
+-- =========================
+-- RESET DAS SEQUENCES (ID)
+-- =========================
+ 
+CALL reset_sequence_by_max('public',       'usuario_empresa',    'id');
+CALL reset_sequence_by_max('public',       'usuarios',           'id');
+CALL reset_sequence_by_max('saas_vendas',  'usuarios',           'id');
+ 
+CALL reset_sequence_by_max('contab',       'contas',             'id');
+CALL reset_sequence_by_max('public',       'empresas',           'id'); 
+CALL reset_sequence_by_max('contab',       'modelos',           'id');
+
+ 
+commit;
+ 

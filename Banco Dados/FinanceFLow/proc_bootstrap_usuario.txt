@@ -1,4 +1,4 @@
-  CREATE OR REPLACE FUNCTION public.proc_bootstrap_usuario(
+ CREATE OR REPLACE FUNCTION public.proc_bootstrap_usuario(
   p_auth_user_id UUID,
   p_nome_usuario TEXT,
   p_email TEXT
@@ -11,6 +11,7 @@ AS $$
 DECLARE
   v_usuario_id BIGINT;
   v_empresa_id BIGINT;
+  v_perfil_id  BIGINT;
 BEGIN
   ------------------------------------------------------------------
   -- 1️⃣ USUÁRIO (não duplica)
@@ -51,6 +52,31 @@ BEGIN
     NULL
   )
   RETURNING id INTO v_empresa_id;
+
+  ------------------------------------------------------------------
+  -- 2.1️⃣ PERFIL CONTÁBIL (obrigatório)
+  ------------------------------------------------------------------
+  SELECT id
+    INTO v_perfil_id
+  FROM public.perfis
+  WHERE codigo = 'CONTABIL';
+
+  IF v_perfil_id IS NULL THEN
+    RAISE EXCEPTION 'Perfil CONTABIL não encontrado';
+  END IF;
+
+  INSERT INTO public.empresa_perfil (
+    empresa_id,
+    perfil_id,
+    ativo,
+    criado_em
+  )
+  VALUES (
+    v_empresa_id,
+    v_perfil_id,
+    true,
+    now()
+  );
 
   ------------------------------------------------------------------
   -- 3️⃣ VÍNCULO USUÁRIO x EMPRESA
