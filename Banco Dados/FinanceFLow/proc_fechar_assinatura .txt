@@ -1,0 +1,91 @@
+ CREATE OR REPLACE FUNCTION saas_vendas.proc_fechar_assinatura (
+  p_empresa_id BIGINT,
+  p_plano_id   BIGINT,
+  p_forma_pagamento text default 'pix'
+)
+RETURNS TABLE (
+  status   TEXT,
+  mensagem TEXT
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = saas_vendas, public
+AS $$
+DECLARE
+  v_plano_nome TEXT;
+  v_data_fim   DATE;
+  v_tem_ativa  BOOLEAN;
+  v_tem_pend   BOOLEAN;
+BEGIN
+  -- 1) valida plano
+  SELECT LOWER(p.nome)
+    INTO v_plano_nome
+  FROM saas_vendas.planos p
+  WHERE p.id = p_plano_id;
+
+  IF v_plano_nome IS NULL THEN
+    RETURN QUERY SELECT 'ERRO', 'Plano não encontrado';
+    RETURN;
+  END IF;
+
+  -- 2) calcula data_fim (DATE)
+  IF v_plano_nome LIKE '%mensal%' THEN
+    v_data_fim := (CURRENT_DATE + INTERVAL '1 month')::date;
+  ELSIF v_plano_nome LIKE '%semestral%' THEN
+    v_data_fim := (CURRENT_DATE + INTERVAL '6 months')::date;
+  ELSIF v_plano_nome LIKE '%anual%' THEN
+    v_data_fim := (CURRENT_DATE + INTERVAL '1 year')::date;
+  ELSE
+    RETURN QUERY SELECT 'ERRO', 'Tipo de plano inválido';
+    RETURN;
+  END IF;
+
+  -- 3) bloqueios (sem estorno automático)
+  SELECT EXISTS (
+    SELECT 1
+    FROM saas_vendas.assinaturas a
+    WHERE a.empresa_id = p_empresa_id
+      AND a.status = 'ATIVA'
+      AND a.data_inicio <= CURRENT_DATE
+      AND (a.data_fim IS NULL OR a.data_fim >= CURRENT_DATE)
+  ) INTO v_tem_ativa;
+
+  IF v_tem_ativa THEN
+    RETURN QUERY SELECT 'TEM_ATIVA', 'Empresa já tem assinatura ATIVA. Troca de plano exige regra própria (upgrade/downgrade).';
+    RETURN;
+  END IF;
+
+  SELECT EXISTS (
+    SELECT 1
+    FROM saas_vendas.assinaturas a
+    WHERE a.empresa_id = p_empresa_id
+      AND a.status = 'PENDENTE_PAGAMENTO'
+  ) INTO v_tem_pend;
+
+  IF v_tem_pend THEN
+    RETURN QUERY SELECT 'PENDENTE', 'Já existe pagamento pendente para esta empresa. Finalize ou cancele antes de gerar outro.';
+    RETURN;
+  END IF;
+
+  -- 4) cria PENDENTE (única)
+  INSERT INTO saas_vendas.assinaturas (
+    empresa_id,
+    plano_id,
+    data_inicio,
+    data_fim,
+    status,
+   forma_pagamento
+  )
+  VALUES (
+    p_empresa_id,
+    p_plano_id,
+    CURRENT_DATE,
+    v_data_fim,
+    'PENDENTE_PAGAMENTO',
+   p_forma_pagamento 
+  );
+
+  RETURN QUERY
+  SELECT 'OK', 'Assinatura pendente criada. Aguardando pagamento.';
+END;
+$$;

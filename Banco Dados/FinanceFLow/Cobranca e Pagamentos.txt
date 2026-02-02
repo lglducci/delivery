@@ -1,0 +1,41 @@
+CREATE TABLE saas_vendas.cobrancas (
+  id              BIGSERIAL PRIMARY KEY,
+
+  assinatura_id   BIGINT NOT NULL
+    REFERENCES saas_vendas.assinaturas(id)
+    ON DELETE CASCADE,
+
+  competencia     DATE NOT NULL, -- ex: 2026-02-01
+  valor           NUMERIC(12,2) NOT NULL,
+  data_vencimento DATE NOT NULL,
+
+  status          VARCHAR(20) NOT NULL
+    CHECK (status IN ('PENDENTE','PAGA','ATRASADA','CANCELADA')),
+
+  criado_em       TIMESTAMP NOT NULL DEFAULT now(),
+  atualizado_em  TIMESTAMP NOT NULL DEFAULT now(),
+
+  UNIQUE (assinatura_id, competencia)
+);
+
+
+CREATE TABLE saas_vendas.pagamentos (
+  id               BIGSERIAL PRIMARY KEY,
+
+  cobranca_id      BIGINT NOT NULL
+    REFERENCES saas_vendas.cobrancas(id)
+    ON DELETE CASCADE,
+
+  gateway          VARCHAR(30) NOT NULL, -- ex: MERCADO_PAGO
+  payment_id       VARCHAR(100) NOT NULL, -- id do MP
+  meio_pagamento   VARCHAR(20) NOT NULL
+    CHECK (meio_pagamento IN ('PIX','CARTAO','OUTRO')),
+
+  valor_pago       NUMERIC(12,2) NOT NULL,
+  status_gateway   VARCHAR(30) NOT NULL, -- approved, pending, rejected
+
+  data_pagamento   TIMESTAMP,
+  criado_em        TIMESTAMP NOT NULL DEFAULT now(),
+
+  UNIQUE (gateway, payment_id)
+);
