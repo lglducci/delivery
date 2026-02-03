@@ -1,0 +1,68 @@
+CREATE OR REPLACE VIEW saas_vendas.alerta_cobrancas_vencendo AS
+SELECT
+  'COBRANCA_VENCENDO'        AS tipo_alerta,
+  c.id                       AS id_referencia,
+  'Cobrança vencendo'        AS descricao,
+  c.valor                    AS valor,
+  c.data_vencimento          AS data_evento
+FROM saas_vendas.cobrancas c
+WHERE c.status = 'PENDENTE'
+  AND c.data_vencimento
+      BETWEEN current_date
+      AND current_date + interval '5 days';
+
+
+CREATE OR REPLACE VIEW saas_vendas.alerta_cobrancas_atrasadas AS
+SELECT
+  'COBRANCA_ATRASADA'        AS tipo_alerta,
+  c.id                       AS id_referencia,
+  'Cobrança atrasada'        AS descricao,
+  c.valor                    AS valor,
+  c.data_vencimento          AS data_evento
+FROM saas_vendas.cobrancas c
+WHERE c.status = 'ATRASADA'
+  AND c.data_vencimento < current_date - interval '5 days';
+
+
+
+
+
+CREATE OR REPLACE VIEW saas_vendas.alerta_assinaturas_risco AS
+SELECT
+  'ASSINATURA_RISCO'             AS tipo_alerta,
+  c.assinatura_id                AS id_referencia,
+  'Assinatura com múltiplos atrasos' AS descricao,
+  SUM(c.valor)                   AS valor,
+  MAX(c.data_vencimento)         AS data_evento
+FROM saas_vendas.cobrancas c
+WHERE c.status = 'ATRASADA'
+GROUP BY c.assinatura_id
+HAVING COUNT(*) >= 2;
+
+
+
+
+CREATE OR REPLACE VIEW saas_vendas.alerta_trial_acabando AS
+SELECT
+  'TRIAL_ACABANDO'           AS tipo_alerta,
+  u.id                       AS id_referencia,
+  'Trial prestes a acabar'   AS descricao,
+  0                          AS valor,
+  u.trial_fim                AS data_evento
+FROM saas_vendas.usuarios u
+WHERE u.trial_fim
+      BETWEEN current_date
+      AND current_date + interval '3 days';
+
+
+
+
+CREATE OR REPLACE VIEW saas_vendas.dashboard_alertas AS
+SELECT * FROM saas_vendas.alerta_cobrancas_vencendo
+UNION ALL
+SELECT * FROM saas_vendas.alerta_cobrancas_atrasadas
+UNION ALL
+SELECT * FROM saas_vendas.alerta_assinaturas_risco
+UNION ALL
+SELECT * FROM saas_vendas.alerta_trial_acabando
+ORDER BY data_evento;

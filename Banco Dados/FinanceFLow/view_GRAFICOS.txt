@@ -1,0 +1,46 @@
+CREATE OR REPLACE VIEW saas_vendas.dashboard_grafico_faturamento_mensal AS
+SELECT
+  to_char(mes_ref, 'YYYY-MM')         AS mes,
+  SUM(valor_pago)                     AS valor
+FROM saas_vendas.vw_pagamentos_aprovados
+WHERE mes_ref >= date_trunc('month', current_date) - interval '11 months'
+GROUP BY mes_ref
+ORDER BY mes_ref;
+
+CREATE OR REPLACE VIEW saas_vendas.dashboard_grafico_assinaturas_mes AS
+SELECT
+  to_char(date_trunc('month', data_inicio), 'YYYY-MM') AS mes,
+
+  COUNT(*) FILTER (WHERE status = 'ativa')      AS ativas,
+  COUNT(*) FILTER (WHERE status = 'cancelada')  AS canceladas
+
+FROM saas_vendas.vw_assinaturas_status
+GROUP BY date_trunc('month', data_inicio)
+ORDER BY mes;
+
+
+
+CREATE OR REPLACE VIEW saas_vendas.dashboard_grafico_cobrancas_status AS
+SELECT
+  status,
+  SUM(valor) AS total
+FROM saas_vendas.vw_cobrancas_status
+GROUP BY status;
+
+
+CREATE OR REPLACE VIEW saas_vendas.dashboard_grafico_inadimplencia_mes AS
+SELECT
+  to_char(mes_ref, 'YYYY-MM') AS mes,
+  SUM(valor)                 AS total
+FROM saas_vendas.vw_cobrancas_status
+WHERE status = 'ATRASADA'
+GROUP BY mes_ref
+ORDER BY mes_ref;
+
+
+
+SELECT
+  (SELECT json_agg(t) FROM saas_vendas.dashboard_grafico_faturamento_mensal t)      AS faturamento_mensal,
+  (SELECT json_agg(t) FROM saas_vendas.dashboard_grafico_assinaturas_mes t)          AS assinaturas_mes,
+  (SELECT json_agg(t) FROM saas_vendas.dashboard_grafico_cobrancas_status t)         AS cobrancas_status,
+  (SELECT json_agg(t) FROM saas_vendas.dashboard_grafico_inadimplencia_mes t)        AS inadimplencia_mes;

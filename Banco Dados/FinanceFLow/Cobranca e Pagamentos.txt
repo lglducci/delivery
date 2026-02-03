@@ -1,9 +1,12 @@
-CREATE TABLE saas_vendas.cobrancas (
+  CREATE TABLE saas_vendas.cobrancas (
   id              BIGSERIAL PRIMARY KEY,
 
   assinatura_id   BIGINT NOT NULL
     REFERENCES saas_vendas.assinaturas(id)
     ON DELETE CASCADE,
+
+ empresa_id   BIGINT NOT NULL
+    REFERENCES public.empresas(id) ON DELETE CASCADE,
 
   competencia     DATE NOT NULL, -- ex: 2026-02-01
   valor           NUMERIC(12,2) NOT NULL,
@@ -25,6 +28,9 @@ CREATE TABLE saas_vendas.pagamentos (
   cobranca_id      BIGINT NOT NULL
     REFERENCES saas_vendas.cobrancas(id)
     ON DELETE CASCADE,
+   
+ empresa_id   BIGINT NOT NULL
+    REFERENCES public.empresas(id) ON DELETE CASCADE,
 
   gateway          VARCHAR(30) NOT NULL, -- ex: MERCADO_PAGO
   payment_id       VARCHAR(100) NOT NULL, -- id do MP

@@ -1,0 +1,187 @@
+CREATE OR REPLACE VIEW saas_vendas.vw_pagamentos_aprovados AS
+SELECT
+  p.id,
+  p.valor_pago,
+  p.data_pagamento::date AS data_pagamento,
+  date_trunc('month', p.data_pagamento)::date AS mes_ref
+FROM saas_vendas.pagamentos p
+WHERE p.status_gateway = 'approved';
+
+
+CREATE OR REPLACE VIEW saas_vendas.vw_cobrancas_status AS
+SELECT
+  c.id,
+  c.assinatura_id,
+  c.valor,
+  c.status,
+  c.data_vencimento::date AS data_vencimento,
+  date_trunc('month', c.data_vencimento)::date AS mes_ref
+FROM saas_vendas.cobrancas c;
+
+CREATE OR REPLACE VIEW saas_vendas.vw_assinaturas_status AS
+SELECT
+  a.id,
+  a.status,
+  a.data_inicio,
+  a.data_fim
+FROM saas_vendas.assinaturas a;
+
+CREATE OR REPLACE VIEW saas_vendas.card_assinaturas_ativas AS
+SELECT count(*) AS total
+FROM saas_vendas.vw_assinaturas_status
+WHERE status = 'ativa';
+
+
+CREATE OR REPLACE VIEW saas_vendas.card_assinaturas_canceladas AS
+SELECT count(*) AS total
+FROM saas_vendas.vw_assinaturas_status
+WHERE status = 'cancelada';
+
+CREATE OR REPLACE VIEW saas_vendas.card_inadimplentes AS
+SELECT count(DISTINCT assinatura_id) AS total
+FROM saas_vendas.vw_cobrancas_status
+WHERE status = 'ATRASADA';
+
+
+
+CREATE OR REPLACE VIEW saas_vendas.card_faturamento_mes AS
+SELECT
+  COALESCE(sum(valor_pago), 0) AS total
+FROM saas_vendas.vw_pagamentos_aprovados
+WHERE mes_ref = date_trunc('month', current_date);
+
+CREATE OR REPLACE VIEW saas_vendas.card_faturamento_total AS
+SELECT
+  COALESCE(sum(valor_pago), 0) AS total
+FROM saas_vendas.vw_pagamentos_aprovados;
+
+
+CREATE OR REPLACE VIEW saas_vendas.card_faturamento_liquido AS
+SELECT
+  total - (total * 0.275) AS total_liquido
+FROM saas_vendas.card_faturamento_total;
+
+CREATE OR REPLACE VIEW saas_vendas.card_cobrancas_aberto AS
+SELECT
+  COALESCE(sum(valor), 0) AS total
+FROM saas_vendas.vw_cobrancas_status
+WHERE status = 'PENDENTE';
+
+
+
+CREATE OR REPLACE VIEW saas_vendas.card_cobrancas_atrasadas AS
+SELECT
+  COALESCE(sum(valor), 0) AS total
+FROM saas_vendas.vw_cobrancas_status
+WHERE status = 'ATRASADA';
+
+
+CREATE OR REPLACE VIEW saas_vendas.grafico_faturamento_mensal AS
+SELECT
+  to_char(mes_ref, 'YYYY-MM') AS mes,
+  sum(valor_pago) AS valor
+FROM saas_vendas.vw_pagamentos_aprovados
+WHERE mes_ref >= date_trunc('month', current_date) - interval '11 months'
+GROUP BY mes_ref
+ORDER BY mes_ref;
+
+CREATE OR REPLACE VIEW saas_vendas.grafico_assinaturas_mes AS
+SELECT
+  to_char(date_trunc('month', data_inicio), 'YYYY-MM') AS mes,
+  count(*) FILTER (WHERE status = 'ativa') AS ativas,
+  count(*) FILTER (WHERE status = 'cancelada') AS canceladas
+FROM saas_vendas.vw_assinaturas_status
+GROUP BY date_trunc('month', data_inicio)
+ORDER BY mes;
+
+
+CREATE OR REPLACE VIEW saas_vendas.grafico_cobrancas_pizza AS
+SELECT
+  status,
+  sum(valor) AS total
+FROM saas_vendas.vw_cobrancas_status
+GROUP BY status;
+
+
+SELECT
+  (SELECT total FROM saas_vendas.card_assinaturas_ativas) AS assinaturas_ativas,
+  (SELECT total FROM saas_vendas.card_inadimplentes) AS inadimplentes,
+  (SELECT total FROM saas_vendas.card_assinaturas_canceladas) AS canceladas,
+  (SELECT total FROM saas_vendas.card_faturamento_mes) AS faturamento_mes,
+  (SELECT total FROM saas_vendas.card_faturamento_total) AS faturamento_total,
+  (SELECT total_liquido FROM saas_vendas.card_faturamento_liquido) AS faturamento_liquido,
+  (SELECT total FROM saas_vendas.card_cobrancas_aberto) AS cobrancas_aberto,
+  (SELECT total FROM saas_vendas.card_cobrancas_atrasadas) AS cobrancas_atrasadas;
+
+CREATE OR REPLACE VIEW saas_vendas.dashboard_cards AS
+SELECT
+  /* ===============================
+     ASSINATURAS
+     =============================== */
+
+  -- Assinaturas ativas
+  (SELECT count(*)
+     FROM saas_vendas.vw_assinaturas_status
+    WHERE status = 'ativa'
+  ) AS assinaturas_ativas,
+
+  -- Assinaturas canceladas
+  (SELECT count(*)
+     FROM saas_vendas.vw_assinaturas_status
+    WHERE status = 'cancelada'
+  ) AS assinaturas_canceladas,
+
+  /* ===============================
+     INADIMPLÊNCIA
+     =============================== */
+
+  -- Assinaturas com pelo menos 1 cobrança atrasada
+  (SELECT count(DISTINCT assinatura_id)
+     FROM saas_vendas.vw_cobrancas_status
+    WHERE status = 'ATRASADA'
+  ) AS inadimplentes,
+
+  /* ===============================
+     FATURAMENTO
+     =============================== */
+
+  -- Faturamento do mês atual
+  (SELECT COALESCE(sum(valor_pago), 0)
+     FROM saas_vendas.vw_pagamentos_aprovados
+    WHERE mes_ref = date_trunc('month', current_date)
+  ) AS faturamento_mes,
+
+  -- Faturamento total (desde o início)
+  (SELECT COALESCE(sum(valor_pago), 0)
+     FROM saas_vendas.vw_pagamentos_aprovados
+  ) AS faturamento_total,
+
+  -- Faturamento líquido (PF - 27,5%)
+  (
+    (SELECT COALESCE(sum(valor_pago), 0)
+       FROM saas_vendas.vw_pagamentos_aprovados
+    )
+    * (1 - 0.275)
+  ) AS faturamento_liquido,
+
+  /* ===============================
+     COBRANÇAS
+     =============================== */
+
+  -- Cobranças em aberto
+  (SELECT COALESCE(sum(valor), 0)
+     FROM saas_vendas.vw_cobrancas_status
+    WHERE status = 'PENDENTE'
+  ) AS cobrancas_aberto,
+
+  -- Cobranças atrasadas
+  (SELECT COALESCE(sum(valor), 0)
+     FROM saas_vendas.vw_cobrancas_status
+    WHERE status = 'ATRASADA'
+  ) AS cobrancas_atrasadas;
+
+
+
+
+
+
