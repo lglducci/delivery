@@ -9,22 +9,21 @@ RETURNS TABLE (
     mes_ano        TEXT,
     conta_codigo   TEXT,
     conta_nome     TEXT,
-    saldo_inicial  NUMERIC(14,2),
-    debito         NUMERIC(14,2),
-    credito        NUMERIC(14,2),
+    saldo_inicial  NUMERIC(14,2), 
+    valor         NUMERIC(14,2),
     saldo          NUMERIC(14,2)
 )
 LANGUAGE sql
 STABLE
 AS $$
+ 
 WITH base AS (
   SELECT
     r.data_mov,
     r.conta_id,
     r.conta_codigo,
     r.conta_nome,
-    r.debito,
-    r.credito
+    r.valor::numeric AS valor
   FROM contab.ff_relatorio_razao(
     p_empresa_id,
     p_data_ini,
@@ -39,8 +38,7 @@ mensal AS (
     conta_id,
     conta_codigo,
     conta_nome,
-    SUM(debito)::numeric(14,2)  AS debito_mes,
-    SUM(credito)::numeric(14,2) AS credito_mes
+    SUM(valor)::numeric(14,2) AS valor_mes
   FROM base
   GROUP BY 1,2,3,4
 ),
@@ -48,7 +46,6 @@ mensal AS (
 saldo_mes AS (
   SELECT
     m.*,
-    c.natureza,
     (
       COALESCE(si.saldo, 0)
       +
@@ -61,8 +58,6 @@ saldo_mes AS (
       ), 0)
     )::numeric(14,2) AS saldo_inicial
   FROM mensal m
-  JOIN contab.contas c
-    ON c.id = m.conta_id
   LEFT JOIN contab.saldos_iniciais si
     ON si.empresa_id = p_empresa_id
    AND si.conta_id   = m.conta_id
@@ -74,19 +69,9 @@ SELECT
   conta_codigo,
   conta_nome,
   saldo_inicial,
-  debito_mes  AS debito,
-  credito_mes AS credito,
-
-  CASE
-    -- contas DEVEDORAS (ativo, despesa)
-    WHEN natureza = 'D' THEN
-      saldo_inicial + debito_mes - credito_mes
-
-    -- contas CREDORAS (passivo, receita, PL)
-    WHEN natureza = 'C' THEN
-      saldo_inicial + credito_mes - debito_mes
-  END::numeric(14,2) AS saldo
-
+  valor_mes AS valor,
+  (saldo_inicial + valor_mes)::numeric(14,2) AS saldo
 FROM saldo_mes
 ORDER BY mes_ini, conta_codigo;
+
 $$;

@@ -16,6 +16,7 @@ RETURNS TABLE (
 LANGUAGE sql
 STABLE
 AS $$
+ 
 WITH contas_filtradas AS (
     SELECT c.id, c.codigo::text AS codigo, c.nome::text AS nome, c.natureza
     FROM contab.contas c
@@ -139,4 +140,5 @@ SELECT
 FROM sem_movimento s
 
 ORDER BY data_mov, conta_codigo;
+
 $$;

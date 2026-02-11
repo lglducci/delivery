@@ -1,4 +1,4 @@
- CREATE OR REPLACE FUNCTION contab.fn_balancete(
+   CREATE OR REPLACE FUNCTION contab.fn_balancete(
     p_empresa_id BIGINT,
     p_data_ini   DATE,
     p_data_fim   DATE
@@ -10,7 +10,7 @@ RETURNS TABLE (
     saldo_inicial NUMERIC(14,2),
     total_debito  NUMERIC(14,2),
     total_credito NUMERIC(14,2),
-    saldo_final   NUMERIC(14,2)
+    saldo   NUMERIC(14,2)
 )
 LANGUAGE sql
 AS $$
@@ -42,7 +42,7 @@ SELECT
         WHEN c.natureza = 'D'
         THEN COALESCE(si.saldo,0) + COALESCE(m.debito,0) - COALESCE(m.credito,0)
         ELSE COALESCE(si.saldo,0) + COALESCE(m.credito,0) - COALESCE(m.debito,0)
-    END AS saldo_final
+    END AS saldo
 FROM contab.contas c
 LEFT JOIN saldo_ini si ON si.conta_id = c.id
 LEFT JOIN mov m       ON m.conta_id  = c.id

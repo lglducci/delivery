@@ -9,6 +9,7 @@ RETURNS TABLE (
   valor_final   numeric(18,2)
 ) LANGUAGE sql AS
 $$
+ 
 WITH
 limites AS (
   SELECT
@@ -23,7 +24,6 @@ mov AS (
     COALESCE(r.debito,0)::numeric(18,2)  AS debito,
     COALESCE(r.credito,0)::numeric(18,2) AS credito
   FROM contab.vw_razao r
-  WHERE r.empresa_id = p_empresa_id
 ),
 map AS (
   SELECT
@@ -33,13 +33,8 @@ map AS (
     bm.ordem,
     bm.sinal
   FROM mov m
-  JOIN LATERAL (
-    SELECT bm.*
-    FROM contab.bp_mapeamento bm
-    WHERE m.conta_codigo LIKE bm.conta_prefix || '%'
-    ORDER BY length(bm.conta_prefix) DESC
-    LIMIT 1
-  ) bm ON true
+  JOIN contab.bp_mapeamento bm
+    ON m.conta_codigo LIKE bm.conta_prefix || '%'
 ),
 grupos AS (
   SELECT
@@ -55,7 +50,6 @@ grupos AS (
              THEN CASE WHEN sinal=1 THEN (debito - credito)
                        WHEN sinal=-1 THEN (credito - debito)
                        ELSE 0 END
-             ELSE 0 END
              ELSE 0 END)::numeric(18,2) AS valor_final
   FROM map
   CROSS JOIN limites l
