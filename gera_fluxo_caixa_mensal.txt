@@ -1,0 +1,80 @@
+ CREATE OR REPLACE FUNCTION contab.gera_fluxo_caixa_mensal (
+    p_empresa_id BIGINT,
+    p_data_ini   DATE,
+    p_data_fim   DATE
+)
+RETURNS TABLE (
+    ano INT,
+    mes INT,
+    entrada NUMERIC(14,2),
+    saida   NUMERIC(14,2),
+    saldo   NUMERIC(14,2)
+)
+LANGUAGE sql
+AS $$
+WITH contas_caixa AS (
+    SELECT id
+    FROM contab.contas
+    WHERE tipo = 'ATIVO'
+      AND analitica = TRUE
+      AND (
+            codigo LIKE '1.1.1%'  -- Caixa
+         OR codigo LIKE '1.1.2%'  -- Bancos
+      )
+),
+movimentos AS (
+    SELECT
+        l.data_mov::date AS data_mov,
+        CASE
+            WHEN c.natureza = 'D' THEN COALESCE(l.debito,0)
+            ELSE COALESCE(l.credito,0)
+        END AS entrada,
+        CASE
+            WHEN c.natureza = 'D' THEN COALESCE(l.credito,0)
+            ELSE COALESCE(l.debito,0)
+        END AS saida
+    FROM contab.lancamentos l
+    JOIN contab.contas c ON c.id = l.conta_id
+    WHERE l.empresa_id = p_empresa_id
+      AND l.conta_id IN (SELECT id FROM contas_caixa)
+),
+saldo_implantacao AS (
+    SELECT COALESCE(SUM(si.saldo),0) AS saldo
+    FROM contab.saldos_iniciais si
+    WHERE si.empresa_id = p_empresa_id
+      AND si.conta_id IN (SELECT id FROM contas_caixa)
+      AND si.data_base <= p_data_ini
+),
+mensal AS (
+    SELECT
+        EXTRACT(YEAR FROM m.data_mov)::int  AS ano,
+        EXTRACT(MONTH FROM m.data_mov)::int AS mes,
+        SUM(m.entrada) AS entrada,
+        SUM(m.saida)   AS saida,
+        MAX(m.data_mov) AS data_fim_mes
+    FROM movimentos m
+    WHERE m.data_mov BETWEEN p_data_ini AND p_data_fim
+    GROUP BY 1,2
+)
+
+SELECT
+    me.ano,
+    me.mes,
+    me.entrada,
+    me.saida,
+
+    -- saldo acumulado até o fim do mês = implantação + movimentos <= último dia do mês
+    (
+      si.saldo
+      +
+      COALESCE((
+        SELECT SUM(m2.entrada - m2.saida)
+        FROM movimentos m2
+        WHERE m2.data_mov <= me.data_fim_mes
+      ),0)
+    ) AS saldo
+
+FROM mensal me
+CROSS JOIN saldo_implantacao si
+ORDER BY me.ano, me.mes;
+$$;
