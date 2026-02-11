@@ -1,0 +1,38 @@
+CREATE TABLE  config_meios_recebimento (
+    id BIGSERIAL PRIMARY KEY,
+    empresa_id BIGINT NOT NULL REFERENCES empresas(id),
+
+    tipo TEXT NOT NULL CHECK (
+        tipo IN ('DINHEIRO','PIX','DEBITO','CREDITO','FIADO')
+    ), 
+    descricao TEXT NOT NULL, 
+    dias_liquidacao INT NOT NULL DEFAULT 0,   -- D+0, D+1, D+30
+    taxa_percentual NUMERIC(5,2) NOT NULL DEFAULT 0.00, 
+    conta_financeira_id BIGINT NULL REFERENCES contab.contas(id), 
+    conta_provisao_id BIGINT NULL REFERENCES contab.contas(id), 
+    ativo BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+
+
+
+ALTER TABLE cartoes_compras
+ADD COLUMN conta_contabil_id BIGINT
+REFERENCES contab.contas(id);
+ CREATE INDEX idx_cartoes_transacoes_compra
+ON cartoes_transacoes (empresa_id, compra_id);
+
+
+
+ALTER TABLE contas_a_receber
+ADD CONSTRAINT fk_contas_a_receber_conta_contabil
+FOREIGN KEY (contabil_id)
+REFERENCES contab.contas(id);
+
+
+ALTER TABLE contas_a_pagar
+ADD CONSTRAINT fk_contas_a_pagar_conta_contabil
+FOREIGN KEY (contabil_id)
+REFERENCES contab.contas(id);
+
+ 

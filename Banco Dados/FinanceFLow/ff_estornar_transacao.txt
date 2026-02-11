@@ -145,9 +145,17 @@ BEGIN
 RETURNING id INTO v_estorno_id;
 
 UPDATE transacoes
-   SET origem_id = v_estorno_id
- WHERE id = v_transacao.id
+   SET origem_id =   v_transacao.id
+ WHERE id = v_estorno_id  
    AND empresa_id = p_empresa_id;
+
+
+
+UPDATE transacoes
+   SET origem_id =   v_estorno_id   
+ WHERE id = v_transacao.id 
+   AND empresa_id = p_empresa_id;
+
 
   RETURN 'sucesso';
 
