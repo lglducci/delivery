@@ -1,4 +1,4 @@
- CREATE OR REPLACE FUNCTION contab.ff_diario_staging_conciliar_automatico(
+   CREATE OR REPLACE FUNCTION contab.ff_diario_staging_conciliar_automatico(
     p_empresa_id bigint,
     p_lote_id uuid
 )
@@ -36,45 +36,46 @@ BEGIN
           AND codigo = r.modelo_codigo
           AND ativo = true
         LIMIT 1;
-
+  
+     if r.modelo_codigo <> 'ESTORNO' then 
         IF v_modelo_id IS NULL THEN
             v_msg := 'Modelo inexistente ou inativo; ';
         END IF;
-
+  end if;
         ------------------------------------------------------------------
         -- 2) MODELO TEM LINHAS
         ------------------------------------------------------------------
-        IF v_modelo_id IS NOT NULL THEN
-            SELECT EXISTS (
-                SELECT 1
-                FROM contab.modelos_linhas
-                WHERE empresa_id = p_empresa_id
-                  AND modelo_id = v_modelo_id
-            )
-            INTO v_tem_linhas;
+       IF v_modelo_id IS NOT NULL  THEN
+           SELECT EXISTS (
+               SELECT 1
+               FROM contab.modelos_linhas
+               WHERE empresa_id = p_empresa_id
+                 AND modelo_id = v_modelo_id
+           )
+           INTO v_tem_linhas;
 
-            IF NOT v_tem_linhas THEN
-                v_msg := COALESCE(v_msg,'') || 'Modelo sem linhas contábeis; ';
-            END IF;
-        END IF;
+           IF NOT v_tem_linhas THEN
+               v_msg := COALESCE(v_msg,'') || 'Modelo sem linhas contábeis; ';
+           END IF;
+       END IF;
 
         ------------------------------------------------------------------
         -- 3) PARCEIRO OBRIGATÓRIO?
         ------------------------------------------------------------------
-        IF v_modelo_id IS NOT NULL THEN
-            SELECT EXISTS (
-                SELECT 1
-                FROM contab.modelos_linhas
-                WHERE empresa_id = p_empresa_id
-                  AND modelo_id = v_modelo_id
-                  AND obrigatorio = true
-            )
-            INTO v_exige_parceiro;
+      --  IF v_modelo_id IS NOT NULL THEN
+     --       SELECT EXISTS (
+      --          SELECT 1
+      --          FROM contab.modelos_linhas
+       --         WHERE empresa_id = p_empresa_id
+       ----           AND modelo_id = v_modelo_id
+           ---       AND obrigatorio = true
+        --    )
+         --   INTO v_exige_parceiro;
 
-            IF v_exige_parceiro AND r.parceiro_id IS NULL THEN
-                v_msg := COALESCE(v_msg,'') || 'Parceiro obrigatório; ';
-            END IF;
-        END IF;
+         --   IF v_exige_parceiro AND r.parceiro_id IS NULL THEN
+         --       v_msg := COALESCE(v_msg,'') || 'Parceiro obrigatório; ';
+         --   END IF;
+       -- END IF;
 
         ------------------------------------------------------------------
         -- 4) VALOR

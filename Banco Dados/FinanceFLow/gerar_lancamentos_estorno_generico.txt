@@ -1,29 +1,18 @@
- CREATE OR REPLACE FUNCTION contab.gerar_lancamentos_estorno_generico(
-    p_diario_id  BIGINT,
+  CREATE OR REPLACE FUNCTION contab.gerar_lancamentos_estorno_generico(
+    p_diario_id  BIGINT,   -- diário 15 (ESTORNO)
     p_empresa_id BIGINT
 )
 RETURNS void
 LANGUAGE plpgsql
 AS $$
 DECLARE
-    v_diario               contab.diario%ROWTYPE;
-    v_categoria_id         BIGINT;
-    v_grupo_contabil       TEXT;
-    v_modelo               contab.modelos%ROWTYPE;
-    v_valor                NUMERIC(14,2);
-
-    -- Vamos assumir que o MODELO ORIGINAL tem 2 pernas (D e C)
-    v_linha_debito         contab.modelos_linhas%ROWTYPE;
-    v_linha_credito        contab.modelos_linhas%ROWTYPE;
-
-    v_qtd_D                INT;
-    v_qtd_C                INT;
+    v_diario_estorno   contab.diario%ROWTYPE;
+    v_diario_origem_id BIGINT;
+    v_lote_id          BIGINT;
 BEGIN
-    ------------------------------------------------------------------
-    -- PASSO 1) Carrega o diário e valida que é ESTORNO (genérico)
-    ------------------------------------------------------------------
+    -- 1) Carrega diário de estorno (ex: 15)
     SELECT *
-      INTO v_diario
+      INTO v_diario_estorno
       FROM contab.diario
      WHERE id = p_diario_id
        AND empresa_id = p_empresa_id
@@ -33,145 +22,43 @@ BEGIN
         RAISE EXCEPTION 'Diário de estorno % não encontrado.', p_diario_id;
     END IF;
 
-    v_valor := v_diario.valor_total;
+    -- 2) Pega o diário origem (ex: 5) do JSON
+    v_diario_origem_id := (v_diario_estorno.outros ->> 'origem_id')::BIGINT;
 
-    IF v_valor IS NULL OR v_valor <= 0 THEN
-        RAISE EXCEPTION 'Valor inválido no diário %.', p_diario_id;
+    IF v_diario_origem_id IS NULL THEN
+        RAISE EXCEPTION 'Diário de estorno % sem origem_id.', p_diario_id;
     END IF;
 
-    ------------------------------------------------------------------
-    -- PASSO 2) Pega categoria_id do diário e resolve o grupo_contabil
-    ------------------------------------------------------------------
-    v_categoria_id := (v_diario.outros ->> 'categoria_id')::BIGINT;
+    -- 3) Gera um lote único para a nova partida dobrada
+    v_lote_id := nextval('contab.lote_id_seq');
 
-    IF v_categoria_id IS NULL THEN
-        RAISE EXCEPTION 'Estorno sem categoria_id em outros.';
-    END IF;
-
-    SELECT grupo_contabil
-      INTO v_grupo_contabil
-      FROM categorias_gerenciais
-     WHERE id = v_categoria_id
-       AND empresa_id = p_empresa_id;
-
-    IF v_grupo_contabil IS NULL THEN
-        RAISE EXCEPTION 'Categoria % sem grupo_contabil.', v_categoria_id;
-    END IF;
-
-    ------------------------------------------------------------------
-    -- PASSO 3) Carrega o MODELO ORIGINAL (ex: PAGAR, RECEBER, etc)
-    ------------------------------------------------------------------
-    SELECT *
-      INTO v_modelo
-      FROM contab.modelos
-     WHERE codigo = v_grupo_contabil
-       AND empresa_id = p_empresa_id
-       AND ativo = TRUE;
-
-    IF NOT FOUND THEN
-        RAISE EXCEPTION 'Modelo contábil % não encontrado.', v_grupo_contabil;
-    END IF;
-
-    ------------------------------------------------------------------
-    -- PASSO 4) Valida que o modelo original tem 1 perna D e 1 perna C
-    -- (pra poder inverter com segurança)
-    ------------------------------------------------------------------
-    SELECT COUNT(*) INTO v_qtd_D
-      FROM contab.modelos_linhas
-     WHERE modelo_id = v_modelo.id
-       AND empresa_id = p_empresa_id
-       AND UPPER(TRIM(dc)) = 'D';
-
-    SELECT COUNT(*) INTO v_qtd_C
-      FROM contab.modelos_linhas
-     WHERE modelo_id = v_modelo.id
-       AND empresa_id = p_empresa_id
-       AND UPPER(TRIM(dc)) = 'C';
-
-    IF v_qtd_D <> 1 OR v_qtd_C <> 1 THEN
-        RAISE EXCEPTION
-          'Modelo % inválido: precisa ter 1 linha D e 1 linha C (D=% / C=%).',
-          v_modelo.codigo, v_qtd_D, v_qtd_C;
-    END IF;
-
-    ------------------------------------------------------------------
-    -- PASSO 5) Pega exatamente as 2 linhas do modelo original
-    ------------------------------------------------------------------
-    SELECT *
-      INTO v_linha_debito
-      FROM contab.modelos_linhas
-     WHERE modelo_id = v_modelo.id
-       AND empresa_id = p_empresa_id
-       AND UPPER(TRIM(dc)) = 'D'
-     LIMIT 1;
-
-    SELECT *
-      INTO v_linha_credito
-      FROM contab.modelos_linhas
-     WHERE modelo_id = v_modelo.id
-       AND empresa_id = p_empresa_id
-       AND UPPER(TRIM(dc)) = 'C'
-     LIMIT 1;
-
-    IF v_linha_debito.conta_id IS NULL OR v_linha_credito.conta_id IS NULL THEN
-        RAISE EXCEPTION 'Modelo % com conta_id nulo nas linhas.', v_modelo.codigo;
-    END IF;
-
-    ------------------------------------------------------------------
-    -- PASSO 6) ESTORNO = INVERTER OS LADOS
-    --
-    -- Original:
-    --   Linha D -> debito = valor
-    --   Linha C -> credito = valor
-    --
-    -- Estorno (invertido):
-    --   Linha D vira CRÉDITO
-    --   Linha C vira DÉBITO
-    ------------------------------------------------------------------
-
-    -- 6.1) Linha que era D no original -> agora vira CRÉDITO no estorno
+    -- 4) Insere estorno invertendo D/C do diário 5
     INSERT INTO contab.lancamentos (
-        empresa_id,
         diario_id,
+        empresa_id,
         data_mov,
         conta_id,
         historico,
         debito,
         credito,
-        modelo_id
+        modelo_id,
+        origem,
+        lote_id
     )
-    VALUES (
-        p_empresa_id,
-        v_diario.id,
-        v_diario.data_mov,
-        v_linha_debito.conta_id,
-        'ESTORNO - ' || v_diario.historico,
-        0,
-        v_valor,
-        v_modelo.id
-    );
-
-    -- 6.2) Linha que era C no original -> agora vira DÉBITO no estorno
-    INSERT INTO contab.lancamentos (
-        empresa_id,
-        diario_id,
-        data_mov,
-        conta_id,
-        historico,
-        debito,
-        credito,
-        modelo_id
-    )
-    VALUES (
-        p_empresa_id,
-        v_diario.id,
-        v_diario.data_mov,
-        v_linha_credito.conta_id,
-        'ESTORNO - ' || v_diario.historico,
-        v_valor,
-        0,
-        v_modelo.id
-    );
+    SELECT
+        v_diario_estorno.id,         -- grava no diário 15
+        l.empresa_id,
+        v_diario_estorno.data_mov,
+        l.conta_id,
+        'ESTORNO - ' || l.historico,
+        l.credito,                   -- INVERTE
+        l.debito,                    -- INVERTE
+        l.modelo_id,
+        'ESTORNO',
+        v_lote_id
+    FROM contab.lancamentos l
+    WHERE l.diario_id = v_diario_origem_id
+      AND l.empresa_id = p_empresa_id;
 
 END;
 $$;

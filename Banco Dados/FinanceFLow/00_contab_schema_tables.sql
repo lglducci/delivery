@@ -2,6 +2,37 @@
 
 CREATE SCHEMA IF NOT EXISTS contab;
 SET search_path = contab, public;
+ 
+-----------------------------------------------------------
+-- 1) PLANO DE CONTAS
+-----------------------------------------------------------
+CREATE TABLE contab.contas (
+  id              	  BIGSERIAL PRIMARY KEY,
+  codigo            	VARCHAR(30) NOT NULL  ,
+  empresa_id      	bigint                  NOT NULL REFERENCES public.empresas(id),
+  nome         	VARCHAR(120) NOT NULL,
+  tipo              	VARCHAR(20)   NOT NULL CHECK (tipo IN ('ATIVO','PASSIVO','PL','RECEITA','CUSTO','DESPESA')),
+  natureza        	CHAR(1)             NOT NULL CHECK (natureza IN ('D','C')),
+  nivel           	INT                      NOT NULL DEFAULT 1,
+  conta_pai_id   	BIGINT                NULL REFERENCES contab.contas(id) ON DELETE SET NULL,
+  analitica       	BOOLEAN           NOT NULL DEFAULT TRUE,
+  sistema                     BOOLEAN           NOT NULL DEFAULT  FALSE
+);
+
+ 
+
+ ALTER TABLE contab.contas
+ADD CONSTRAINT contas_empresa_codigo_key
+UNIQUE (empresa_id, codigo);
+
+
+-----------------------------------------------------------
+-- 3) DIÁRIO
+-----------------------------------------------------------
+     BEGIN;
+
+CREATE SCHEMA IF NOT EXISTS contab;
+SET search_path = contab, public;
 
 -- DROP (idempotente)
  
@@ -36,8 +67,7 @@ UNIQUE (empresa_id, codigo);
 -----------------------------------------------------------
 -- 3) DIÁRIO
 -----------------------------------------------------------
-  
-drop table  contab.diario cascade ;
+ 
 
 CREATE TABLE contab.diario (
   id                  BIGSERIAL PRIMARY KEY,
@@ -72,7 +102,7 @@ CREATE TABLE contab.modelos (
   codigo      	     VARCHAR(40) NOT NULL UNIQUE,
   nome       	     VARCHAR(120) NOT NULL,
   ativo      		     BOOLEAN NOT NULL DEFAULT TRUE,
-  sistema                          BOOLEAN           NOT NULL DEFAULT  FALSE
+  sistema                          BOOLEAN           NOT NULL DEFAULT  FALSE,
  codigo_estorno           TEXT  NULL, 
 tipo_automacao           TEXT NULL  
 );
@@ -109,7 +139,7 @@ ON contab.modelos_linhas (empresa_id, modelo_id, conta_id, dc);
 -----------------------------------------------------------
 CREATE TABLE contab.lancamentos (
   id          		BIGSERIAL PRIMARY KEY,
-  diario_id     	BIGINT NOT NULL REFERENCES contab.diario(id) ON DELETE CASCADE,
+  diario_id     	BIGINT DEFAULT 0,
   empresa_id    	bigint NOT NULL REFERENCES public.empresas(id),
   data_mov      	DATE NOT NULL,
   conta_id      	BIGINT NOT NULL REFERENCES contab.contas(id),
@@ -155,9 +185,7 @@ CREATE TABLE contab.diario_staging (
 */
  
 
- 
-drop table contab.diario_staging cascade 
-
+  
 CREATE TABLE contab.diario_staging (
   id BIGSERIAL PRIMARY KEY, 
   linha  int   null , 
@@ -180,8 +208,7 @@ CREATE TABLE contab.diario_staging (
   referencia_id bigint
 );
 
-
-drop table  contab.eventos cascade;
+ 
 
  CREATE TABLE contab.eventos (
     codigo text PRIMARY KEY,
@@ -271,6 +298,7 @@ ALTER TABLE contab.lembretes
 ADD CONSTRAINT chk_lembrete_status
 CHECK (status IN ('PENDENTE','BAIXADO','CANCELADO'));
 
+ 
 
  INSERT INTO contab.conta_classificacao
 (

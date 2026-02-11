@@ -13,7 +13,10 @@ DECLARE
   v_valor       NUMERIC(14,2);
   v_deb_count   INT := 0;
   v_cred_count  INT := 0;
+  v_lote_id          BIGINT;
 BEGIN
+
+ v_lote_id := nextval('contab.lote_id_seq');
   -- 1) Diário
   SELECT * INTO v_diario
   FROM contab.diario
@@ -71,7 +74,8 @@ BEGIN
       historico,
       debito,
       credito,
-      modelo_id
+      modelo_id,
+     lote_id
     )
     VALUES (
       p_empresa_id,
@@ -81,7 +85,8 @@ BEGIN
       v_diario.historico,
       CASE WHEN r_linha.dc = 'D' THEN v_valor ELSE 0 END,
       CASE WHEN r_linha.dc = 'C' THEN v_valor ELSE 0 END,
-      v_modelo.id
+      v_modelo.id,
+     v_lote_id 
     );
 
     	IF r_linha.dc = 'D' THEN

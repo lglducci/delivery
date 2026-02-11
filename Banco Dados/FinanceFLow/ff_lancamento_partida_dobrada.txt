@@ -62,7 +62,8 @@ BEGIN
         credito,
         historico,
         criado_em,
-        lote_id
+        lote_id,
+       origem
     ) VALUES (
         p_empresa_id,
         0,
@@ -72,7 +73,8 @@ BEGIN
         p_valor,
         p_historico,
         NOW(),
-        v_lote_id
+        v_lote_id,
+       'CONTABIL'
     );
 
     -- 🔔 LEMBRETE (opcional)
