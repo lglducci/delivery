@@ -87,6 +87,11 @@ CREATE TABLE contas_financeiras (
     contabil_id BIGINT NULL
 );
 
+ ALTER TABLE public.contas_financeiras
+ADD COLUMN cadastro_completo BOOLEAN DEFAULT false;
+
+
+ 
  
  
 ---------------------------------------------------
@@ -101,6 +106,8 @@ CREATE TABLE categorias_gerenciais (
 ); 
 alter table categorias_gerenciais add meu_negocio bool default false ;
 
+ALTER TABLE public.categorias_gerenciais
+ADD COLUMN cadastro_completo BOOLEAN DEFAULT false;
 ---------------------------------------------------
 -- 6. PESSOA (Cliente / Fornecedor)
 ---------------------------------------------------

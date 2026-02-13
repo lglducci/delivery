@@ -1,0 +1,110 @@
+  CREATE OR REPLACE FUNCTION public.proc_criar_conta_financeira_completa(
+    p_id_empresa     BIGINT,
+    p_nome           TEXT,
+    p_banco          TEXT,
+    p_nro_banco      TEXT,
+    p_agencia        TEXT,
+    p_conta          TEXT,
+    p_conjunta       BOOLEAN,
+    p_juridica       BOOLEAN,
+    p_padrao         BOOLEAN,
+    p_tipo           TEXT,
+    p_saldo_inicial  NUMERIC,
+    p_codigo_contabil TEXT
+)
+RETURNS TABLE (
+    id BIGINT,
+    empresa_id BIGINT,
+    nome TEXT,
+    banco TEXT,
+    tipo TEXT,
+    saldo_inicial NUMERIC,
+    contabil_id BIGINT
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_conta_contabil_id BIGINT;
+    v_conta_fin_id BIGINT;
+BEGIN
+
+    -------------------------------------------------------
+    -- 1️⃣ CRIA CONTA CONTÁBIL (se não existir)
+    -------------------------------------------------------
+
+    v_conta_contabil_id :=
+        contab.ff_cria_conta_inexistente(
+            p_id_empresa,
+            p_codigo_contabil,
+            p_nome
+        );
+
+    -------------------------------------------------------
+    -- 2️⃣ INSERE CONTA FINANCEIRA
+    -------------------------------------------------------
+
+    INSERT INTO public.contas_financeiras (
+        empresa_id,
+        nome,
+        banco,
+        tipo,
+        saldo_inicial,
+        padrao,
+        nro_banco,
+        agencia,
+        conta,
+        conjunta,
+        juridica,
+        contabil_id
+    )
+    VALUES (
+        p_id_empresa,
+        p_nome,
+        p_banco,
+        p_tipo,
+        COALESCE(p_saldo_inicial,0),
+        p_padrao,
+        p_nro_banco,
+        p_agencia,
+        p_conta,
+        p_conjunta,
+        p_juridica,
+        v_conta_contabil_id
+    )
+     RETURNING public.contas_financeiras.id INTO v_conta_fin_id;
+
+    -------------------------------------------------------
+    -- 3️⃣ INSERE SALDO INICIAL CONTÁBIL
+    -------------------------------------------------------
+
+    INSERT INTO contab.saldos_iniciais (
+        empresa_id,
+        conta_id,
+        data_base,
+        saldo
+    )
+    VALUES (
+        p_id_empresa,
+        v_conta_contabil_id,
+        DATE '2000-01-01',
+        COALESCE(p_saldo_inicial,0)
+    );
+
+    -------------------------------------------------------
+    -- 4️⃣ RETORNA A CONTA CRIADA
+    -------------------------------------------------------
+
+    RETURN QUERY
+    SELECT
+        cf.id,
+        cf.empresa_id,
+        cf.nome,
+        cf.banco,
+        cf.tipo,
+        cf.saldo_inicial,
+        cf.contabil_id
+    FROM public.contas_financeiras cf
+    WHERE cf.id = v_conta_fin_id;
+
+END;
+$$;
