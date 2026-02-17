@@ -1,4 +1,4 @@
-    CREATE OR REPLACE FUNCTION ff_registrar_conta_pagar_com_parcelas(
+      CREATE OR REPLACE FUNCTION ff_registrar_conta_pagar_com_parcelas(
   p_empresa_id     	BIGINT,
   p_descricao      	TEXT,
   p_valor_total    	NUMERIC,
@@ -8,7 +8,8 @@
   p_fornecedor_id  	BIGINT DEFAULT NULL,
   p_categoria_id    	 BIGINT DEFAULT NULL,
   p_doc_ref              	text DEFAULT NULL,
- p_contabil_id   	BIGINT DEFAULT NULL 
+ p_forma_operacao    text DEFAULT NULL,
+ codigo  text default null 
 )
 RETURNS BIGINT
 LANGUAGE plpgsql
@@ -19,7 +20,8 @@ DECLARE
     v_valor_parcela NUMERIC;
     v_venc DATE;
     i INT;
-  v_lote_id BIGINT := NULL;
+    v_lote_id BIGINT := NULL;
+   modelo_codigo text;
 BEGIN
 
  -- Só gera lote se houver mais de 1 parcela
@@ -27,7 +29,7 @@ BEGIN
         v_lote_id := nextval('contas_a_pagar_lote_seq');
     END IF;
 
-
+modelo_codigo := NULLIF(codigo, '');
     -----------------------------------------------------------
     -- 1) PRIORIDADE TOTAL: SE p_categoria_id VEM → USA DIRETO
     -----------------------------------------------------------
@@ -69,8 +71,9 @@ BEGIN
             status,
             fornecedor_id,
            lote_id ,
-          doc_ref ,
-         contabil_id
+          doc_ref , 
+         modelo_codigo ,
+         forma_operacao
         )
         VALUES (
             p_empresa_id,
@@ -83,12 +86,35 @@ BEGIN
             'aberto',
             p_fornecedor_id,
            v_lote_id ,
-           p_doc_ref ,
-           p_contabil_id   
+           p_doc_ref , 
+           modelo_codigo ,
+          p_forma_operacao    
         )
         RETURNING id INTO v_id;
 
+UPDATE contas_a_pagar cp
+SET modelo_codigo = (
+    SELECT m.codigo
+    FROM contab.categorias_modelos cm
+    JOIN contab.modelos m
+      ON m.id = cm.modelo_id
+    WHERE cm.categoria_id = cp.categoria_id
+      AND cm.empresa_id = cp.empresa_id
+      AND cm.ativo = true
+      AND m.ativo = true
+      AND m.forma_operacao = cm.forma_operacao 
+      and cp.empresa_id =  p_empresa_id     
+    ORDER BY m.id
+    LIMIT 1
+)
+WHERE cp.id = v_id
+AND cp.modelo_codigo IS NULL 
+AND cp.empresa_id =  p_empresa_id     ;
+
+
     END LOOP;
+
+ 
 
     RETURN v_id; -- retorna a última parcela criada
 END;

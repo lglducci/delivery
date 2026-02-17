@@ -108,6 +108,35 @@ alter table categorias_gerenciais add meu_negocio bool default false ;
 
 ALTER TABLE public.categorias_gerenciais
 ADD COLUMN cadastro_completo BOOLEAN DEFAULT false;
+
+
+
+
+ALTER TABLE public.categorias_gerenciais
+ADD COLUMN classificacao TEXT;
+
+
+
+
+ ALTER TABLE public.categorias_gerenciais
+ADD CONSTRAINT categorias_gerenciais_classificacao_check
+CHECK (
+  classificacao IN (
+    'despesa',
+    'estoque',
+    'receita',
+    'ativo',
+    'passivo'
+  )
+);
+
+
+ALTER TABLE public.categorias_gerenciais
+ALTER COLUMN classificacao SET DEFAULT 'despesa';
+
+
+
+
 ---------------------------------------------------
 -- 6. PESSOA (Cliente / Fornecedor)
 ---------------------------------------------------
@@ -183,6 +212,19 @@ ALTER TABLE contas_a_pagar ALTER COLUMN lote_id SET DEFAULT nextval('contas_a_pa
 
 ALTER TABLE contas_a_pagar
 ADD COLUMN contabil_id BIGINT;
+
+
+
+ALTER TABLE public.contas_a_pagar
+ADD COLUMN forma_operacao VARCHAR(30);
+ 
+ALTER TABLE public.contas_a_pagar
+ADD CONSTRAINT chk_forma_operacao_cp
+CHECK (forma_operacao IN (
+    'FORNECEDOR',
+    'FINANCIAMENTO',
+    'CARTAO'
+));
  
 
 ---------------------------------------------------

@@ -1,0 +1,73 @@
+ DROP FUNCTION IF EXISTS public.ff_insere_categoria_gerencial;
+
+CREATE OR REPLACE FUNCTION public.ff_insere_categoria_gerencial(
+    p_empresa_id BIGINT,
+    p_nome TEXT,
+    p_tipo TEXT,
+    p_classificacao TEXT DEFAULT 'despesa'
+)
+RETURNS BIGINT
+LANGUAGE plpgsql
+AS
+$$
+DECLARE
+    v_categoria_id BIGINT;
+BEGIN
+
+    ----------------------------------------------------------------
+    -- 1️⃣ Validações básicas
+    ----------------------------------------------------------------
+    IF p_nome IS NULL OR trim(p_nome) = '' THEN
+        RAISE EXCEPTION 'Nome da categoria é obrigatório.';
+    END IF;
+
+    IF lower(p_tipo) NOT IN ('entrada', 'saida') THEN
+        RAISE EXCEPTION 'Tipo deve ser entrada ou saida.';
+    END IF;
+
+    IF lower(p_classificacao) NOT IN ('despesa','estoque','receita','ativo','passivo') THEN
+        RAISE EXCEPTION 'Classificacao inválida.';
+    END IF;
+
+    ----------------------------------------------------------------
+    -- 2️⃣ Inserir categoria
+    ----------------------------------------------------------------
+    INSERT INTO public.categorias_gerenciais (
+        empresa_id,
+        nome,
+        tipo,
+        classificacao,
+        cadastro_completo
+    )
+    VALUES (
+        p_empresa_id,
+        trim(p_nome),
+        lower(p_tipo),
+        lower(p_classificacao),
+        false
+    )
+    RETURNING id INTO v_categoria_id;
+
+    ----------------------------------------------------------------
+    -- 3️⃣ Vincular automaticamente ao template contábil
+    ----------------------------------------------------------------
+    PERFORM contab.ff_vincular_categoria_template(
+        p_empresa_id,
+        v_categoria_id
+    );
+
+    ----------------------------------------------------------------
+    -- 4️⃣ Marcar como completo
+    ----------------------------------------------------------------
+    UPDATE public.categorias_gerenciais
+    SET cadastro_completo = true
+    WHERE id = v_categoria_id
+      AND empresa_id = p_empresa_id;
+
+    ----------------------------------------------------------------
+    -- 5️⃣ Retornar ID criado
+    ----------------------------------------------------------------
+    RETURN v_categoria_id;
+
+END;
+$$;

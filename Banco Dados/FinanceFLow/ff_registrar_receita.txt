@@ -52,6 +52,28 @@ BEGIN
     p_origem 
   )
   RETURNING id INTO v_id;
+UPDATE public.transacoes t
+SET evento_codigo = sub.codigo
+FROM (
+    SELECT 
+        t2.id,
+        m.codigo
+    FROM public.transacoes t2
+    JOIN contab.categorias_modelos cm
+        ON cm.categoria_id = t2.categoria_id
+       AND cm.empresa_id = t2.empresa_id
+       AND cm.ativo = true
+       AND cm.forma_operacao = 'VISTA'
+    JOIN contab.modelos m
+        ON m.id = cm.modelo_id
+       AND m.ativo = true
+    WHERE t2.id = v_id
+      AND t2.empresa_id = p_empresa_id
+    ORDER BY m.id
+    LIMIT 1
+) sub
+WHERE t.id = sub.id
+AND t.evento_codigo IS NULL;
 
   RETURN v_id;
 END;

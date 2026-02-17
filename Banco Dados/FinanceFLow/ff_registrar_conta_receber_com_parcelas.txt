@@ -7,11 +7,11 @@
   p_parcelas       INT DEFAULT 1,
   p_fornecedor_id     BIGINT DEFAULT NULL,
   p_categoria_id   BIGINT DEFAULT NULL,
-  p_doc_ref   text DEFAULT NULL,
- p_contabil_id   	BIGINT DEFAULT NULL ,
+  p_doc_ref   text DEFAULT NULL,   
  p_conta_id   	BIGINT DEFAULT NULL ,
  p_forma_recebimento TEXT default NULL,
- p_canal   text default null 
+ p_canal   text default null ,
+ p_codigo   text default null 
 )
 RETURNS BIGINT
 LANGUAGE plpgsql
@@ -23,7 +23,11 @@ DECLARE
     v_venc DATE;
     i INT;
    v_lote_id BIGINT := NULL;
+modelo_codigo  TEXT;
 BEGIN
+
+
+modelo_codigo := NULLIF(p_codigo  , '');
 
         -- Só gera lote se houver mais de 1 parcela
     IF p_parcelas > 1 THEN
@@ -72,7 +76,7 @@ BEGIN
             status,
             lote_id  ,
           doc_ref ,
-          contabil_id,
+         modelo_codigo,
           conta_id,
           forma_recebimento,
           canal
@@ -88,15 +92,36 @@ BEGIN
             i,
             'aberto',
               v_lote_id,
-            p_doc_ref,
-           p_contabil_id   ,
+            p_doc_ref, 
+           modelo_codigo ,
             p_conta_id   ,
            p_forma_recebimento ,
            p_canal    
         )
         RETURNING id INTO v_id;
+    UPDATE contas_a_receber cr
+SET modelo_codigo = (
+    SELECT m.codigo
+    FROM contab.categorias_modelos cm
+    JOIN contab.modelos m
+      ON m.id = cm.modelo_id
+    WHERE cm.categoria_id = cr.categoria_id
+      AND cm.empresa_id = cr.empresa_id
+      AND cm.ativo = true
+      AND m.ativo = true
+      AND m.forma_operacao = cm.forma_operacao 
+      and cr.empresa_id =  p_empresa_id     
+    ORDER BY m.id
+    LIMIT 1
+)
+WHERE cr.id = v_id
+AND cr.modelo_codigo IS NULL 
+AND cr.empresa_id =  p_empresa_id     ;
 
     END LOOP;
+
+
+ 
 
     RETURN v_id;
 END;
