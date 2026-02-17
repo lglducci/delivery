@@ -1,0 +1,155 @@
+  
+ CREATE OR REPLACE FUNCTION contab.fn_contas_por_operacao(
+    p_empresa_id bigint,
+    p_tipo_operacao text,
+    p_lado text
+)
+RETURNS SETOF contab.contas
+LANGUAGE plpgsql
+AS $$
+BEGIN
+
+
+IF p_tipo_operacao = 'null' THEN
+   p_tipo_operacao := NULL;
+END IF;
+
+IF p_lado = 'null' THEN
+   p_lado := NULL;
+END IF;
+
+    -- ======================================
+    -- FALLBACK (mostra tudo)
+    -- ======================================
+    IF p_tipo_operacao IS NULL OR p_tipo_operacao = ''
+       OR p_lado IS NULL OR p_lado = '' THEN
+
+        RETURN QUERY
+        SELECT *
+        FROM contab.contas c
+        WHERE c.empresa_id = p_empresa_id
+          AND c.analitica = true
+        ORDER BY c.codigo;
+
+        RETURN;
+    END IF;
+
+
+    -- ======================================
+    -- CP - CONTA A PAGAR
+    -- ======================================
+    IF p_tipo_operacao = 'CP' THEN
+
+        IF p_lado = 'C' THEN
+            RETURN QUERY
+            SELECT *
+            FROM contab.contas c
+            WHERE c.empresa_id = p_empresa_id
+              AND c.analitica = true
+              AND c.codigo LIKE '2.1.%'
+            ORDER BY c.codigo;
+
+        ELSIF p_lado = 'D' THEN
+            RETURN QUERY
+            SELECT *
+            FROM contab.contas c
+            WHERE c.empresa_id = p_empresa_id
+              AND c.analitica = true
+              AND (
+                    c.codigo LIKE '1.%'
+                 OR c.codigo LIKE '3.%'
+                 OR c.codigo LIKE '4.%'
+                  )
+              AND c.codigo NOT LIKE '1.1.1.%'
+              AND c.codigo NOT LIKE '1.1.2.%'
+            ORDER BY c.codigo;
+        END IF;
+
+    END IF;
+
+
+    -- ======================================
+    -- CR - CONTA A RECEBER
+    -- ======================================
+    IF p_tipo_operacao = 'CR' THEN
+
+        IF p_lado = 'D' THEN
+            RETURN QUERY
+            SELECT *
+            FROM contab.contas c
+            WHERE c.empresa_id = p_empresa_id
+              AND c.analitica = true
+              AND c.codigo LIKE '1.1.2%'
+            ORDER BY c.codigo;
+
+        ELSIF p_lado = 'C' THEN
+            RETURN QUERY
+            SELECT *
+            FROM contab.contas c
+            WHERE c.empresa_id = p_empresa_id
+              AND c.analitica = true
+              AND c.codigo LIKE '5.%'
+            ORDER BY c.codigo;
+        END IF;
+
+    END IF;
+
+
+    -- ======================================
+    -- CX - MOVIMENTO CAIXA
+    -- ======================================
+    IF p_tipo_operacao = 'CX' THEN
+
+        IF p_lado = 'D' THEN
+            RETURN QUERY
+            SELECT *
+            FROM contab.contas c
+            WHERE c.empresa_id = p_empresa_id
+              AND c.analitica = true
+              AND c.codigo LIKE '2.%'
+            ORDER BY c.codigo;
+
+        ELSIF p_lado = 'C' THEN
+            RETURN QUERY
+            SELECT *
+            FROM contab.contas c
+            WHERE c.empresa_id = p_empresa_id
+              AND c.analitica = true
+              AND c.codigo LIKE '1.1.%'
+            ORDER BY c.codigo;
+        END IF;
+
+    END IF;
+
+
+    -- ======================================
+    -- IM - IMOBILIZADO
+    -- ======================================
+    IF p_tipo_operacao = 'IM' THEN
+
+        IF p_lado = 'D' THEN
+            RETURN QUERY
+            SELECT *
+            FROM contab.contas c
+            WHERE c.empresa_id = p_empresa_id
+              AND c.analitica = true
+              AND c.codigo LIKE '1.2.%'
+            ORDER BY c.codigo;
+
+        ELSIF p_lado = 'C' THEN
+            RETURN QUERY
+            SELECT *
+            FROM contab.contas c
+            WHERE c.empresa_id = p_empresa_id
+              AND c.analitica = true
+              AND c.codigo LIKE '2.1.%'
+            ORDER BY c.codigo;
+        END IF;
+
+    END IF;
+
+END;
+$$;
+
+ 
+ 

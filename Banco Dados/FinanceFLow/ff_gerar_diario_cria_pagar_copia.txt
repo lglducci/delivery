@@ -1,15 +1,16 @@
-    CREATE OR REPLACE FUNCTION contab.ff_gerar_diario_cria_receber(
+    CREATE OR REPLACE FUNCTION contab.ff_gerar_diario_cria_pagar(
     p_empresa_id BIGINT,
-    p_data    DATE   
+    p_data    DATE 
 )
-RETURNS void
+RETURNS INTEGER
 LANGUAGE plpgsql
 AS $$
+ 
 DECLARE
     v_qtd INTEGER := 0;
 BEGIN
     /*
-      🔹 Tabela usada: fin.contas_receber  (troque se o nome for outro)
+      🔹 Tabela usada: fin.contas_pagar  (troque se o nome for outro)
       Campos esperados (adapte se precisar):
         - empresa_id
         - descricao
@@ -40,45 +41,42 @@ BEGIN
     outros 
 )
 SELECT
-    cr.empresa_id,
-    MIN(cr.criado_em)::date,
- 
-        cr.modelo_codigo,
-      
-    'Criação de Recebimento: ' || MAX(cr.descricao)
-      || ' (' || MAX(cr.parcelas) || ' parcelas)',
-    'CR-' || cr.lote_id,
-    cr.fornecedor_id,
+    cp.empresa_id,
+    MIN(cp.criado_em)::date,
+    'CRIA_PAGAR',
+    'Criação de dívida: ' || MAX(cp.descricao)
+      || ' (' || MAX(cp.parcelas) || ' parcelas)',
+    'CP-' || cp.lote_id,
+    cp.fornecedor_id,
 
     -- 🔥 BUSCA DO CNPJ (NÃO NULO)
     (
       SELECT p.cpf_cnpj
       FROM public.pessoa p
-      WHERE p.id = cr.fornecedor_id
+      WHERE p.id = cp.fornecedor_id
     ) AS cnpj,
 
-    MAX(cr.vencimento)::date,
-    SUM(cr.valor),
+    MAX(cp.vencimento)::date,
+    SUM(cp.valor),
     0, 0, 0,
     'rascunho',
     jsonb_build_object(
-        'origem', 'CONTAS_RECEBER',
-        'evento', 'CRIA_RECEBER',
-        'vencimento',   MAX(cr.vencimento),
-        'parcelas',  MAX(cr.descricao),
-        'modelo',  cr.modelo_codigo 
+        'origem', 'CONTAS_PAGAR',
+        'evento', 'CRIA_PAGAR', 
+        'data criacao', MIN(cp.criado_em),
+         'parcelas', MAX(cp.parcelas)  
     ) 
-FROM contas_a_receber cr
-WHERE cr.empresa_id = p_empresa_id
-    AND cr.criado_em::date =  p_data
- -- AND cr.status IN ('aberto', 'em_aberto')
+FROM contas_a_pagar cp
+WHERE cp.empresa_id = p_empresa_id 
+ AND cp.criado_em::date =  p_data 
+  --AND cp.status IN ('aberto', 'em_aberto')
 GROUP BY
-    cr.empresa_id,
-    cr.lote_id,
-    cr.fornecedor_id,
-   cr.modelo_codigo ;
- 
+    cp.empresa_id,
+    cp.lote_id,
+    cp.fornecedor_id 
 
- 
+GET DIAGNOSTICS v_qtd = ROW_COUNT;
+RETURN v_qtd;
 END;
+ 
 $$;

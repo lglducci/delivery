@@ -1,0 +1,158 @@
+ DROP FUNCTION IF EXISTS contab.ff_vincular_categoria_template;
+
+CREATE OR REPLACE FUNCTION contab.ff_vincular_categoria_template(
+    p_empresa_id BIGINT,
+    p_categoria_id BIGINT
+)
+RETURNS TEXT
+LANGUAGE plpgsql
+AS
+$$
+DECLARE
+    v_categoria RECORD;
+    v_template RECORD;
+    v_modelo_id BIGINT;
+    v_conta_debito_id BIGINT;
+    v_conta_credito_id BIGINT;
+BEGIN
+
+    ----------------------------------------------------------------
+    -- 1️⃣ Buscar categoria
+    ----------------------------------------------------------------
+    SELECT *
+    INTO v_categoria
+    FROM public.categorias_gerenciais
+    WHERE id = p_categoria_id
+      AND empresa_id = p_empresa_id;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Categoria não encontrada.';
+    END IF;
+
+    ----------------------------------------------------------------
+    -- 2️⃣ Loop em TODOS os templates compatíveis
+    ----------------------------------------------------------------
+    FOR v_template IN
+        SELECT *
+        FROM contab.template_eventos_contabeis t
+        WHERE lower(t.natureza_fluxo) = lower(v_categoria.tipo)
+          AND lower(t.classificacao) = lower(v_categoria.classificacao)
+          AND t.ativo = true
+    LOOP
+
+        ----------------------------------------------------------------
+        -- 3️⃣ Verificar se modelo já existe
+        ----------------------------------------------------------------
+        SELECT id
+        INTO v_modelo_id
+        FROM contab.modelos
+        WHERE empresa_id = p_empresa_id
+          AND codigo = v_template.codigo_evento;
+
+        IF v_modelo_id IS NULL THEN
+
+            INSERT INTO contab.modelos (
+                empresa_id,
+                codigo,
+                nome,
+                sistema,
+                tipo_automacao,
+                forma_operacao
+            )
+            VALUES (
+                p_empresa_id,
+                v_template.codigo_evento,
+                v_template.descricao,
+                true,
+                'FINANCEIRO_PADRAO',
+                 v_template.forma_operacao
+            )
+            RETURNING id INTO v_modelo_id;
+
+        END IF;
+
+        ----------------------------------------------------------------
+        -- 4️⃣ Garantir contas existem
+        ----------------------------------------------------------------
+        PERFORM contab.ff_cria_conta_inexistente(
+            p_empresa_id,
+            v_template.conta_debito_codigo,
+            v_template.conta_debito_codigo
+        );
+
+        PERFORM contab.ff_cria_conta_inexistente(
+            p_empresa_id,
+            v_template.conta_credito_codigo,
+            v_template.conta_credito_codigo
+        );
+
+        SELECT id INTO v_conta_debito_id
+        FROM contab.contas
+        WHERE empresa_id = p_empresa_id
+          AND codigo = v_template.conta_debito_codigo;
+
+        SELECT id INTO v_conta_credito_id
+        FROM contab.contas
+        WHERE empresa_id = p_empresa_id
+          AND codigo = v_template.conta_credito_codigo;
+
+        ----------------------------------------------------------------
+        -- 5️⃣ Inserir linhas do modelo (D e C)
+        ----------------------------------------------------------------
+        INSERT INTO contab.modelos_linhas (
+            modelo_id,
+            empresa_id,
+            ordem,
+            conta_id,
+            dc,
+            fonte_valor,
+            perna_fixa
+        )
+        VALUES
+        (v_modelo_id, p_empresa_id, 1, v_conta_debito_id, 'D', 'VALOR', true)
+        ON CONFLICT DO NOTHING;
+
+        INSERT INTO contab.modelos_linhas (
+            modelo_id,
+            empresa_id,
+            ordem,
+            conta_id,
+            dc,
+            fonte_valor,
+            perna_fixa
+        )
+        VALUES
+        (v_modelo_id, p_empresa_id, 2, v_conta_credito_id, 'C', 'VALOR', true)
+        ON CONFLICT DO NOTHING;
+
+        ----------------------------------------------------------------
+        -- 6️⃣ Vincular modelo à categoria
+        ----------------------------------------------------------------
+        INSERT INTO contab.categorias_modelos (
+            empresa_id,
+            categoria_id,
+            modelo_id,
+            forma_operacao
+        )
+        VALUES (
+            p_empresa_id,
+            p_categoria_id,
+            v_modelo_id,
+           v_template.forma_operacao
+        )
+        ON CONFLICT DO NOTHING;
+
+    END LOOP;
+
+    ----------------------------------------------------------------
+    -- 7️⃣ Marcar categoria como completa
+    ----------------------------------------------------------------
+    UPDATE public.categorias_gerenciais
+    SET cadastro_completo = true
+    WHERE id = p_categoria_id
+      AND empresa_id = p_empresa_id;
+
+    RETURN 'OK';
+
+END;
+$$;

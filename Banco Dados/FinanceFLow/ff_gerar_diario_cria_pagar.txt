@@ -1,30 +1,15 @@
-    CREATE OR REPLACE FUNCTION contab.ff_gerar_diario_cria_pagar(
+ CREATE OR REPLACE FUNCTION contab.ff_gerar_diario_cria_pagar(
     p_empresa_id BIGINT,
-    p_data    DATE 
+    p_data DATE
 )
 RETURNS INTEGER
 LANGUAGE plpgsql
 AS $$
- 
 DECLARE
     v_qtd INTEGER := 0;
 BEGIN
-    /*
-      🔹 Tabela usada: fin.contas_pagar  (troque se o nome for outro)
-      Campos esperados (adapte se precisar):
-        - empresa_id
-        - descricao
-        - valor
-        - vencimento
-        - fornecedor_id        -- parceiro
-        - parcelas             -- total de parcelas da dívida
-        - parcela_nr           -- nº da parcela (1..N)
-        - status               -- 'aberto', 'pago', etc
-        - criado_em            -- data de criação da dívida
-        - lote_id              -- identificador do grupo de parcelas da mesma dívida
-    */
 
- INSERT INTO contab.diario_staging (
+INSERT INTO contab.diario_staging (
     empresa_id,
     data_mov,
     modelo_codigo,
@@ -43,42 +28,63 @@ BEGIN
 SELECT
     cp.empresa_id,
     MIN(cp.criado_em)::date,
-    'CRIA_PAGAR',
+
+    -- 🔥 RESOLUÇÃO INTELIGENTE DO MODELO
+    COALESCE(
+        cp.modelo_codigo,
+        m.codigo
+    ) AS modelo_codigo,
+
     'Criação de dívida: ' || MAX(cp.descricao)
-      || ' (' || MAX(cp.parcelas) || ' parcelas)',
+        || ' (' || MAX(cp.parcelas) || ' parcelas)',
+
     'CP-' || cp.lote_id,
     cp.fornecedor_id,
 
-    -- 🔥 BUSCA DO CNPJ (NÃO NULO)
     (
-      SELECT p.cpf_cnpj
-      FROM public.pessoa p
-      WHERE p.id = cp.fornecedor_id
+        SELECT p.cpf_cnpj
+        FROM public.pessoa p
+        WHERE p.id = cp.fornecedor_id
     ) AS cnpj,
 
     MAX(cp.vencimento)::date,
     SUM(cp.valor),
     0, 0, 0,
     'rascunho',
+
     jsonb_build_object(
         'origem', 'CONTAS_PAGAR',
-        'evento', 'CRIA_PAGAR', 
-        'data criacao', MIN(cp.criado_em),
-         'parcelas', MAX(cp.parcelas) ,
-         'contabil_id', cp.contabil_id
-    ) 
+        'evento', 'CRIA_PAGAR',
+        'data_criacao', MIN(cp.criado_em),
+        'parcelas', MAX(cp.parcelas)
+    )
+
 FROM contas_a_pagar cp
-WHERE cp.empresa_id = p_empresa_id 
- AND cp.criado_em::date =  p_data 
-  --AND cp.status IN ('aberto', 'em_aberto')
+
+-- 🔵 BUSCA DO MODELO VIA CATEGORIA
+LEFT JOIN contab.categorias_modelos cm
+    ON cm.empresa_id = cp.empresa_id
+   AND cm.categoria_id = cp.categoria_id
+   AND cm.forma_operacao = 'FORNECEDOR'
+   AND cm.ativo = true
+
+LEFT JOIN contab.modelos m
+    ON m.id = cm.modelo_id
+   AND m.ativo = true
+
+WHERE cp.empresa_id = p_empresa_id
+  AND cp.criado_em::date = p_data
+
 GROUP BY
     cp.empresa_id,
     cp.lote_id,
     cp.fornecedor_id,
-    cp.contabil_id ;
+    cp.modelo_codigo,
+    m.codigo;
 
 GET DIAGNOSTICS v_qtd = ROW_COUNT;
+
 RETURN v_qtd;
+
 END;
- 
 $$;

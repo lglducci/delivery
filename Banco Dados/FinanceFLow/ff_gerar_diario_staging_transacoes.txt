@@ -42,10 +42,10 @@ BEGIN
 
         /* modelo vem da categoria (sua decisão de projeto) */
       
-    COALESCE(
-  NULLIF(t.evento_codigo, ''),
-  cg.grupo_contabil
+  COALESCE(
+  NULLIF(t.evento_codigo, '')
 ) AS modelo_codigo,
+
 
 
         COALESCE(t.descricao, '') AS historico,

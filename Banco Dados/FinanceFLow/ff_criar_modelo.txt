@@ -1,10 +1,14 @@
-  create or replace function contab.ff_criar_modelo
+    create or replace function contab.ff_criar_modelo
 (p_empresa_id int, 
  p_nome text, 
  p_token text, 
  p_conta_cred  int,
 p_conta_deb int,
- p_tipo_automacao text )
+ p_tipo_automacao text ,
+  p_tipo_operacao contab.tipo_operacao_enum
+)
+
+
 returns int as $$
 declare
     v_modelo_id int;
@@ -12,8 +16,8 @@ declare
     v_conta_cred int;
 begin
     -- cria o modelo
-    insert into contab.modelos (empresa_id, nome, codigo, tipo_automacao )
-    values (p_empresa_id, p_nome, p_token, p_tipo_automacao )
+    insert into contab.modelos (empresa_id, nome, codigo, tipo_automacao , tipo_operacao)
+    values (p_empresa_id, p_nome, p_token, p_tipo_automacao,p_tipo_operacao  )
     returning id into v_modelo_id;
 
     -- garante conta fake debito
@@ -48,3 +52,4 @@ begin
     return v_modelo_id;
 end;
 $$ language plpgsql;
+ 
