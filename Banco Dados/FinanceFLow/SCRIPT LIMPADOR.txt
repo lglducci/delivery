@@ -1,29 +1,60 @@
- BEGIN;
+        BEGIN;
 
 -- =========================
 -- DELETE DOS DADOS
 -- =========================
+DELETE FROM contas_a_pagar;
+DELETE FROM contas_a_receber;
+DELETE FROM transacoes;
+DELETE FROM cartoes;
+delete from contab.lancamentos;
+
 DELETE FROM empresa_perfil;
 DELETE FROM public.usuario_empresa;
 DELETE FROM public.usuarios;
 DELETE FROM saas_vendas.usuarios;
+DELETE FROM saas_vendas.assinaturas;
 DELETE FROM auth.users;
 DELETE FROM contab.saldos_iniciais;
+DELETE FROM contab.modelos;
+DELETE FROM contab.modelos_linhas;
+delete from contas_financeiras;
+delete from categorias_gerenciais;
+delete from pessoa;
+delete from cartoes_faturas;
+delete from cartoes_transacoes;
+delete from cartoes_compras;
+delete from cartoes;
 DELETE FROM contab.contas;
-DELETE FROM empresas;
+DELETE FROM contab.diario;
 
+DELETE FROM empresas;
+ 
 -- =========================
 -- RESET DAS SEQUENCES (ID)
 -- =========================
- 
+ CALL reset_sequence_by_max('contab',       'diario',    'id');
+CALL reset_sequence_by_max('public',       'contas_a_pagar',    'id');
+CALL reset_sequence_by_max('public',       'contas_a_receber','id');
+CALL reset_sequence_by_max('public',       'transacoes'  ,     'id');
+CALL reset_sequence_by_max('public',       'cartoes',    'id');  
+CALL reset_sequence_by_max('contab',       'lancamentos',    'id');
 CALL reset_sequence_by_max('public',       'usuario_empresa',    'id');
 CALL reset_sequence_by_max('public',       'usuarios',           'id');
-CALL reset_sequence_by_max('saas_vendas',  'usuarios',           'id');
- 
+CALL reset_sequence_by_max('saas_vendas',  'usuarios',           'id'); 
+
 CALL reset_sequence_by_max('contab',       'contas',             'id');
 CALL reset_sequence_by_max('public',       'empresas',           'id'); 
 CALL reset_sequence_by_max('contab',       'modelos',           'id');
-
- 
+CALL reset_sequence_by_max('contab',       'modelos_linhas',           'id');
+CALL reset_sequence_by_max('public',       'contas_financeiras',           'id');
+CALL reset_sequence_by_max('public',       'categorias_gerenciais',           'id');
+CALL reset_sequence_by_max('public',       'cartoes_faturas',           'id');
+CALL reset_sequence_by_max('public',       'cartoes_transacoes',           'id');
+CALL reset_sequence_by_max('public',       'cartoes_compras',           'id');
+CALL reset_sequence_by_max('public',       'cartoes',           'id');
+CALL reset_sequence_by_max('saas_vendas',  'cobrancas',           'id'); 
+CALL reset_sequence_by_max('saas_vendas',  'pagamentos',           'id'); 
+CALL reset_sequence_by_max('saas_vendas',  'assinaturas',           'id'); 
 commit;
  

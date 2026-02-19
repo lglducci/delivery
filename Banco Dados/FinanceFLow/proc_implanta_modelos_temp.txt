@@ -1,0 +1,123 @@
+  CREATE OR REPLACE FUNCTION contab.proc_implanta_modelos_temp(
+  p_empresa_id BIGINT
+)
+RETURNS VOID
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  r RECORD;
+
+  v_modelo_id BIGINT;
+
+  v_conta_id BIGINT;
+  v_codigo TEXT;
+  v_dc CHAR(1);
+  v_ordem INT;
+BEGIN
+ ------------------------------------------------------------------
+  -- LOOP 1: LINHA A LINHA DA TABELA TEMP
+  ------------------------------------------------------------------
+  FOR r IN
+    SELECT *
+    FROM saas_vendas.modelo_temp
+    ORDER BY codigo_modelo
+  LOOP
+
+    --------------------------------------------------------------
+    -- 1) MODELO
+    --------------------------------------------------------------
+    SELECT id
+    INTO v_modelo_id
+    FROM contab.modelos
+    WHERE empresa_id = p_empresa_id
+      AND codigo = r.codigo_modelo;
+
+  /*  IF v_modelo_id IS NULL THEN
+      INSERT INTO contab.modelos (
+        empresa_id,
+        codigo,
+        nome,
+        sistema
+      )
+      VALUES (
+        p_empresa_id,
+        r.codigo_modelo,
+        r.nome_modelo,
+        TRUE
+      )
+      RETURNING id INTO v_modelo_id;
+    END IF;
+*/
+    --------------------------------------------------------------
+    -- LOOP 2: PERNAS (D / C)
+    --------------------------------------------------------------
+    FOR v_ordem, v_codigo, v_dc IN
+      SELECT 1, r.codigo_debito,  'D'
+      UNION ALL
+      SELECT 2, r.codigo_credito, 'C'
+    LOOP
+
+      ------------------------------------------------------------
+      -- 2) CONTA (resolve ou cria)
+      ------------------------------------------------------------
+      SELECT id
+      INTO v_conta_id
+      FROM contab.contas
+      WHERE empresa_id = p_empresa_id
+        AND (
+          v_codigo = codigo
+          OR v_codigo LIKE codigo || '.%'
+        )
+      ORDER BY nivel DESC
+      LIMIT 1;
+
+      IF v_conta_id IS NULL THEN
+        -- cria a conta se não existir
+        PERFORM contab.proc_implantacao_cria_conta(
+          p_empresa_id,
+          v_codigo,
+          'CONTA AUTO ' || v_codigo
+        );
+
+      -- busca novamente
+        SELECT id
+        INTO v_conta_id
+        FROM contab.contas
+        WHERE empresa_id = p_empresa_id
+          AND codigo = v_codigo
+        LIMIT 1;
+      END IF;
+
+      /*   ------------------------------------------------------------
+      -- 3) MODELOS_LINHAS
+      ------------------------------------------------------------
+      INSERT INTO contab.modelos_linhas (
+        modelo_id,
+        empresa_id,
+        ordem,
+        conta_id,
+        dc,
+        fonte_valor,
+        fator,
+        obrigatorio,
+        perna_fixa
+      )
+      VALUES (
+        v_modelo_id,
+        p_empresa_id,
+        v_ordem,
+        v_conta_id,
+        v_dc,
+        'VALOR',
+        1.0,
+        TRUE,
+        TRUE
+      )
+      ON CONFLICT (empresa_id, modelo_id, conta_id, dc)
+      DO NOTHING;*/
+
+    END LOOP;
+
+  END LOOP;
+END;
+$$;

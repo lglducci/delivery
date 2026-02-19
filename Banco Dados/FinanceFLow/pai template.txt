@@ -1,0 +1,100 @@
+-- 1️  CONTAS A RECEBER
+ 
+
+UPDATE contab.template_eventos_contabeis
+SET conta_pai = 'CRIA_RECEBER'
+WHERE codigo_evento = 'CRIA_RECEBER';
+
+UPDATE contab.template_eventos_contabeis
+SET conta_pai = 'CRIA_RECEBER'
+WHERE codigo_evento = 'RECEBIMENTO_RECEBER';
+
+
+-- 2 CARTÃO VENDA
+ 
+
+UPDATE contab.template_eventos_contabeis
+SET conta_pai = 'CRIA_CARTAO_VENDA'
+WHERE codigo_evento IN (
+  'CRIA_CARTAO_VENDA',
+  'RECEBIMENTO_CARTAO'
+);
+
+--3️ cONTAS A PAGAR (DESPESA)
+ 
+
+UPDATE contab.template_eventos_contabeis
+SET conta_pai = 'CRIA_PAGAR_DESPESA'
+WHERE codigo_evento IN (
+  'CRIA_PAGAR_DESPESA',
+  'PAGAMENTO_PAGAR'
+);
+
+
+--- 4️  CONTAS A PAGAR (ESTOQUE)
+
+ 
+
+UPDATE contab.template_eventos_contabeis
+SET conta_pai = 'CRIA_PAGAR_ESTOQUE'
+WHERE codigo_evento IN (
+  'CRIA_PAGAR_ESTOQUE',
+  'PAGAMENTO_FORNECEDOR'
+);
+
+
+-- 5️ CARTÃO COMPRA
+
+ 
+
+UPDATE contab.template_eventos_contabeis
+SET conta_pai = 'CRIA_CARTAO_COMPRA'
+WHERE codigo_evento IN (
+  'CRIA_CARTAO_COMPRA',
+  'PROVISAO_CARTAO_COMPRA',
+  'PAGAMENTO_CARTAO',
+  'APROPRIACAO_CARTAO'
+);
+
+
+---  6️     EMPRÉSTIMO CONCEDIDO
+
+ 
+
+UPDATE contab.template_eventos_contabeis
+SET conta_pai = 'EMPRESTIMO_CONCEDIDO'
+WHERE codigo_evento IN (
+  'EMPRESTIMO_CONCEDIDO',
+  'RECEBIMENTO_EMPRESTIMO_CONCEDIDO',
+  'JUROS_EMPRESTIMO_CONCEDIDO'
+);
+
+-- 7️  EMPRÉSTIMO BANCÁRIO 
+
+UPDATE contab.template_eventos_contabeis
+SET conta_pai = 'EMPRESTIMO_BANCARIO'
+WHERE codigo_evento IN (
+  'EMPRESTIMO_BANCARIO',
+  'PAGAMENTO_EMPRESTIMO'
+);
+
+--   8️ RECEITA À VISTA 
+
+UPDATE contab.template_eventos_contabeis
+SET conta_pai = 'RECEITA_VISTA'
+WHERE codigo_evento = 'RECEITA_VISTA';
+
+
+ -- 9️   DESPESA À VISTA
+
+ 
+UPDATE contab.template_eventos_contabeis
+SET conta_pai = 'DESPESA_VISTA'
+WHERE codigo_evento = 'DESPESA_VISTA';
+
+-- 10️ VENDA CARTÃO (antiga OUTROS)
+ 
+
+UPDATE contab.template_eventos_contabeis
+SET conta_pai = 'CRIA_CARTAO_VENDA'
+WHERE codigo_evento = 'VENDA_CARTAO';
