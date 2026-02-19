@@ -30,10 +30,8 @@ SELECT
     MIN(cp.criado_em)::date,
 
     -- 🔥 RESOLUÇÃO INTELIGENTE DO MODELO
-    COALESCE(
-        cp.modelo_codigo,
-        m.codigo
-    ) AS modelo_codigo,
+ 
+        cp.modelo_codigo, 
 
     'Criação de dívida: ' || MAX(cp.descricao)
         || ' (' || MAX(cp.parcelas) || ' parcelas)',
@@ -59,8 +57,7 @@ SELECT
         'parcelas', MAX(cp.parcelas)
     )
 
-FROM contas_a_pagar cp
-
+FROM contas_a_pagar cp 
 -- 🔵 BUSCA DO MODELO VIA CATEGORIA
 LEFT JOIN contab.categorias_modelos cm
     ON cm.empresa_id = cp.empresa_id
@@ -79,8 +76,7 @@ GROUP BY
     cp.empresa_id,
     cp.lote_id,
     cp.fornecedor_id,
-    cp.modelo_codigo,
-    m.codigo;
+    cp.modelo_codigo ;
 
 GET DIAGNOSTICS v_qtd = ROW_COUNT;
 

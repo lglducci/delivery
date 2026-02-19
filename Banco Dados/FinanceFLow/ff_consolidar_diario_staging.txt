@@ -28,12 +28,12 @@ BEGIN
     --------------------------------------------------------------------
     INSERT INTO contab.diario (
         empresa_id, data_mov, modelo_codigo, historico, doc_ref,
-        parceiro_id, data_vencto, valor_total, valor_custo,
+       data_vencto, valor_total, valor_custo,
         valor_imposto, desconto, outros, status, lote_id 
     )
     SELECT 
         empresa_id, data_mov, modelo_codigo, historico, doc_ref,
-        parceiro_id, data_vencto, valor_total, valor_custo,
+         data_vencto, valor_total, valor_custo,
         valor_imposto, 0, outros, 'rascunho', lote_id 
     FROM contab.diario_staging
     WHERE empresa_id = p_empresa_id

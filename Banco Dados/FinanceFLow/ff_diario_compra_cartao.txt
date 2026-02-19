@@ -27,9 +27,9 @@ INSERT INTO contab.diario_staging (
 SELECT
     t.empresa_id,
     t.data_parcela,
-    'COMPRA_CARTAO',
+    'CRIA_CARTAO_COMPRA',
     t.descricao,
-    CONCAT('COMPRA_CARTAO_', t.id),
+    CONCAT('CRIA_CARTAO_COMPRA_', t.id),
    '00000000000000',
     c.cartao_id,
     t.data_parcela,

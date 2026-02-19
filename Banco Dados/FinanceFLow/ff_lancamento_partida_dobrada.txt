@@ -39,7 +39,8 @@ BEGIN
         credito,
         historico,
         criado_em,
-        lote_id
+        lote_id,
+       origem
     ) VALUES (
         p_empresa_id,
         0,
@@ -49,7 +50,8 @@ BEGIN
         0,
         p_historico,
         NOW(),
-        v_lote_id
+        v_lote_id,
+       'CONTABIL'
     );
 
     -- 🔵 CRÉDITO

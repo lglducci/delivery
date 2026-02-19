@@ -32,13 +32,22 @@ BEGIN
     ----------------------------------------------------------------
     -- 2️⃣ Loop em TODOS os templates compatíveis
     ----------------------------------------------------------------
-    FOR v_template IN
-        SELECT *
-        FROM contab.template_eventos_contabeis t
-        WHERE lower(t.natureza_fluxo) = lower(v_categoria.tipo)
-          AND lower(t.classificacao) = lower(v_categoria.classificacao)
-          AND t.ativo = true
-    LOOP
+      
+FOR v_template IN
+    SELECT *
+    FROM contab.template_eventos_contabeis t
+    WHERE lower(t.natureza_fluxo) = lower(v_categoria.tipo)
+      AND lower(t.classificacao) = lower(v_categoria.classificacao)
+      AND t.ativo = true
+
+    UNION ALL
+
+    SELECT *
+    FROM contab.template_eventos_contabeis t
+    WHERE lower(t.natureza_fluxo) = lower(v_categoria.tipo)
+      AND lower(t.forma_operacao) = 'baixa'
+      AND t.ativo = true
+LOOP
 
         ----------------------------------------------------------------
         -- 3️⃣ Verificar se modelo já existe

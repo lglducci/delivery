@@ -23,7 +23,9 @@ BEGIN
 
 DELETE FROM contab.lancamentos l
          WHERE l.empresa_id = p_empresa_id
-           AND l.data_mov   between  p_data_ini    and  p_data_fim  ;
+           AND l.data_mov   between  p_data_ini    and  p_data_fim 
+           AND (origem IS NULL OR origem <> 'CONTABIL');
+
 
 
     -- processa por DIA, pulando dias já processados/estornados

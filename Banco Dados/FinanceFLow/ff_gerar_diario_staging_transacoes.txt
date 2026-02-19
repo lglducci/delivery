@@ -41,8 +41,7 @@ BEGIN
         t.data_movimento::date,
 
         /* modelo vem da categoria (sua decisão de projeto) */
-      
-  COALESCE(
+         COALESCE(
   NULLIF(t.evento_codigo, '')
 ) AS modelo_codigo,
 
