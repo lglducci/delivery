@@ -1,0 +1,7 @@
+CREATE OR REPLACE VIEW vw_saldo_projetado AS
+SELECT
+  r.empresa_id,
+  COALESCE(r.total_receber,0) - COALESCE(p.total_pagar,0) AS saldo_projetado
+FROM vw_total_receber_aberto r
+LEFT JOIN vw_total_pagar_aberto p
+  ON p.empresa_id = r.empresa_id;

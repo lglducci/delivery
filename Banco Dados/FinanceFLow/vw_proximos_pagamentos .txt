@@ -1,0 +1,13 @@
+ 
+
+CREATE OR REPLACE VIEW vw_proximos_pagamentos AS
+SELECT
+  id,
+  empresa_id,
+  COALESCE(descricao, '') AS descricao,
+  vencimento,
+  COALESCE(valor, 0::numeric(12,2)) AS valor
+FROM contas_a_pagar
+WHERE status = 'aberto'
+ORDER BY vencimento
+LIMIT 10;

@@ -1,0 +1,9 @@
+ 
+CREATE OR REPLACE VIEW vw_receita_mes_atual AS
+SELECT
+  empresa_id,
+  COALESCE(SUM(valor), 0::numeric(12,2)) AS total_recebido
+FROM transacoes
+WHERE tipo = 'entrada'
+  AND date_trunc('month', data_movimento) = date_trunc('month', CURRENT_DATE)
+GROUP BY empresa_id;

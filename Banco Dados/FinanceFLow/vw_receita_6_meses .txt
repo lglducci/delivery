@@ -1,0 +1,12 @@
+ 
+
+CREATE OR REPLACE VIEW vw_receita_6_meses AS
+SELECT
+  empresa_id,
+  to_char(date_trunc('month', data_movimento), 'YYYY-MM') AS ano_mes,
+  COALESCE(SUM(valor), 0::numeric(12,2)) AS total_recebido
+FROM transacoes
+WHERE tipo = 'entrada'
+  AND data_movimento >= CURRENT_DATE - INTERVAL '6 months'
+GROUP BY empresa_id, ano_mes
+ORDER BY ano_mes;

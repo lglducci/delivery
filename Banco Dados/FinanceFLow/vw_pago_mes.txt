@@ -1,0 +1,12 @@
+ 
+
+CREATE OR REPLACE VIEW vw_pago_mes AS
+SELECT
+  empresa_id,
+  TO_CHAR(data_movimento,'YYYY-MM') AS ano_mes,
+  COALESCE(SUM(valor), 0::numeric(12,2)) AS total_pago
+FROM transacoes
+WHERE
+  tipo = 'saida'
+  AND pagar_id IS NOT NULL
+GROUP BY empresa_id, ano_mes;

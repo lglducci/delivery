@@ -1,0 +1,66 @@
+    CREATE OR REPLACE FUNCTION fn_dashboard_financeiro(p_empresa_id BIGINT)
+RETURNS JSON
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  result JSON;
+BEGIN
+  SELECT json_build_object(
+     'resultado_12_meses' ,  (SELECT COALESCE(SUM(resultado), 0)  FROM vw_resultado_12_meses WHERE empresa_id = p_empresa_id),
+      'despesa_12_meses' ,  (SELECT COALESCE(SUM(total_despesa), 0) FROM vw_despesa_12_meses WHERE empresa_id = p_empresa_id),
+    'saldo_atual' ,  (SELECT COALESCE(SUM(saldo_atual ),0) FROM vw_saldo_atual WHERE empresa_id = p_empresa_id),
+    'receita_mes',        (SELECT COALESCE(SUM( total_recebido),0) FROM vw_receita_mes_atual WHERE empresa_id = p_empresa_id),
+    'resultado_mes',     (SELECT  COALESCE(SUM(resultado),0) FROM vw_resultado_mes_atual WHERE empresa_id = p_empresa_id),  
+    'receita_12m',        (SELECT json_agg(v) FROM vw_receita_12_meses v WHERE empresa_id = p_empresa_id),
+    'receber_aberto',     (SELECT  COALESCE(SUM(total_receber),0) FROM vw_total_receber_aberto WHERE empresa_id = p_empresa_id),
+    'pagar_aberto',       (SELECT  COALESCE(SUM(total_pagar),0) FROM vw_total_pagar_aberto WHERE empresa_id = p_empresa_id),
+    'receber_vencido',    (SELECT row_to_json(v) FROM vw_receber_vencido v WHERE empresa_id = p_empresa_id),
+    'pagar_vencido',      (SELECT row_to_json(v) FROM vw_pagar_vencido v WHERE empresa_id = p_empresa_id),
+    'saldo_projetado',    (SELECT  COALESCE(SUM(saldo_projetado),0) FROM vw_saldo_projetado WHERE empresa_id = p_empresa_id),
+    'proximos_receber',   (SELECT json_agg(v) FROM vw_proximos_recebimentos v WHERE empresa_id = p_empresa_id),
+    'proximos_pagar',     (SELECT json_agg(v) FROM vw_proximos_pagamentos v WHERE empresa_id = p_empresa_id),
+
+    -- 🔥 SOMA DOS 12 MESES (CARD)
+    'receita_6m', (
+      SELECT COALESCE(SUM(total_recebido), 0)
+      FROM vw_receita_6_meses
+      WHERE empresa_id = p_empresa_id
+    ),
+
+    -- 🔥 SÉRIE PARA GRÁFICO
+    'receita_6m_serie', (
+      SELECT json_agg(v ORDER BY v.ano_mes)
+      FROM vw_receita_6_meses v
+      WHERE empresa_id = p_empresa_id
+    ),
+
+    
+       -- 🔥 SÉRIE PARA GRÁFICO
+    'resultado_12m_serie', (
+      SELECT json_agg(v ORDER BY v.ano_mes)
+      FROM vw_resultado_12_meses v
+      WHERE empresa_id = p_empresa_id
+    ),
+
+    
+       -- 🔥 SÉRIE PARA GRÁFICO
+    'despesa_12m_serie', (
+      SELECT json_agg(v ORDER BY v.ano_mes)
+      FROM vw_despesa_12_meses v
+      WHERE empresa_id = p_empresa_id
+    ),
+
+       -- 🔥 SÉRIE PARA GRÁFICO
+    'receita_12m_serie', (
+      SELECT json_agg(v ORDER BY v.ano_mes)
+      FROM vw_receita_12_meses v
+      WHERE empresa_id = p_empresa_id
+    ),
+    'receita_12m', (  SELECT COALESCE(SUM(total_recebido), 0)  FROM vw_receita_12_meses WHERE empresa_id = p_empresa_id  )
+  )
+  INTO result;
+
+  RETURN result;
+END;
+$$;
+
