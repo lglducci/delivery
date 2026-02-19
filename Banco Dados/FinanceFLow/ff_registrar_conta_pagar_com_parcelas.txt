@@ -103,7 +103,8 @@ SET modelo_codigo = (
       AND cm.ativo = true
       AND m.ativo = true
       AND m.forma_operacao = cm.forma_operacao 
-      and cp.empresa_id =  p_empresa_id     
+      and cp.empresa_id =  p_empresa_id   
+     and cm.forma_operacao ='FORNECEDOR'  
     ORDER BY m.id
     LIMIT 1
 )

@@ -14,32 +14,40 @@ BEGIN
   FOR v_id IN SELECT json_array_elements_text(p_lista_ids)::BIGINT LOOP
 
  
+ INSERT INTO transacoes(
+  empresa_id,
+  conta_id,
+  categoria_id,
+  tipo,
+  valor,
+  data_movimento,
+  descricao,
+  receber_id,
+  evento_codigo,
+  origem
+)
+SELECT 
+  c.empresa_id,
+  p_conta_id,
+  c.categoria_id,
+  'entrada',
+  c.valor,
+  CURRENT_DATE,
+  c.descricao,
+  c.id,
+  m_filho.codigo,
+  'Recebimento'
+FROM contas_a_receber c
+JOIN contab.modelos m_pai
+  ON m_pai.codigo = c.modelo_codigo
+ AND m_pai.empresa_id = c.empresa_id
+JOIN contab.modelos m_filho
+  ON m_filho.modelo_pai_id = m_pai.id
+ AND m_filho.empresa_id = c.empresa_id
+WHERE c.id = v_id
+  AND c.status = 'aberto';
 
-    -- Insere transação
-    INSERT INTO transacoes(
-      empresa_id,
-      conta_id,
-      categoria_id,
-      tipo,
-      valor,
-      data_movimento,
-      descricao,
-      receber_id ,
-      evento_codigo
-    )
-    SELECT 
-      empresa_id,
-      p_conta_id ,
-      categoria_id,
-      'entrada',
-      valor,
-      CURRENT_DATE,
-      descricao,
-      id ,
-      'RECEBER'
-    FROM contas_a_receber
-    WHERE id = v_id
- and status = 'aberto';
+
 
     -- Atualiza conta a receber
     UPDATE contas_a_receber

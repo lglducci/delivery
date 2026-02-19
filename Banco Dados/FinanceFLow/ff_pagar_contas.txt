@@ -14,32 +14,39 @@ BEGIN
 
      
     -- Insere transação
-    INSERT INTO transacoes(
-      empresa_id,
-      conta_id,
-      categoria_id,
-      tipo,
-      valor,
-      data_movimento,
-      descricao,
-      pagar_id ,
-     evento_codigo,
-    origem 
-    )
-    SELECT 
-      empresa_id,
-      p_conta_id ,
-      categoria_id,
-      'saida',
-      valor,
-      CURRENT_DATE,
-      descricao,
-      id ,
-    'PAGAR',
-   'Pagamento'
-    FROM contas_a_pagar
-    WHERE id = v_id 
-and status = 'aberto';
+    I INSERT INTO transacoes(
+  empresa_id,
+  conta_id,
+  categoria_id,
+  tipo,
+  valor,
+  data_movimento,
+  descricao,
+  pagar_id,
+  evento_codigo,
+  origem
+)
+SELECT 
+  c.empresa_id,
+  p_conta_id,
+  c.categoria_id,
+  'saida',
+  c.valor,
+  CURRENT_DATE,
+  c.descricao,
+  c.id,
+  m_filho.codigo,
+  'Pagamento'
+FROM contas_a_pagar c
+JOIN contab.modelos m_pai
+  ON m_pai.codigo = c.modelo_codigo
+ AND m_pai.empresa_id = c.empresa_id
+JOIN contab.modelos m_filho
+  ON m_filho.modelo_pai_id = m_pai.id
+ AND m_filho.empresa_id = c.empresa_id
+WHERE c.id = v_id
+  AND c.status = 'aberto';
+
 
     -- Atualiza conta a pagar
     UPDATE contas_a_pagar
