@@ -123,12 +123,23 @@ END LOOP;
 
 
 
- PERFORM  contab.proc_implanta_modelos_temp(v_empresa_id);
+ --PERFORM  contab.proc_implanta_modelos_temp(v_empresa_id);
   ------------------------------------------------------------------
   -- 5️⃣ RETORNA EMPRESA CRIADA
   ------------------------------------------------------------------
 
  PERFORM contab.ff_implantar_modelos_sistema(v_empresa_id);
+
+ UPDATE contab.modelos m_filho
+SET modelo_pai_id = m_pai.id
+FROM contab.template_eventos_contabeis t,
+     contab.modelos m_pai
+WHERE m_filho.codigo = t.codigo_evento
+  AND t.conta_pai IS NOT NULL
+  AND m_pai.codigo = t.conta_pai
+  AND m_pai.empresa_id = m_filho.empresa_id
+ AND m_filho.empresa_id = v_empresa_id;
+
   RETURN v_empresa_id;
 
 EXCEPTION

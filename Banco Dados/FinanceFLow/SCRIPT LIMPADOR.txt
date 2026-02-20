@@ -1,4 +1,4 @@
-        BEGIN;
+          BEGIN;
 
 -- =========================
 -- DELETE DOS DADOS
@@ -21,9 +21,12 @@ DELETE FROM contab.modelos_linhas;
 delete from contas_financeiras;
 delete from categorias_gerenciais;
 delete from pessoa;
-delete from cartoes_faturas;
 delete from cartoes_transacoes;
+delete from cartoes_faturas;
+ 
 delete from cartoes_compras;
+ 
+ 
 delete from cartoes;
 DELETE FROM contab.contas;
 DELETE FROM contab.diario;
