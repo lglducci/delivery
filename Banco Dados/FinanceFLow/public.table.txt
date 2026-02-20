@@ -108,13 +108,25 @@ alter table categorias_gerenciais add meu_negocio bool default false ;
 
 ALTER TABLE public.categorias_gerenciais
 ADD COLUMN cadastro_completo BOOLEAN DEFAULT false;
-
-
-
+ 
 
 ALTER TABLE public.categorias_gerenciais
 ADD COLUMN classificacao TEXT;
 
+ALTER TABLE public.categorias_gerenciais
+DROP CONSTRAINT IF EXISTS categorias_classificacao_check;
+
+ALTER TABLE public.categorias_gerenciais
+ADD CONSTRAINT categorias_classificacao_check
+CHECK (classificacao IN (
+   'receita',
+   'ativo',
+   'despesa',
+   'estoque',
+   'passivo',
+   'imobilizado',
+   'baixa_passivo'
+));
 
 
 
@@ -135,7 +147,8 @@ ALTER TABLE public.categorias_gerenciais
 ALTER COLUMN classificacao SET DEFAULT 'despesa';
 
 
-
+ALTER TABLE public.categorias_gerenciais
+ADD COLUMN forma_operacao varchar(30);
 
 ---------------------------------------------------
 -- 6. PESSOA (Cliente / Fornecedor)

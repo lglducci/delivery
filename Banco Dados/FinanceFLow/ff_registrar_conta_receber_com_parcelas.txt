@@ -111,6 +111,7 @@ SET modelo_codigo = (
       AND m.ativo = true
       AND m.forma_operacao = cm.forma_operacao 
       and cr.empresa_id =  p_empresa_id     
+      and cm.forma_operacao ='RECEBER'
     ORDER BY m.id
     LIMIT 1
 )
@@ -118,11 +119,7 @@ WHERE cr.id = v_id
 AND cr.modelo_codigo IS NULL 
 AND cr.empresa_id =  p_empresa_id     ;
 
-    END LOOP;
-
-
- 
-
+    END LOOP; 
     RETURN v_id;
 END;
 $$;
