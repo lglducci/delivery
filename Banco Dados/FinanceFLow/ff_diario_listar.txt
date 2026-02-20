@@ -1,4 +1,4 @@
- 
+   
 
  
  CREATE OR REPLACE FUNCTION contab.ff_diario_listar(
@@ -13,8 +13,7 @@ RETURNS TABLE (
     data_mov        DATE,
     modelo_codigo   VARCHAR(40),
     historico       TEXT,
-    doc_ref         VARCHAR(60),
-    parceiro        VARCHAR(200),
+    doc_ref         VARCHAR(60), 
     data_vencto     DATE, 
     valor_total     NUMERIC(14,2),
     valor_custo     NUMERIC(14,2),
@@ -29,17 +28,15 @@ BEGIN
         d.data_mov,
         d.modelo_codigo,
         d.historico,
-        d.doc_ref,
-        COALESCE(p.nome, '') AS parceiro,
+        d.doc_ref, 
         d.data_vencto, 
         d.valor_total,
         d.valor_custo,
         d.valor_imposto,
         d.desconto
     FROM contab.diario d
-    LEFT JOIN public.pessoa p ON p.id = d.parceiro_id
-    WHERE d.empresa_id = p_empresa_id
-      AND d.data_mov BETWEEN p_data_ini AND p_data_fim
+  
+    WHERE  d.data_mov BETWEEN p_data_ini AND p_data_fim
       
       -- FILTRO POR MODELO
       AND (
@@ -53,13 +50,9 @@ BEGIN
           p_busca IS NULL OR p_busca = '' 
           OR unaccent(lower(d.historico))  LIKE unaccent(lower('%' || p_busca || '%'))
           OR unaccent(lower(d.doc_ref))    LIKE unaccent(lower('%' || p_busca || '%'))
-          OR unaccent(lower(COALESCE(p.nome, ''))) LIKE unaccent(lower('%' || p_busca || '%'))
+          
       )
     ORDER BY d.data_mov DESC;
 END;
 $$ LANGUAGE plpgsql;
 
- 
-
-
- 
