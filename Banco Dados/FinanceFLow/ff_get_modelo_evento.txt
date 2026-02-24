@@ -1,0 +1,42 @@
+ DROP FUNCTION IF EXISTS contab.ff_get_modelo_evento;
+
+CREATE OR REPLACE FUNCTION contab.ff_get_modelo_evento(
+    p_empresa_id BIGINT,
+    p_classificacao TEXT,
+    p_tipo_evento TEXT
+)
+RETURNS TEXT
+LANGUAGE plpgsql
+AS
+$$
+DECLARE
+    v_codigo TEXT;
+BEGIN
+
+    ----------------------------------------------------------------
+    -- Buscar modelo baseado na categoria + evento
+    ----------------------------------------------------------------
+    SELECT m.codigo
+      INTO v_codigo
+    FROM contab.modelos m
+    WHERE m.empresa_id = p_empresa_id
+      AND lower(m.tipo_evento) = lower(p_tipo_evento)
+      AND lower(m.classificacao) = lower(p_classificacao)
+      AND m.ativo = true
+    LIMIT 1;
+
+    ----------------------------------------------------------------
+    -- Se não encontrou, erro explícito
+    ----------------------------------------------------------------
+    IF v_codigo IS NULL THEN
+        RAISE EXCEPTION
+        'Modelo não encontrado para categoria %, evento %, empresa %.',
+        p_classificacao,
+        p_tipo_evento,
+        p_empresa_id;
+    END IF;
+
+    RETURN v_codigo;
+
+END;
+$$;

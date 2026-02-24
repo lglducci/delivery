@@ -103,27 +103,13 @@ BEGIN
  
 
  INSERT INTO public.categorias_gerenciais
-(empresa_id, nome, classificacao, tipo)
-SELECT v_empresa_id, nome, classificacao, tipo
+(empresa_id, nome , tipo )
+SELECT v_empresa_id, nome , tipo 
 FROM saas_vendas.categorias_gerenciais;
 
--- 🔥 Vincular templates automaticamente
-FOR v_categoria_id IN
-    SELECT id
-    FROM public.categorias_gerenciais
-    WHERE empresa_id = v_empresa_id
-LOOP
+ 
 
-    PERFORM contab.ff_vincular_categoria_template(
-        v_empresa_id,
-        v_categoria_id
-    );
-
-END LOOP;
-
-
-
- --PERFORM  contab.proc_implanta_modelos_temp(v_empresa_id);
+ 
   ------------------------------------------------------------------
   -- 5️⃣ RETORNA EMPRESA CRIADA
   ------------------------------------------------------------------

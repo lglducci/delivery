@@ -59,15 +59,6 @@ SELECT
 
 FROM contas_a_pagar cp 
 -- 🔵 BUSCA DO MODELO VIA CATEGORIA
-LEFT JOIN contab.categorias_modelos cm
-    ON cm.empresa_id = cp.empresa_id
-   AND cm.categoria_id = cp.categoria_id
-   AND cm.forma_operacao = 'FORNECEDOR'
-   AND cm.ativo = true
-
-LEFT JOIN contab.modelos m
-    ON m.id = cm.modelo_id
-   AND m.ativo = true
 
 WHERE cp.empresa_id = p_empresa_id
   AND cp.criado_em::date = p_data

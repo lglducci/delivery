@@ -32,16 +32,7 @@ ON UPDATE CASCADE
 ON DELETE SET NULL;
 
 
+ 
+ALTER TABLE contab.modelos 
+ADD COLUMN IF NOT EXISTS classificacao TEXT ;
 
- CREATE TYPE contab.tipo_operacao_enum AS ENUM (
-  'CP',  -- Conta a Pagar
-  'CR',  -- Conta a Receber
-  'CX',  -- Movimento de Caixa
-  'IM',  -- Imobilizado
-  'TR',  -- Transferência
-  'AD',  -- Adiantamento
-  'AJ'   -- Ajuste Contábil
-);
-
-ALTER TABLE contab.modelos
-ADD COLUMN tipo_operacao contab.tipo_operacao_enum;

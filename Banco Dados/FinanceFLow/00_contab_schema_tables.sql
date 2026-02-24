@@ -104,7 +104,7 @@ CREATE TABLE contab.modelos (
   ativo      		     BOOLEAN NOT NULL DEFAULT TRUE,
   sistema                          BOOLEAN           NOT NULL DEFAULT  FALSE,
  codigo_estorno           TEXT  NULL, 
-tipo_automacao           TEXT NULL  
+ tipo_automacao           TEXT NULL  
 );
 
 ALTER TABLE contab.modelos

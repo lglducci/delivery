@@ -1,4 +1,4 @@
-          BEGIN;
+              BEGIN;
 
 -- =========================
 -- DELETE DOS DADOS
@@ -6,7 +6,7 @@
 DELETE FROM contas_a_pagar;
 DELETE FROM contas_a_receber;
 DELETE FROM transacoes;
-DELETE FROM cartoes;
+ 
 delete from contab.lancamentos;
 
 DELETE FROM empresa_perfil;
@@ -45,7 +45,7 @@ CALL reset_sequence_by_max('contab',       'lancamentos',    'id');
 CALL reset_sequence_by_max('public',       'usuario_empresa',    'id');
 CALL reset_sequence_by_max('public',       'usuarios',           'id');
 CALL reset_sequence_by_max('saas_vendas',  'usuarios',           'id'); 
-
+CALL reset_sequence_by_max('public',       'pessoa',           'id');
 CALL reset_sequence_by_max('contab',       'contas',             'id');
 CALL reset_sequence_by_max('public',       'empresas',           'id'); 
 CALL reset_sequence_by_max('contab',       'modelos',           'id');
@@ -60,4 +60,6 @@ CALL reset_sequence_by_max('saas_vendas',  'cobrancas',           'id');
 CALL reset_sequence_by_max('saas_vendas',  'pagamentos',           'id'); 
 CALL reset_sequence_by_max('saas_vendas',  'assinaturas',           'id'); 
 commit;
+ 
+
  
