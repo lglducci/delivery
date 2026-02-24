@@ -1,0 +1,47 @@
+ 🎯 1️⃣ Criar ENUM global
+DO $$ BEGIN
+    CREATE TYPE contab.tipo_evento_financeiro_enum AS ENUM (
+        'financeiro',
+        'pagar',
+        'receber',
+        'cartao_compra',
+        'cartao_venda',
+        'cartao_recebimento',
+        'cartao_apropriacao',
+        'estoque_saida',
+        'venda_custo'
+    );
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+ 
+ALTER TABLE public.contas_a_pagar
+ADD COLUMN IF NOT EXISTS tipo_evento contab.tipo_evento_financeiro_enum
+DEFAULT 'pagar' NOT NULL;
+ 
+ALTER TABLE public.contas_a_receber
+ADD COLUMN IF NOT EXISTS tipo_evento contab.tipo_evento_financeiro_enum
+DEFAULT 'receber' NOT NULL;
+ 
+ALTER TABLE public.cartoes_compras
+ADD COLUMN IF NOT EXISTS tipo_evento contab.tipo_evento_financeiro_enum
+DEFAULT 'cartao_compra' NOT NULL;
+ 
+ 
+
+ALTER TABLE public.cartoes_transacoes
+ADD COLUMN IF NOT EXISTS tipo_evento contab.tipo_evento_financeiro_enum
+DEFAULT 'cartao_recebimento' NOT NULL;
+
+ 
+
+UPDATE public.cartoes_transacoes
+SET tipo_evento = 'cartao_apropriacao'
+WHERE tipo = 'apropriacao';
+
+ 
+
+ 
+ALTER TABLE public.transacoes
+ADD COLUMN IF NOT EXISTS tipo_evento contab.tipo_evento_financeiro_enum
+DEFAULT 'financeiro' NOT NULL;

@@ -7,7 +7,8 @@ CREATE OR REPLACE FUNCTION ff_registrar_receita(
   p_valor NUMERIC,
   p_descricao TEXT,
   p_data DATE DEFAULT CURRENT_DATE,
- p_origem TEXT DEFAULT 'ZAP'
+ p_origem TEXT DEFAULT 'ZAP',
+ p_classificacao  text default not null 
 )
 RETURNS BIGINT
 LANGUAGE plpgsql
@@ -16,6 +17,7 @@ DECLARE
   v_conta_id BIGINT;
   v_cat_id   BIGINT;
   v_id       BIGINT;
+ modelo_codigo  TEXT;
 BEGIN
     
            IF p_conta_id IS NOT NULL AND p_conta_id > 0 THEN
@@ -30,6 +32,11 @@ BEGIN
              v_cat_id := ff_get_categoria_id(p_empresa_id, p_categoria_nome, 'entrada');
            END IF;
 
+   modelo_codigo := contab.ff_get_modelo_evento(
+                   p_empresa_id,
+                    p_classificacao,
+                  'financeiro');
+       
 
   INSERT INTO transacoes (
     empresa_id,
@@ -39,7 +46,9 @@ BEGIN
     valor,
     descricao,
     data_movimento,
-    origem
+    origem,
+   classificacao ,
+   evento_codigo  
   )
   VALUES (
     p_empresa_id,
@@ -49,10 +58,14 @@ BEGIN
     p_valor,
     p_descricao,
     p_data,
-    p_origem 
+    p_origem ,
+   p_classificacao ,
+  modelo_codigo  
   )
   RETURNING id INTO v_id;
-UPDATE public.transacoes t
+
+
+/*UPDATE public.transacoes t
 SET evento_codigo = sub.codigo
 FROM (
     SELECT 
@@ -74,7 +87,7 @@ FROM (
 ) sub
 WHERE t.id = sub.id
 AND t.evento_codigo IS NULL;
-
+*/ 
   RETURN v_id;
 END;
 $$;

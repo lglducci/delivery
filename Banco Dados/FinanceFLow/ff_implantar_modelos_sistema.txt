@@ -36,16 +36,18 @@ BEGIN
                 codigo,
                 nome,
                 sistema,
-                tipo_automacao,
-                forma_operacao
+                tipo_automacao, 
+                tipo_evento   ,
+              classificacao
             )
             VALUES (
                 p_empresa_id,
                 v_template.codigo_evento,
                 v_template.descricao,
                 true,
-                'FINANCEIRO_PADRAO',
-                v_template.forma_operacao
+                'FINANCEIRO_PADRAO', 
+                v_template.tipo_evento  ,
+               v_template.classificacao
             )
             RETURNING id INTO v_modelo_id;
 

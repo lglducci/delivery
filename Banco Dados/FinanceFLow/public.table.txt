@@ -87,9 +87,7 @@ CREATE TABLE contas_financeiras (
     contabil_id BIGINT NULL
 );
 
- ALTER TABLE public.contas_financeiras
-ADD COLUMN cadastro_completo BOOLEAN DEFAULT false;
-
+ 
 
  
  
@@ -100,21 +98,15 @@ ADD COLUMN cadastro_completo BOOLEAN DEFAULT false;
 CREATE TABLE categorias_gerenciais (
     id BIGSERIAL PRIMARY KEY,
     empresa_id BIGINT NOT NULL REFERENCES empresas(id),
-    nome TEXT NOT NULL,
-    grupo_contabil TEXT NULL,
+    nome TEXT NOT NULL, 
     tipo TEXT NOT NULL CHECK (tipo IN ('entrada','saida')) 
 ); 
-alter table categorias_gerenciais add meu_negocio bool default false ;
-
-ALTER TABLE public.categorias_gerenciais
-ADD COLUMN cadastro_completo BOOLEAN DEFAULT false;
+ 
  
 
-ALTER TABLE public.categorias_gerenciais
-ADD COLUMN classificacao TEXT;
+ 
 
-ALTER TABLE public.categorias_gerenciais
-DROP CONSTRAINT IF EXISTS categorias_classificacao_check;
+ 
 
 ALTER TABLE public.categorias_gerenciais
 ADD CONSTRAINT categorias_classificacao_check
@@ -129,27 +121,8 @@ CHECK (classificacao IN (
 ));
 
 
-
- ALTER TABLE public.categorias_gerenciais
-ADD CONSTRAINT categorias_gerenciais_classificacao_check
-CHECK (
-  classificacao IN (
-    'despesa',
-    'estoque',
-    'receita',
-    'ativo',
-    'passivo'
-  )
-);
-
-
-ALTER TABLE public.categorias_gerenciais
-ALTER COLUMN classificacao SET DEFAULT 'despesa';
-
-
-ALTER TABLE public.categorias_gerenciais
-ADD COLUMN forma_operacao varchar(30);
-
+ 
+  
 ---------------------------------------------------
 -- 6. PESSOA (Cliente / Fornecedor)
 ---------------------------------------------------

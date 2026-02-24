@@ -9,7 +9,7 @@
   p_categoria_id   BIGINT DEFAULT NULL,
   p_doc_ref   text DEFAULT NULL,   
  p_conta_id   	BIGINT DEFAULT NULL ,
- p_forma_recebimento TEXT default NULL,
+ p_classificacao    TEXT default NULL,
  p_canal   text default null ,
  p_codigo   text default null 
 )
@@ -34,23 +34,9 @@ modelo_codigo := NULLIF(p_codigo  , '');
         v_lote_id := nextval('contas_a_receber_lote_seq ');
     END IF;
 
-    -----------------------------------------------------------
-    -- 1) SE categoria_id vier → prioridade total
-    -----------------------------------------------------------
-    IF p_categoria_id IS NOT NULL AND p_categoria_id > 0 THEN
-        v_categoria_id := p_categoria_id;
-
-    -----------------------------------------------------------
-    -- 2) Caso contrário → tenta buscar pelo nome
-    -----------------------------------------------------------
-    ELSIF p_categoria IS NOT NULL THEN
-        SELECT id INTO v_categoria_id
-        FROM categorias_gerenciais
-        WHERE empresa_id = p_empresa_id
-          AND lower(nome) = lower(p_categoria)
-        LIMIT 1;
-    END IF;
-
+   modelo_codigo := contab.ff_get_modelo_evento(  p_empresa_id, p_classificacao,   'receber');
+  
+     
     -----------------------------------------------------------
     -- Valor por parcela
     -----------------------------------------------------------
@@ -78,7 +64,7 @@ modelo_codigo := NULLIF(p_codigo  , '');
           doc_ref ,
          modelo_codigo,
           conta_id,
-          forma_recebimento,
+          classificacao,
           canal
         )
         VALUES (
@@ -92,32 +78,14 @@ modelo_codigo := NULLIF(p_codigo  , '');
             i,
             'aberto',
               v_lote_id,
-            p_doc_ref, 
-           modelo_codigo ,
-            p_conta_id   ,
-           p_forma_recebimento ,
-           p_canal    
+              p_doc_ref, 
+              modelo_codigo ,
+              p_conta_id   ,
+              p_classificacao,
+               p_canal    
         )
         RETURNING id INTO v_id;
-    UPDATE contas_a_receber cr
-SET modelo_codigo = (
-    SELECT m.codigo
-    FROM contab.categorias_modelos cm
-    JOIN contab.modelos m
-      ON m.id = cm.modelo_id
-    WHERE cm.categoria_id = cr.categoria_id
-      AND cm.empresa_id = cr.empresa_id
-      AND cm.ativo = true
-      AND m.ativo = true
-      AND m.forma_operacao = cm.forma_operacao 
-      and cr.empresa_id =  p_empresa_id     
-      and cm.forma_operacao ='RECEBER'
-    ORDER BY m.id
-    LIMIT 1
-)
-WHERE cr.id = v_id
-AND cr.modelo_codigo IS NULL 
-AND cr.empresa_id =  p_empresa_id     ;
+  
 
     END LOOP; 
     RETURN v_id;

@@ -36,3 +36,61 @@ FOREIGN KEY (contabil_id)
 REFERENCES contab.contas(id);
 
  
+
+
+-----CONTAS_A_PAGAR 
+ALTER TABLE contas_a_pagar
+ADD COLUMN IF NOT EXISTS classificacao TEXT NOT NULL DEFAULT 'despesa';
+
+ALTER TABLE contas_a_pagar
+ADD CONSTRAINT contas_a_pagar_classificacao_chk
+CHECK (classificacao IN (
+    'despesa',
+    'estoque',
+    'imobilizado',
+    'passivo'
+)); 
+
+-----CONTAS_A_RECEBER 
+ALTER TABLE contas_a_receber
+ADD COLUMN IF NOT EXISTS classificacao TEXT NOT NULL DEFAULT 'receita';
+
+ALTER TABLE contas_a_receber
+ADD CONSTRAINT contas_a_receber_classificacao_chk
+CHECK (classificacao IN (
+    'receita',
+    'ativo'
+)); 
+
+----COMPRAS_CARTAO 
+ 
+ALTER TABLE cartoes_compras
+ADD COLUMN IF NOT EXISTS classificacao TEXT NOT NULL DEFAULT 'despesa';
+
+ALTER TABLE cartoes_compras
+ADD CONSTRAINT compras_cartao_classificacao_chk
+CHECK (classificacao IN (
+    'despesa',
+    'estoque',
+    'imobilizado'
+)); 
+---TRANSACOES (à vista) 
+ALTER TABLE transacoes
+ADD COLUMN IF NOT EXISTS classificacao TEXT NOT NULL;
+
+ALTER TABLE transacoes
+ADD CONSTRAINT transacoes_classificacao_chk
+CHECK (classificacao IN (
+    'receita',
+    'ativo',
+    'passivo',
+    'despesa',
+    'estoque',
+    'imobilizado'
+));
+
+
+
+
+
+ 

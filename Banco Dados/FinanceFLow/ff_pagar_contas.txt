@@ -8,13 +8,21 @@ LANGUAGE plpgsql
 AS $$
 DECLARE
   v_id BIGINT;
+  v_modelo_codigo  text; 
 BEGIN
+
+
+    v_modelo_codigo   := contab.ff_get_modelo_evento(
+                   p_empresa_id,
+                    'baixa',
+                     'financeiro');
+
   FOR v_id IN SELECT json_array_elements_text(p_lista_ids)::BIGINT LOOP
 
 
      
     -- Insere transação
-    I INSERT INTO transacoes(
+  INSERT INTO transacoes(
   empresa_id,
   conta_id,
   categoria_id,
@@ -24,7 +32,8 @@ BEGIN
   descricao,
   pagar_id,
   evento_codigo,
-  origem
+  origem,
+ classificacao
 )
 SELECT 
   c.empresa_id,
@@ -35,16 +44,12 @@ SELECT
   CURRENT_DATE,
   c.descricao,
   c.id,
-  m_filho.codigo,
-  'Pagamento'
-FROM contas_a_pagar c
-JOIN contab.modelos m_pai
-  ON m_pai.codigo = c.modelo_codigo
- AND m_pai.empresa_id = c.empresa_id
-JOIN contab.modelos m_filho
-  ON m_filho.modelo_pai_id = m_pai.id
- AND m_filho.empresa_id = c.empresa_id
+  v_modelo_codigo  ,
+  'Pagamento',
+ classificacao
+FROM contas_a_pagar c 
 WHERE c.id = v_id
+  and c.empresa_id = p_empresa_id
   AND c.status = 'aberto';
 
 
