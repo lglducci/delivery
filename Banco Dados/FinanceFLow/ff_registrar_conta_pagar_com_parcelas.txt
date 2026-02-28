@@ -29,7 +29,8 @@ BEGIN
         v_lote_id := nextval('contas_a_pagar_lote_seq');
     END IF;
 
-modelo_codigo := NULLIF(codigo, '');
+ modelo_codigo := NULLIF(TRIM(codigo), '');
+
     -----------------------------------------------------------
     -- 1) PRIORIDADE TOTAL: SE p_categoria_id VEM → USA DIRETO
     -----------------------------------------------------------
@@ -41,11 +42,10 @@ modelo_codigo := NULLIF(codigo, '');
     ---------- 
     END IF;
 
-
- modelo_codigo := contab.ff_get_modelo_evento(
-                   p_empresa_id,
-                    p_classsificacao,
-                  'pagar'   );
+ IF modelo_codigo IS NULL OR modelo_codigo = 'null' THEN
+             modelo_codigo := contab.ff_get_modelo_evento(
+                   p_empresa_id,  p_classsificacao,  'pagar'   );
+end if;
        
     -----------------------------------------------------------
     -- CALCULAR VALOR POR PARCELA

@@ -5,7 +5,7 @@
  p_conta_cred  int,
 p_conta_deb int,
  p_tipo_automacao text ,
-  p_tipo_operacao contab.tipo_operacao_enum
+  p_tipo_evento text 
 )
 
 
@@ -16,8 +16,8 @@ declare
     v_conta_cred int;
 begin
     -- cria o modelo
-    insert into contab.modelos (empresa_id, nome, codigo, tipo_automacao , tipo_operacao)
-    values (p_empresa_id, p_nome, p_token, p_tipo_automacao,p_tipo_operacao  )
+    insert into contab.modelos (empresa_id, nome, codigo, tipo_automacao , tipo_evento)
+    values (p_empresa_id, p_nome, p_token, p_tipo_automacao,p_tipo_evento)
     returning id into v_modelo_id;
 
     -- garante conta fake debito

@@ -23,6 +23,7 @@ RETURNS TABLE (
 )
 LANGUAGE plpgsql
 AS $$
+ 
 DECLARE
     v_conta_contabil_id BIGINT;
     v_conta_fin_id BIGINT;
@@ -107,4 +108,5 @@ BEGIN
     WHERE cf.id = v_conta_fin_id;
 
 END;
+
 $$;

@@ -86,9 +86,8 @@ CHECK (classificacao IN (
     'passivo',
     'despesa',
     'estoque',
-    'imobilizado'
+    'imobilizado','custo'
 ));
-
 
 
 

@@ -55,7 +55,8 @@ CREATE TABLE empresas (
     nome TEXT NOT NULL,
     tipo TEXT CHECK (tipo IN ('ME','MEI','LTDA','SA','EIRELI','ASSOCIACAO')),
     documento TEXT,
-    criado_em TIMESTAMP DEFAULT now()
+    criado_em TIMESTAMP DEFAULT now(),
+   controla_estoque boolean NOT NULL DEFAULT false 
 );
 
 
