@@ -16,9 +16,9 @@ DECLARE
 BEGIN
 
    v_modelo_codigo   := contab.ff_get_modelo_evento(
-                   p_empresa_id,
-                   'baixa_ativo',
-                     'financeiro');
+                     p_empresa_id,
+                     'baixa_ativo',
+                     'vista');
 
   FOR v_id IN SELECT json_array_elements_text(p_lista_ids)::BIGINT LOOP
 

@@ -6,7 +6,8 @@
   p_parcelas      	INT DEFAULT 1,
   p_data_compra  	  DATE DEFAULT CURRENT_DATE,
   p_contabil_id     BIGINT DEFAULT NULL,
-  p_classificacao    text default not null 
+  p_classificacao    text default not null , 
+  p_modelo_codigo  text default   null
   
 )
 RETURNS BIGINT
@@ -27,12 +28,10 @@ BEGIN
   IF p_parcelas IS NULL OR p_parcelas < 1 THEN
     p_parcelas := 1;
   END IF;
-
-   v_modelo_codigo   := contab.ff_get_modelo_evento(
-                   p_empresa_id,
-                    p_classificacao,
-                  'cartao_compra');
-       
+     v_modelo_codigo  := NULLIF(TRIM(p_modelo_codigo  ), '');
+      IF   v_modelo_codigo   IS NULL OR v_modelo_codigo  = 'null' THEN 
+               v_modelo_codigo   := contab.ff_get_modelo_evento(   p_empresa_id, p_classificacao,  'cartao_compra');
+        end if;    
   -- descobre o cartão (igual lógica da fatura)
   IF p_cartao_nome IS NULL
      OR trim(p_cartao_nome) = ''

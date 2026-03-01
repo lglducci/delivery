@@ -126,7 +126,8 @@ BEGIN
     pagar_id,
     receber_id,
     fatura_id,
-    evento_codigo
+    evento_codigo,
+   classificacao
   )
   VALUES (
     p_empresa_id,
@@ -140,7 +141,8 @@ BEGIN
     v_transacao.pagar_id,
     v_transacao.receber_id,
     v_transacao.fatura_id,
-    v_evento_estorno
+    v_evento_estorno,
+     v_transacao.classificacao
   ) 
 RETURNING id INTO v_estorno_id;
 

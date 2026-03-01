@@ -22,7 +22,8 @@ BEGIN
     WHERE m.empresa_id = p_empresa_id
       AND lower(m.tipo_evento) = lower(p_tipo_evento)
       AND lower(m.classificacao) = lower(p_classificacao)
-      AND m.ativo = true
+      AND m.ativo = true 
+     AND m.sistema = true
     LIMIT 1;
 
     ----------------------------------------------------------------

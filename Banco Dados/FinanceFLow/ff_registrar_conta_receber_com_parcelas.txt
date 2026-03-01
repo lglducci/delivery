@@ -29,12 +29,17 @@ BEGIN
 
 modelo_codigo := NULLIF(p_codigo  , '');
 
+ 
+      IF   modelo_codigo IS NULL OR modelo_codigo = 'null' THEN 
+             modelo_codigo := contab.ff_get_modelo_evento(  p_empresa_id, p_classificacao,   'receber');
+        end if;    
+
         -- Só gera lote se houver mais de 1 parcela
     IF p_parcelas > 1 THEN
         v_lote_id := nextval('contas_a_receber_lote_seq ');
     END IF;
 
-   modelo_codigo := contab.ff_get_modelo_evento(  p_empresa_id, p_classificacao,   'receber');
+   
   
      
     -----------------------------------------------------------
@@ -72,7 +77,7 @@ modelo_codigo := NULLIF(p_codigo  , '');
             p_descricao,
             v_valor_parcela,
             v_venc,
-            v_categoria_id,
+             p_categoria_id ,
             p_fornecedor_id,
             p_parcelas,
             i,

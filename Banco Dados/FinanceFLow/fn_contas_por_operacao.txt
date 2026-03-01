@@ -2,114 +2,22 @@
  CREATE OR REPLACE FUNCTION contab.fn_contas_por_operacao(
     p_empresa_id bigint,
     p_tipo_operacao text,
-    p_lado text
+    p_lado text,
+    p_tipo text,
+    p_classificacao text
 )
 RETURNS SETOF contab.contas
 LANGUAGE plpgsql
 AS $$
-BEGIN
+BEGIN 
 
+IF p_tipo_operacao = 'financeiro' THEN
 
-IF p_tipo_operacao = 'null' THEN
-   p_tipo_operacao := NULL;
-END IF;
-
-IF p_lado = 'null' THEN
-   p_lado := NULL;
-END IF;
-
-    -- ======================================
-    -- FALLBACK (mostra tudo)
-    -- ======================================
-    IF p_tipo_operacao IS NULL OR p_tipo_operacao = ''
-       OR p_lado IS NULL OR p_lado = '' THEN
-
-        RETURN QUERY
-        SELECT *
-        FROM contab.contas c
-        WHERE c.empresa_id = p_empresa_id
-          AND c.analitica = true
-        ORDER BY c.codigo;
-
-        RETURN;
-    END IF;
-
-
-    -- ======================================
-    -- CP - CONTA A PAGAR
-    -- ======================================
-    IF p_tipo_operacao = 'pagar' THEN
-
-        IF p_lado = 'C' THEN
-            RETURN QUERY
-            SELECT *
-            FROM contab.contas c
-            WHERE c.empresa_id = p_empresa_id
-              AND c.analitica = true
-              AND c.codigo LIKE '2.1.%'
-            ORDER BY c.codigo;
-
-        ELSIF p_lado = 'D' THEN
-            RETURN QUERY
-            SELECT *
-            FROM contab.contas c
-            WHERE c.empresa_id = p_empresa_id
-              AND c.analitica = true
-              AND (
-                    c.codigo LIKE '1.%'
-                 OR c.codigo LIKE '3.%'
-                 OR c.codigo LIKE '4.%'
-                  )
-              AND c.codigo NOT LIKE '1.1.1.%'
-              AND c.codigo NOT LIKE '1.1.2.%'
-            ORDER BY c.codigo;
-        END IF;
-
-    END IF;
-
-
-    -- ======================================
-    -- CR - CONTA A RECEBER
-    -- ======================================
-    IF p_tipo_operacao = 'receber' THEN
+    -- 🔹 ENTRADA FINANCEIRA
+    IF p_tipo = 'entrada' THEN
 
         IF p_lado = 'D' THEN
-            RETURN QUERY
-            SELECT *
-            FROM contab.contas c
-            WHERE c.empresa_id = p_empresa_id
-              AND c.analitica = true
-              AND c.codigo LIKE '1.1.2%'
-            ORDER BY c.codigo;
-
-        ELSIF p_lado = 'C' THEN
-            RETURN QUERY
-            SELECT *
-            FROM contab.contas c
-            WHERE c.empresa_id = p_empresa_id
-              AND c.analitica = true
-              AND c.codigo LIKE '5.%'
-            ORDER BY c.codigo;
-        END IF;
-
-    END IF;
-
-
-    -- ======================================
-    -- CX - MOVIMENTO CAIXA
-    -- ======================================
-    IF p_tipo_operacao = 'financeiro'  THEN
-
-        IF p_lado = 'D' THEN
-            RETURN QUERY
-            SELECT *
-            FROM contab.contas c
-            WHERE c.empresa_id = p_empresa_id
-              AND c.analitica = true
-              AND c.codigo LIKE '2.%'
-            ORDER BY c.codigo;
-
-        ELSIF p_lado = 'C' THEN
+            -- Banco / Caixa
             RETURN QUERY
             SELECT *
             FROM contab.contas c
@@ -117,65 +25,68 @@ END IF;
               AND c.analitica = true
               AND c.codigo LIKE '1.1.%'
             ORDER BY c.codigo;
+
+        ELSIF p_lado = 'C' THEN
+
+            IF p_classificacao = 'receita' THEN
+                RETURN QUERY
+                SELECT *
+                FROM contab.contas c
+                WHERE c.empresa_id = p_empresa_id
+                  AND c.analitica = true
+                  AND c.codigo LIKE '4.%';
+            END IF;
+
+            IF p_classificacao = 'passivo' THEN
+                RETURN QUERY
+                SELECT *
+                FROM contab.contas c
+                WHERE c.empresa_id = p_empresa_id
+                  AND c.analitica = true
+                  AND c.codigo LIKE '2.%';
+            END IF;
+
         END IF;
 
     END IF;
 
-    -- ======================================
-    -- CR - cartao_compra 
-    -- ======================================
-  IF p_tipo_operacao = 'cartao_compra' THEN
+    -- 🔹 SAÍDA FINANCEIRA
+    IF p_tipo = 'saida' THEN
 
-    IF p_lado = 'D' THEN
-        RETURN QUERY
-        SELECT *
-        FROM contab.contas c
-        WHERE c.empresa_id = p_empresa_id
-          AND c.analitica = true
-          AND (
-                c.codigo LIKE '6.%'      -- despesas
-             OR c.codigo LIKE '1.2.%'    -- imobilizado
-             OR c.codigo LIKE '1.1.3.%'  -- estoque (se usar)
-          )
-        ORDER BY c.codigo;
+        IF p_lado = 'C' THEN
+            -- Banco
+            RETURN QUERY
+            SELECT *
+            FROM contab.contas c
+            WHERE c.empresa_id = p_empresa_id
+              AND c.analitica = true
+              AND c.codigo LIKE '1.1.%';
 
-    ELSIF p_lado = 'C' THEN
-        RETURN QUERY
-        SELECT *
-        FROM contab.contas c
-        WHERE c.empresa_id = p_empresa_id
-          AND c.analitica = true
-          AND c.codigo LIKE '2.1.3%'   -- cartão crédito a pagar
-        ORDER BY c.codigo;
+        ELSIF p_lado = 'D' THEN
+
+            IF p_classificacao = 'despesa' THEN
+                RETURN QUERY
+                SELECT *
+                FROM contab.contas c
+                WHERE c.empresa_id = p_empresa_id
+                  AND c.analitica = true
+                  AND c.codigo LIKE '6.%';
+            END IF;
+
+            IF p_classificacao = 'imobilizado' THEN
+                RETURN QUERY
+                SELECT *
+                FROM contab.contas c
+                WHERE c.empresa_id = p_empresa_id
+                  AND c.analitica = true
+                  AND c.codigo LIKE '1.2.%';
+            END IF;
+
+        END IF;
 
     END IF;
 
 END IF;
-    -- ======================================
-    -- IM - IMOBILIZADO
-    -- ======================================
-    IF p_tipo_operacao = 'IM' THEN
-
-        IF p_lado = 'D' THEN
-            RETURN QUERY
-            SELECT *
-            FROM contab.contas c
-            WHERE c.empresa_id = p_empresa_id
-              AND c.analitica = true
-              AND c.codigo LIKE '1.2.%'
-            ORDER BY c.codigo;
-
-        ELSIF p_lado = 'C' THEN
-            RETURN QUERY
-            SELECT *
-            FROM contab.contas c
-            WHERE c.empresa_id = p_empresa_id
-              AND c.analitica = true
-              AND c.codigo LIKE '2.1.%'
-            ORDER BY c.codigo;
-        END IF;
-
-    END IF;
 
 END;
 $$;

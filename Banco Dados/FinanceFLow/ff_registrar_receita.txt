@@ -8,7 +8,8 @@ CREATE OR REPLACE FUNCTION ff_registrar_receita(
   p_descricao TEXT,
   p_data DATE DEFAULT CURRENT_DATE,
  p_origem TEXT DEFAULT 'ZAP',
- p_classificacao  text default not null 
+ p_classificacao  text default not null ,
+ p_codigo   text default null 
 )
 RETURNS BIGINT
 LANGUAGE plpgsql
@@ -32,11 +33,11 @@ BEGIN
              v_cat_id := ff_get_categoria_id(p_empresa_id, p_categoria_nome, 'entrada');
            END IF;
 
-   modelo_codigo := contab.ff_get_modelo_evento(
-                   p_empresa_id,
-                    p_classificacao,
-                  'financeiro');
        
+      modelo_codigo := NULLIF(p_codigo  , '');
+  IF   modelo_codigo IS NULL OR modelo_codigo = 'null' THEN 
+        modelo_codigo := contab.ff_get_modelo_evento(   p_empresa_id,  p_classificacao,  'financeiro');
+     end if ;    
 
   INSERT INTO transacoes (
     empresa_id,
