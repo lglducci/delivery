@@ -60,7 +60,7 @@ BEGIN
   SELECT id
     INTO v_perfil_id
   FROM public.perfis
-  WHERE codigo = 'CONTABIL';
+  WHERE codigo = 'TOTAL';
 
   IF v_perfil_id IS NULL THEN
     RAISE EXCEPTION 'Perfil CONTABIL não encontrado';
@@ -108,6 +108,8 @@ SELECT v_empresa_id, nome , tipo
 FROM saas_vendas.categorias_gerenciais;
 
  
+INSERT INTO contab.controle_fechamento (empresa_id, ultimo_dia_processado) 
+VALUES (v_empresa_id,  '2026-01-01');
 
  
   ------------------------------------------------------------------

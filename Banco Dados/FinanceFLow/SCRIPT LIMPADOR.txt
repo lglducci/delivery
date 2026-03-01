@@ -23,7 +23,7 @@ delete from categorias_gerenciais;
 delete from pessoa;
 delete from cartoes_transacoes;
 delete from cartoes_faturas;
- 
+ delete from contab.controle_fechamento;
 delete from cartoes_compras;
  
  
@@ -59,6 +59,7 @@ CALL reset_sequence_by_max('public',       'cartoes',           'id');
 CALL reset_sequence_by_max('saas_vendas',  'cobrancas',           'id'); 
 CALL reset_sequence_by_max('saas_vendas',  'pagamentos',           'id'); 
 CALL reset_sequence_by_max('saas_vendas',  'assinaturas',           'id'); 
+ 
 commit;
  
 
