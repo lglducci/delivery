@@ -173,6 +173,24 @@ ALTER TABLE transacoes
 ADD COLUMN origem_id BIGINT NULL
 REFERENCES transacoes(id);
 
+  ALTER TABLE public.transacoes 
+ADD COLUMN forma_pagamento   TEXT default 'avista' ;      -- PIX | DINHEIRO | DEBITO | CREDITO | FIADO
+
+
+ALTER TABLE transacoes
+ADD CONSTRAINT chk_transacoes_forma_pagamento
+CHECK (
+  forma_pagamento IN (
+    'avista',
+    'pix',
+    'cartao_credito',
+    'cartao_debito', 
+    'boleto', 
+    'transferencia',
+    'aprazo'
+  )
+);
+
 ---------------------------------------------------
 -- 8. CONTAS A PAGAR
 ---------------------------------------------------
@@ -201,6 +219,8 @@ ALTER TABLE contas_a_pagar
 ADD COLUMN contabil_id BIGINT;
 
 
+ ALTER TABLE public.contas_a_pagar
+ADD COLUMN forma_pagamento TEXT NULL,      -- PIX | DINHEIRO | DEBITO | CREDITO | FIADO
 
 ALTER TABLE public.contas_a_pagar
 ADD COLUMN forma_operacao VARCHAR(30);
@@ -321,6 +341,10 @@ CREATE TABLE cartoes_compras (
     criado_em TIMESTAMP DEFAULT now()
 );
 
+ 
+
+ 
+  
 ---------------------------------------------------
 -- 13. EXTRATO IMPORTADO
 ---------------------------------------------------

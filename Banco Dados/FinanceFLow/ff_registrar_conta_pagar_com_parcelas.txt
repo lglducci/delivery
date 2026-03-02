@@ -9,7 +9,8 @@
   p_categoria_id    	 BIGINT DEFAULT NULL,
   p_doc_ref              	text DEFAULT NULL,
  p_classsificacao        text DEFAULT not NULL,
- codigo  text default null 
+ codigo  text default null ,
+ p_forma_pagamento   text default not null 
 )
 RETURNS BIGINT
 LANGUAGE plpgsql
@@ -73,7 +74,8 @@ end if;
            lote_id ,
           doc_ref , 
          modelo_codigo ,
-         classificacao
+         classificacao,
+        forma_pagamento 
         )
         VALUES (
             p_empresa_id,
@@ -88,7 +90,8 @@ end if;
            v_lote_id ,
            p_doc_ref , 
            modelo_codigo ,
-             p_classsificacao
+             p_classsificacao,
+            p_forma_pagamento   
         )
         RETURNING id INTO v_id;
  

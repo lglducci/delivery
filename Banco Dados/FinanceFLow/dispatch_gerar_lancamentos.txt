@@ -15,7 +15,7 @@ BEGIN
         RETURN;
     END IF;
 
-    IF p_modelo_codigo LIKE 'ESTORNO_%' THEN
+       /* IF p_modelo_codigo LIKE 'ESTORNO_%' THEN
         PERFORM contab.gerar_lancamentos_estorno(p_diario_id, p_empresa_id);
         RETURN;
     END IF;
@@ -23,7 +23,7 @@ BEGIN
     ------------------------------------------------------------------
     -- FINANCEIRO ESPECÍFICO
     ------------------------------------------------------------------
-    IF p_modelo_codigo IN ('PAGAR','RECEBER') THEN
+   IF p_modelo_codigo IN ('PAGAR','RECEBER') THEN
         PERFORM contab.gerar_lancamentos_pagar_receber(p_diario_id, p_empresa_id);
         RETURN;
     END IF;
@@ -36,7 +36,7 @@ BEGIN
     IF p_modelo_codigo = 'PAGAMENTO_FATURA_CARTAO' THEN
         PERFORM contab.ff_gerar_lancamento_pagto_fatura_cartao(p_diario_id, p_empresa_id);
         RETURN;
-    END IF;
+    END IF;*/
 
     ------------------------------------------------------------------
     -- PADRÃO (MODELOS COMUNS / À VISTA / CATEGORIA)

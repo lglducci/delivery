@@ -11,7 +11,8 @@
  p_conta_id   	BIGINT DEFAULT NULL ,
  p_classificacao    TEXT default NULL,
  p_canal   text default null ,
- p_codigo   text default null 
+ p_codigo   text default null ,
+ p_forma_recebimento   text default not null 
 )
 RETURNS BIGINT
 LANGUAGE plpgsql
@@ -67,10 +68,11 @@ modelo_codigo := NULLIF(p_codigo  , '');
             status,
             lote_id  ,
           doc_ref ,
-         modelo_codigo,
+          modelo_codigo,
           conta_id,
           classificacao,
-          canal
+          canal,
+         forma_recebimento
         )
         VALUES (
             p_empresa_id,
@@ -87,7 +89,8 @@ modelo_codigo := NULLIF(p_codigo  , '');
               modelo_codigo ,
               p_conta_id   ,
               p_classificacao,
-               p_canal    
+               p_canal  ,
+               p_forma_recebimento     
         )
         RETURNING id INTO v_id;
   
