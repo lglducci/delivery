@@ -1,4 +1,3 @@
-    
  CREATE OR REPLACE FUNCTION contab.fn_contas_por_operacao(
     p_empresa_id bigint,
     p_tipo_operacao text,
@@ -9,67 +8,112 @@
 RETURNS SETOF contab.contas
 LANGUAGE plpgsql
 AS $$
-BEGIN 
+BEGIN
 
-IF p_tipo_operacao = 'financeiro' THEN
+    -- 🔹 Normaliza null string
+    IF p_tipo_operacao = 'null' THEN p_tipo_operacao := NULL; END IF;
+    IF p_lado = 'null' THEN p_lado := NULL; END IF;
+    IF p_tipo = 'null' THEN p_tipo := NULL; END IF;
+    IF p_classificacao = 'null' THEN p_classificacao := NULL; END IF;
 
-    -- 🔹 ENTRADA FINANCEIRA
-    IF p_tipo = 'entrada' THEN
+    -- =========================================
+    -- 🔵 FALLBACK (mostra tudo analítico)
+    -- =========================================
+    IF p_tipo_operacao IS NULL
+       OR p_lado IS NULL THEN
 
-        IF p_lado = 'D' THEN
-            -- Banco / Caixa
-            RETURN QUERY
-            SELECT *
-            FROM contab.contas c
-            WHERE c.empresa_id = p_empresa_id
-              AND c.analitica = true
-              AND c.codigo LIKE '1.1.%'
-            ORDER BY c.codigo;
+        RETURN QUERY
+        SELECT *
+        FROM contab.contas c
+        WHERE c.empresa_id = p_empresa_id
+          AND c.analitica = true
+        ORDER BY c.codigo;
 
-        ELSIF p_lado = 'C' THEN
-
-            IF p_classificacao = 'receita' THEN
-                RETURN QUERY
-                SELECT *
-                FROM contab.contas c
-                WHERE c.empresa_id = p_empresa_id
-                  AND c.analitica = true
-                  AND c.codigo LIKE '4.%';
-            END IF;
-
-            IF p_classificacao = 'passivo' THEN
-                RETURN QUERY
-                SELECT *
-                FROM contab.contas c
-                WHERE c.empresa_id = p_empresa_id
-                  AND c.analitica = true
-                  AND c.codigo LIKE '2.%';
-            END IF;
-
-        END IF;
-
+        RETURN;
     END IF;
 
-    -- 🔹 SAÍDA FINANCEIRA
-    IF p_tipo = 'saida' THEN
+ 
 
+
+-- =========================================
+-- 🟢 CONTA A RECEBER (CLIENTE)
+-- =========================================
+IF p_tipo_operacao = 'receber' THEN
+
+    -- DÉBITO → Clientes
+    IF p_lado = 'D' THEN
+        RETURN QUERY
+        SELECT *
+        FROM contab.contas c
+        WHERE c.empresa_id = p_empresa_id
+          AND c.analitica = true
+          AND c.codigo LIKE '1.1.2.01%'; -- Clientes
+    END IF;
+
+    -- CRÉDITO → Receita
+    IF p_lado = 'C' THEN
+        RETURN QUERY
+        SELECT *
+        FROM contab.contas c
+        WHERE c.empresa_id = p_empresa_id
+          AND c.analitica = true
+          AND c.codigo LIKE '4.%';
+    END IF;
+
+END IF;
+
+
+-- =========================================
+-- 🟢 CONTA A RECEBER CARTÃO
+-- =========================================
+IF p_tipo_operacao = 'receber_cartao' THEN
+
+    -- DÉBITO → Cartões a Receber
+    IF p_lado = 'D' THEN
+        RETURN QUERY
+        SELECT *
+        FROM contab.contas c
+        WHERE c.empresa_id = p_empresa_id
+          AND c.analitica = true
+          AND c.codigo LIKE '1.1.2.02%'; -- Cartões
+    END IF;
+
+    -- CRÉDITO → Receita
+    IF p_lado = 'C' THEN
+        RETURN QUERY
+        SELECT *
+        FROM contab.contas c
+        WHERE c.empresa_id = p_empresa_id
+          AND c.analitica = true
+          AND c.codigo LIKE '4.%';
+    END IF;
+
+END IF;
+
+
+    -- =========================================
+    -- 🔴 CONTA A PAGAR
+    -- =========================================
+    IF p_tipo_operacao = 'pagar' THEN
+
+        -- CRÉDITO → Fornecedores
         IF p_lado = 'C' THEN
-            -- Banco
             RETURN QUERY
             SELECT *
             FROM contab.contas c
             WHERE c.empresa_id = p_empresa_id
               AND c.analitica = true
-              AND c.codigo LIKE '1.1.%';
+              AND c.codigo LIKE '2.1.%';
+        END IF;
 
-        ELSIF p_lado = 'D' THEN
+        -- DÉBITO → depende da classificação
+        IF p_lado = 'D' THEN
 
             IF p_classificacao = 'despesa' THEN
                 RETURN QUERY
                 SELECT *
                 FROM contab.contas c
                 WHERE c.empresa_id = p_empresa_id
-                  AND c.analitica = true
                   AND c.codigo LIKE '6.%';
             END IF;
 
@@ -78,18 +122,180 @@ IF p_tipo_operacao = 'financeiro' THEN
                 SELECT *
                 FROM contab.contas c
                 WHERE c.empresa_id = p_empresa_id
-                  AND c.analitica = true
                   AND c.codigo LIKE '1.2.%';
+            END IF;
+
+            IF p_classificacao = 'custo' THEN
+                RETURN QUERY
+                SELECT *
+                FROM contab.contas c
+                WHERE c.empresa_id = p_empresa_id
+                  AND c.codigo LIKE '5.%';
             END IF;
 
         END IF;
 
     END IF;
 
-END IF;
+
+    -- =========================================
+    -- 💳 CARTÃO COMPRA
+    -- =========================================
+    IF p_tipo_operacao = 'cartao_compra' THEN
+
+        -- DÉBITO
+        IF p_lado = 'D' THEN
+
+            IF p_classificacao = 'despesa' THEN
+                RETURN QUERY
+                SELECT *
+                FROM contab.contas c
+                WHERE c.empresa_id = p_empresa_id
+                  AND c.codigo LIKE '6.%';
+            END IF;
+
+            IF p_classificacao = 'imobilizado' THEN
+                RETURN QUERY
+                SELECT *
+                FROM contab.contas c
+                WHERE c.empresa_id = p_empresa_id
+                  AND c.codigo LIKE '1.2.%';
+            END IF;
+
+            IF p_classificacao = 'custo' THEN
+                RETURN QUERY
+                SELECT *
+                FROM contab.contas c
+                WHERE c.empresa_id = p_empresa_id
+                  AND c.codigo LIKE '5.%';
+            END IF;
+
+        END IF;
+
+        -- CRÉDITO → Cartão a pagar
+        IF p_lado = 'C' THEN
+            RETURN QUERY
+            SELECT *
+            FROM contab.contas c
+            WHERE c.empresa_id = p_empresa_id
+              AND c.codigo LIKE '2.1.3%';
+        END IF;
+
+    END IF;
+
+
+    -- =========================================
+    -- 💰 FINANCEIRO (À VISTA)
+    -- =========================================
+    IF p_tipo_operacao = 'financeiro' THEN
+
+        -- ENTRADA
+        IF p_tipo = 'entrada' THEN
+
+            -- DÉBITO → Banco/Caixa
+            IF p_lado = 'D' THEN
+                RETURN QUERY
+                SELECT *
+                FROM contab.contas c
+                WHERE c.empresa_id = p_empresa_id
+                  AND c.codigo LIKE '1.1.%';
+            END IF;
+
+            -- CRÉDITO
+            IF p_lado = 'C' THEN
+
+                IF p_classificacao = 'receita' THEN
+                    RETURN QUERY
+                    SELECT *
+                    FROM contab.contas c
+                    WHERE c.empresa_id = p_empresa_id
+                      AND c.codigo LIKE '4.%';
+                END IF;
+
+                IF p_classificacao = 'passivo' THEN
+                    RETURN QUERY
+                    SELECT *
+                    FROM contab.contas c
+                    WHERE c.empresa_id = p_empresa_id
+                      AND c.codigo LIKE '2.%';
+                END IF;
+
+            END IF;
+
+        END IF;
+
+        -- SAÍDA
+        IF p_tipo = 'saida' THEN
+
+            -- CRÉDITO → Banco
+            IF p_lado = 'C' THEN
+                RETURN QUERY
+                SELECT *
+                FROM contab.contas c
+                WHERE c.empresa_id = p_empresa_id
+                  AND c.codigo LIKE '1.1.%';
+            END IF;
+
+            -- DÉBITO
+            IF p_lado = 'D' THEN
+
+                IF p_classificacao = 'despesa' THEN
+                    RETURN QUERY
+                    SELECT *
+                    FROM contab.contas c
+                    WHERE c.empresa_id = p_empresa_id
+                      AND c.codigo LIKE '6.%';
+                END IF;
+
+              -- DÉBITO
+            IF p_lado = 'D' THEN
+
+                IF p_classificacao = 'custo'  THEN
+                    RETURN QUERY
+                    SELECT *
+                    FROM contab.contas c
+                    WHERE c.empresa_id = p_empresa_id
+                      AND c.codigo LIKE '5.%';
+                END IF;
+             END IF;
+         
+                IF p_classificacao = 'imobilizado' THEN
+                    RETURN QUERY
+                    SELECT *
+                    FROM contab.contas c
+                    WHERE c.empresa_id = p_empresa_id
+                      AND c.codigo LIKE '1.2.%';
+                END IF;
+
+            END IF;
+
+        END IF;
+
+    END IF;
+
+
+    -- =========================================
+    -- 🟣 IMOBILIZADO DIRETO
+    -- =========================================
+    IF p_tipo_operacao = 'IM' THEN
+
+        IF p_lado = 'D' THEN
+            RETURN QUERY
+            SELECT *
+            FROM contab.contas c
+            WHERE c.empresa_id = p_empresa_id
+              AND c.codigo LIKE '1.2.%';
+        END IF;
+
+        IF p_lado = 'C' THEN
+            RETURN QUERY
+            SELECT *
+            FROM contab.contas c
+            WHERE c.empresa_id = p_empresa_id
+              AND c.codigo LIKE '2.1.%';
+        END IF;
+
+    END IF;
 
 END;
 $$;
-
- 
- 

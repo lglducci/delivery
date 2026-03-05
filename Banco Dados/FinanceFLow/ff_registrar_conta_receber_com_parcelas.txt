@@ -24,15 +24,20 @@ DECLARE
     v_venc DATE;
     i INT;
    v_lote_id BIGINT := NULL;
-modelo_codigo  TEXT;
+     modelo_codigo  TEXT;
+    tipo_evento  text ; 
 BEGIN
 
+   tipo_evento:='receber' ; 
+  if p_forma_recebimento    = 'cartao_credito' THEN
+       tipo_evento:='receber_cartao' ; 
+ end if;
 
 modelo_codigo := NULLIF(p_codigo  , '');
 
  
       IF   modelo_codigo IS NULL OR modelo_codigo = 'null' THEN 
-             modelo_codigo := contab.ff_get_modelo_evento(  p_empresa_id, p_classificacao,   'receber');
+             modelo_codigo := contab.ff_get_modelo_evento(  p_empresa_id, p_classificacao,    tipo_evento );
         end if;    
 
         -- Só gera lote se houver mais de 1 parcela
