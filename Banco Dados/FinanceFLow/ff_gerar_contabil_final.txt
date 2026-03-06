@@ -54,7 +54,7 @@ BEGIN
     -- 5) CONTROLE DE FECHAMENTO
     ----------------------------------------------------------------
     UPDATE contab.controle_fechamento
-    SET ultimo_dia_processado = p_data_fim + 1
+    SET ultimo_dia_processado = p_data_fim  
     WHERE empresa_id = p_empresa_id;
 END;
 $$;

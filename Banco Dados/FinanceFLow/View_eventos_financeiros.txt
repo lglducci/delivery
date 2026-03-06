@@ -1,0 +1,112 @@
+ 
+
+ drop view vw_eventos_financeiros
+
+ 
+    
+   CREATE OR REPLACE VIEW vw_eventos_financeiros AS
+
+SELECT
+    id,
+    empresa_id,
+    descricao,
+    valor_total AS valor,
+    'saida' AS tipo,
+    parcelas,
+    NULL AS vencimento,
+    data_compra AS data_movimento,
+    evento_codigo AS evento_codigo,
+    criado_em AS data_criacao,
+    tipo_evento,
+    classificacao,
+    'cartao_compra' AS tipo_operacao,
+   0 as  conta_id, 0  as categoria_id , 0 as  fornecedor_id , 0 origem_id,
+   ''  as status
+ FROM cartoes_compras
+
+UNION ALL
+
+SELECT
+    id,
+    empresa_id,
+    descricao,
+    valor,
+    'saida' AS tipo,
+    parcela_num as parcelas ,
+    vencimento,
+    vencimento AS  data_movimento,
+    evento_codigo AS evento_codigo,
+    criado_em AS data_criacao,
+    tipo_evento,
+    classificacao,
+    'conta_pagar' AS tipo_operacao,
+    0 as conta_id,  
+  categoria_id ,   
+  fornecedor_id  ,
+  0 origem_id ,
+    status
+FROM contas_a_pagar
+
+UNION ALL
+
+SELECT
+    id,
+    empresa_id,
+    descricao,
+    valor,
+    'entrada' AS tipo,
+    parcela_num as  parcelas,
+    vencimento,
+    vencimento AS data_movimento,
+    evento_codigo AS  evento_codigo,
+    criado_em AS data_criacao,
+    tipo_evento,
+    classificacao,
+    'conta_receber' AS tipo_operacao ,
+    0 as conta_id,  categoria_id ,    fornecedor_id  ,
+     0 origem_id ,
+     status
+FROM contas_a_receber
+
+UNION ALL
+
+SELECT
+    id,
+    empresa_id,
+    descricao,
+    valor,
+    'entrada' AS tipo,
+    0 AS parcelas,
+    NULL AS vencimento,
+    data_movimento AS data_movimento,
+    evento_codigo AS  evento_codigo,
+    criado_em AS data_criacao,
+    tipo_evento,
+    classificacao,
+    'transacao' AS tipo_operacao ,
+    conta_id,  categoria_id ,   0 as fornecedor_id ,
+   origem_id,
+   ''  as status
+FROM transacoes
+union all   
+SELECT
+    id,
+    empresa_id,
+    'Fatura cartão' AS descricao,
+    valor_total AS valor,
+    'saida' AS tipo,
+    1 AS parcelas,
+    vencimento,
+    vencimento AS data_movimento,
+    evento_codigo,
+    criado_em AS data_criacao,
+    'financeiro' AS tipo_evento,
+    'despesa' AS classificacao,
+    'fatura_cartao' AS tipo_operacao,
+    0 AS conta_id,
+    0 AS categoria_id,
+    0 AS fornecedor_id,
+   0 origem_id,
+    status
+FROM cartoes_faturas
+WHERE status IN ('fechada','paga');

@@ -30,11 +30,11 @@ BEGIN
     -- Se não encontrou, erro explícito
     ----------------------------------------------------------------
     IF v_codigo IS NULL THEN
-        RAISE EXCEPTION
-        'Modelo não encontrado para categoria %, evento %, empresa %.',
-        p_classificacao,
-        p_tipo_evento,
-        p_empresa_id;
+       RAISE EXCEPTION 
+      'Não existe modelo contábil ativo e de sistema para classificacao "%", tipo_evento "%", empresa %.',
+       p_classificacao,
+      p_tipo_evento,
+      p_empresa_id;
     END IF;
 
     RETURN v_codigo;
