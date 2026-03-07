@@ -7,6 +7,7 @@ LANGUAGE plpgsql
 AS $$
 DECLARE
     v_diario_estorno   contab.diario%ROWTYPE;
+    v_transacao_origem_id BIGINT;
     v_diario_origem_id BIGINT;
     v_lote_id          BIGINT;
 BEGIN
@@ -22,11 +23,20 @@ BEGIN
         RAISE EXCEPTION 'Diário de estorno % não encontrado.', p_diario_id;
     END IF;
 
+---   1.1 mudei a partir daqui  
+   v_transacao_origem_id :=  (v_diario_estorno.outros ->> 'origem_id')::BIGINT;
+
+      SELECT id
+           INTO v_diario_origem_id
+      FROM contab.diario
+  WHERE transacao_id = v_transacao_origem_id
+             AND empresa_id = p_empresa_id;
+
     -- 2) Pega o diário origem (ex: 5) do JSON
-    v_diario_origem_id := (v_diario_estorno.outros ->> 'origem_id')::BIGINT;
+   -- comentei isso agora pego da tabela  v_diario_origem_id := (v_diario_estorno.outros ->> 'origem_id')::BIGINT;
 
     IF v_diario_origem_id IS NULL THEN
-        RAISE EXCEPTION 'Diário de estorno % sem origem_id.', p_diario_id;
+        RAISE EXCEPTION 'Diário origem da transação % não encontrado.', v_transacao_origem_id;
     END IF;
 
     -- 3) Gera um lote único para a nova partida dobrada

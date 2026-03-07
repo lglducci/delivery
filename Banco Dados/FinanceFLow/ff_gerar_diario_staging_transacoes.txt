@@ -34,7 +34,8 @@ BEGIN
         valor_imposto,
         desconto,
         status,
-        outros 
+        outros ,
+       transacao_id
     )
     SELECT
         t.empresa_id,
@@ -79,7 +80,7 @@ BEGIN
             'conta_contabil_id',cf.contabil_id ,
             'categoria_id', t.categoria_id ,
             'origem_id', t.origem_id
-        )  
+        )  , t.id
     FROM public.transacoes t
     LEFT JOIN public.categorias_gerenciais cg
            ON cg.id = t.categoria_id

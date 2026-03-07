@@ -91,7 +91,12 @@ ALTER TABLE contab.diario
 ADD CONSTRAINT ck_diario_status
 CHECK (status IN ('rascunho', 'confirmado', 'processado', 'estornado','manual'));
 
+ALTER TABLE contab.diario
+ADD COLUMN transacao_id bigint;
 
+CREATE UNIQUE INDEX ux_diario_transacao
+ON contab.diario (empresa_id, transacao_id)
+WHERE transacao_id IS NOT NULL;
 
 -----------------------------------------------------------
 -- 4) MODELOS
@@ -208,7 +213,12 @@ CREATE TABLE contab.diario_staging (
   referencia_id bigint
 );
 
- 
+ ALTER TABLE contab.diario_staging
+ADD COLUMN transacao_id bigint;
+
+CREATE UNIQUE INDEX ux_diario_transacao_staging
+ON contab.diario_staging (empresa_id, transacao_id)
+WHERE transacao_id IS NOT NULL;
 
  CREATE TABLE contab.eventos (
     codigo text PRIMARY KEY,
