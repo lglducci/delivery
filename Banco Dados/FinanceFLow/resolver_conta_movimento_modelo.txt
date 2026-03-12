@@ -1,0 +1,52 @@
+CREATE OR REPLACE FUNCTION contab.resolver_conta_movimento_modelo(
+    p_empresa_id BIGINT,
+    p_modelo_id BIGINT,
+    p_conta_override_id BIGINT
+)
+RETURNS TABLE(
+    conta_id BIGINT,
+    dc CHAR
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    r contab.modelos_linhas%ROWTYPE;
+    v_codigo TEXT;
+BEGIN
+
+FOR r IN
+    SELECT *
+    FROM contab.modelos_linhas
+    WHERE empresa_id = p_empresa_id
+    AND modelo_id = p_modelo_id
+    ORDER BY ordem
+LOOP
+
+    -- pega código da conta
+    SELECT codigo
+    INTO v_codigo
+    FROM contab.contas
+    WHERE id = r.conta_id;
+
+    -- regra de substituição
+    IF p_conta_override_id IS NOT NULL
+       AND v_codigo LIKE '1.%'
+       AND r.conta_id <> p_conta_override_id
+    THEN
+
+        conta_id := p_conta_override_id;
+
+    ELSE
+
+        conta_id := r.conta_id;
+
+    END IF;
+
+    dc := r.dc;
+
+    RETURN NEXT;
+
+END LOOP;
+
+END;
+$$;
