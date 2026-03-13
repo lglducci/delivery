@@ -25,7 +25,7 @@ LOOP
     v_tipo         := v_item->>'tipo';
     v_historico    := v_item->>'historico';
     v_conta_contra := (v_item->>'conta_contra')::BIGINT;
-    v_data := to_date(v_item->>'data','DD/MM/YYYY');
+    v_data := (v_item->>'data')::date;
 
     -- validações
     IF v_conta_contra IS NULL THEN

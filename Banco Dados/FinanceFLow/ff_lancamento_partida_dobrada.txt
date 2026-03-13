@@ -24,10 +24,7 @@ BEGIN
     END IF;
 
     -- 🔢 próximo lote_id
-    SELECT COALESCE(MAX(lote_id), 0) + 1
-      INTO v_lote_id
-      FROM contab.lancamentos
-     WHERE empresa_id = p_empresa_id;
+ v_lote_id := nextval('contab.lote_id_seq');
 
     -- 🔴 DÉBITO
     INSERT INTO contab.lancamentos (
