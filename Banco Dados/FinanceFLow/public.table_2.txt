@@ -91,5 +91,16 @@ CHECK (classificacao IN (
 
 
 
-
+create table ia_consumo (
+  id bigserial primary key,
+  empresa_id bigint not null,
+  pergunta text,
+  resposta text,
+  tokens_input integer default 0,
+  tokens_output integer default 0,
+  tokens_total integer default 0,
+  custo_estimado numeric(10,6) default 0,
+  modelo text,
+  created_at timestamp default now()
+);
  

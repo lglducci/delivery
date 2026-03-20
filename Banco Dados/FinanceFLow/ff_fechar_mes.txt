@@ -126,7 +126,8 @@ BEGIN
     debito,
     credito,
     historico,
-    diario_id
+    diario_id,
+   origem
   )
   VALUES
     (
@@ -145,7 +146,8 @@ BEGIN
       0,
       v_resultado,
       'Fechamento do mês ' || p_mes || '/' || p_ano,
-      0
+      0,
+'CONTABIL'
     );
 
 END;
