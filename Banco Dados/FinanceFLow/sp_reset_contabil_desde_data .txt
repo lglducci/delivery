@@ -21,7 +21,8 @@ BEGIN
     ------------------------------------------------------------------
     DELETE FROM contab.lancamentos
      WHERE empresa_id = p_empresa_id
-       AND data_mov >= p_data_inicio;
+       AND data_mov >= p_data_inicio
+       AND (origem IS NULL OR origem <> 'CONTABIL');
 
     ------------------------------------------------------------------
     -- 3) Apaga diário

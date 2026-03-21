@@ -1,4 +1,4 @@
- CREATE OR REPLACE FUNCTION contab.ff_razao_sintetico_mensal (
+  CREATE OR REPLACE FUNCTION contab.ff_razao_sintetico_mensal (
     p_empresa_id BIGINT,
     p_data_ini   DATE,
     p_data_fim   DATE,
@@ -9,69 +9,90 @@ RETURNS TABLE (
     mes_ano        TEXT,
     conta_codigo   TEXT,
     conta_nome     TEXT,
-    saldo_inicial  NUMERIC(14,2), 
-    valor         NUMERIC(14,2),
+    saldo_inicial  NUMERIC(14,2),
+    valor          NUMERIC(14,2),
     saldo          NUMERIC(14,2)
 )
 LANGUAGE sql
 STABLE
 AS $$
- 
-WITH base AS (
+
+WITH contas_base AS (
   SELECT
-    r.data_mov,
-    r.conta_id,
-    r.conta_codigo,
-    r.conta_nome,
-    r.valor::numeric AS valor
-  FROM contab.ff_relatorio_razao(
-    p_empresa_id,
-    p_data_ini,
-    p_data_fim,
-    p_filtro
-  ) r
+    c.id        AS conta_id,
+    c.codigo    AS conta_codigo,
+    c.nome      AS conta_nome,
+    c.natureza
+  FROM contab.contas c
+  WHERE c.empresa_id = p_empresa_id
+  AND (
+      p_filtro IS NULL
+      OR btrim(p_filtro) = ''
+      OR c.codigo ILIKE '%' || p_filtro || '%'
+      OR c.nome   ILIKE '%' || p_filtro || '%'
+  )
 ),
 
-mensal AS (
-  SELECT
-    date_trunc('month', data_mov)::date AS mes_ini,
-    conta_id,
-    conta_codigo,
-    conta_nome,
-    SUM(valor)::numeric(14,2) AS valor_mes
-  FROM base
-  GROUP BY 1,2,3,4
+saldo_base AS (
+SELECT
+  c.conta_id,
+  c.conta_codigo,
+  c.conta_nome,
+
+  COALESCE(si.saldo,0)
+  +
+  COALESCE((
+      SELECT     SUM(  CASE
+  WHEN c.natureza='D' THEN l.debito - l.credito
+  ELSE l.credito - l.debito
+END  )
+      FROM contab.lancamentos l
+      WHERE l.empresa_id = p_empresa_id
+      AND l.conta_id     = c.conta_id
+      AND l.data_mov    < p_data_ini
+  ),0) AS saldo_inicial
+
+FROM contas_base c
+
+LEFT JOIN contab.saldos_iniciais si
+ON si.empresa_id = p_empresa_id
+AND si.conta_id  = c.conta_id
 ),
 
-saldo_mes AS (
-  SELECT
-    m.*,
-    (
-      COALESCE(si.saldo, 0)
-      +
-      COALESCE((
-        SELECT SUM(l.debito - l.credito)
-        FROM contab.lancamentos l
-        WHERE l.empresa_id = p_empresa_id
-          AND l.conta_id   = m.conta_id
-          AND l.data_mov  < m.mes_ini
-      ), 0)
-    )::numeric(14,2) AS saldo_inicial
-  FROM mensal m
-  LEFT JOIN contab.saldos_iniciais si
-    ON si.empresa_id = p_empresa_id
-   AND si.conta_id   = m.conta_id
+movimento_periodo AS (
+
+SELECT
+  l.conta_id,
+
+  SUM(  CASE
+  WHEN c.natureza='D' THEN l.debito - l.credito
+  ELSE l.credito - l.debito
+END  ) AS valor
+
+FROM contab.lancamentos l
+JOIN contab.contas c
+ON c.id = l.conta_id
+
+WHERE l.empresa_id = p_empresa_id
+AND l.data_mov BETWEEN p_data_ini AND p_data_fim
+
+GROUP BY l.conta_id
 )
 
 SELECT
-  conta_id,
-  to_char(mes_ini, 'MM/YYYY') AS mes_ano,
-  conta_codigo,
-  conta_nome,
-  saldo_inicial,
-  valor_mes AS valor,
-  (saldo_inicial + valor_mes)::numeric(14,2) AS saldo
-FROM saldo_mes
-ORDER BY mes_ini, conta_codigo;
+  s.conta_id,
+  to_char(p_data_ini,'MM/YYYY') AS mes_ano,
+  s.conta_codigo,
+  s.conta_nome,
+  s.saldo_inicial,
+  COALESCE(m.valor,0)::numeric(14,2) AS valor,
+  (s.saldo_inicial + COALESCE(m.valor,0))::numeric(14,2) AS saldo
+
+FROM saldo_base s
+
+LEFT JOIN movimento_periodo m
+ON m.conta_id = s.conta_id
+
+ORDER BY s.conta_codigo;
 
 $$;
