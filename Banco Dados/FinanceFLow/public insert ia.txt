@@ -1,0 +1,77 @@
+insert into ia_conhecimento (tipo, assunto, titulo, rota, conteudo)
+values
+
+-- 🔷 DASHBOARD
+('navegacao','dashboard_financeiro','Dashboard Financeiro','/dashboard','Visualização geral financeira da empresa'),
+('navegacao','dashboard_contabil','Dashboard Contábil','/dashboardcontabil','Visão contábil da empresa'),
+
+-- 🔷 FINANCEIRO
+('navegacao','lancamentos','Lançamentos','/transactions','Registro de entradas e saídas financeiras'),
+('processo','lancamento','Como lançar movimentação','/transactions','Ir em Lançamentos → registrar entrada ou saída → salvar'),
+
+('navegacao','contas_pagar','Contas a Pagar','/contas-pagar','Gestão de contas a pagar'),
+('processo','contas_pagar','Como registrar conta a pagar','/contas-pagar','Ir em Contas a Pagar → novo → preencher dados'),
+
+('navegacao','contas_receber','Contas a Receber','/contas-receber','Gestão de contas a receber'),
+('processo','contas_receber','Como registrar conta a receber','/contas-receber','Ir em Contas a Receber → novo → preencher dados'),
+
+('navegacao','titulos_vencidos','Títulos Vencidos','/titulos-vencidos','Consulta de títulos vencidos'),
+
+-- 🔷 CARTÕES
+('navegacao','faturas_cartao','Faturas Cartão','/faturas-cartao','Controle de faturas'),
+('navegacao','transacoes_cartao','Transações Cartão','/cartao-transacoes','Consulta de transações'),
+('navegacao','compras_cartao','Compras no Cartão','/compras-cartao','Registro de compras no cartão'),
+
+('processo','cartao','Como registrar compra no cartão','/compras-cartao','Ir em Compras no Cartão → registrar compra'),
+
+-- 🔷 CONTÁBIL
+('navegacao','diario_contabil','Diário Contábil','/diario','Visualização do diário contábil'),
+('navegacao','processar_contabil','Processar Contábil','/processar-diario','Executa geração contábil'),
+('processo','processar_contabil','Como processar contábil','/processar-diario','Ir em Processar Contábil → executar'),
+
+('navegacao','lancamentos_contabeis','Lançamentos Contábeis','/relatorios/diario','Consulta dos lançamentos contábeis'),
+('navegacao','apuracao_resultado','Apuração de Resultado','/apuracaoresultado','Apuração de resultados'),
+('navegacao','lembretes_contabeis','Lembretes Contábeis','/lembretecontabil','Controle de lembretes'),
+
+-- 🔷 CADASTROS
+('navegacao','fornecedor_cliente','Fornecedores e Clientes','/providers-clients','Cadastro de fornecedores e clientes'),
+('processo','fornecedor_cliente','Como cadastrar fornecedor','/providers-clients','Ir em Fornecedores/Clientes → novo cadastro'),
+
+('navegacao','categorias','Categorias Gerenciais','/contasgerenciais','Cadastro de categorias'),
+('navegacao','contas_financeiras','Contas Financeiras','/saldos','Cadastro de contas financeiras'),
+('navegacao','cartoes','Cartões','/cards','Cadastro de cartões'),
+
+('navegacao','contas_contabeis','Contas Contábeis','/contascontabeis','Cadastro do plano de contas'),
+
+('navegacao','mapeamento_contabil','Modelos Contábeis (Token)','/mapeamento-contabil','Configuração dos modelos contábeis'),
+
+-- 🔷 CONCEITOS IMPORTANTES
+('conceito','token','O que é token',null,'Token é o modelo contábil que define débito e crédito automaticamente'),
+
+('conceito','contabil','O que é contabilidade',null,'Contabilidade registra os fatos financeiros em partidas dobradas'),
+
+('conceito','implantacao','Conta de implantação',null,'Usar conta de Patrimônio Líquido para ajuste inicial'),
+
+('conceito','partida_dobrada','Partida dobrada',null,'Todo lançamento tem débito e crédito de mesmo valor'),
+
+('conceito','financeiro_vs_contabil','Financeiro vs Contábil',null,'Financeiro registra o fato, contábil classifica'),
+
+-- 🔷 PROCESSOS IMPORTANTES
+('processo','inicio','Por onde começar','/contascontabeis','1. Criar contas contábeis → 2. Criar modelos → 3. Lançar financeiro → 4. Processar contábil'),
+
+('processo','modelo','Como configurar modelo contábil','/mapeamento-contabil','Ir em Modelos Contábeis → definir débito e crédito'),
+
+('processo','fluxo','Fluxo do sistema',null,'Financeiro → Token → Contábil → Relatórios'),
+
+-- 🔷 RELATÓRIOS
+('navegacao','relatorios','Relatórios','/reports','Acesso aos relatórios'),
+('navegacao','balanco','Balanço','/relatorios/balanco','Visualização do balanço'),
+('navegacao','razao','Razão','/relatorios/razao','Consulta do razão'),
+('navegacao','dre','DRE','/relatorios/dre','Demonstração de resultado'),
+
+-- 🔷 CONFIGURAÇÕES
+('navegacao','empresa','Minha Empresa','/editar-empresa','Configuração da empresa'),
+('navegacao','plano','Plano','/escolhaplano','Gerenciamento de plano'),
+
+-- 🔷 OUTROS
+('navegacao','livro_caixa','Livro Caixa','/livro-caixa','Registro do livro caixa');

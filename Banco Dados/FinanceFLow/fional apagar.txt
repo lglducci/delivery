@@ -1,0 +1,25 @@
+insert into ia_conhecimento (tipo, assunto, titulo, rota, conteudo)
+values
+
+-- 🔷 DASHBOARD
+ 
+
+-- 🔷 FINANCEIRO
+ 
+('processo','lancamento','Como lançar movimentação','/transactions','Ir em Lançamentos → registrar entrada ou saída → salvar'), 
+('processo','contas_pagar','Como registrar conta a pagar','/contas-pagar','Ir em Contas a Pagar → novo → preencher dados'), 
+('processo','contas_receber','Como registrar conta a receber','/contas-receber','Ir em Contas a Receber → novo → preencher dados'), 
+('processo','cartao','Como registrar compra no cartão','/compras-cartao','Ir em Compras no Cartão → registrar compra'), 
+('processo','processar_contabil','Como processar contábil','/processar-diario','Ir em Processar Contábil → executar'),
+ 
+('processo','fornecedor_cliente','Como cadastrar fornecedor','/providers-clients','Ir em Fornecedores/Clientes → novo cadastro'), 
+('conceito','token','O que é token',null,'Token é o modelo contábil que define débito e crédito automaticamente'), 
+('conceito','contabil','O que é contabilidade',null,'Contabilidade registra os fatos financeiros em partidas dobradas'), 
+('conceito','implantacao','Conta de implantação',null,'Usar conta de Patrimônio Líquido para ajuste inicial'), 
+('conceito','partida_dobrada','Partida dobrada',null,'Todo lançamento tem débito e crédito de mesmo valor'), 
+('conceito','financeiro_vs_contabil','Financeiro vs Contábil',null,'Financeiro registra o fato, contábil classifica'),
+
+-- 🔷 PROCESSOS IMPORTANTES
+('processo','inicio','Por onde começar','/contascontabeis','1. Criar contas contábeis → 2. Criar modelos → 3. Lançar financeiro → 4. Processar contábil'), 
+('processo','modelo','Como configurar modelo contábil','/mapeamento-contabil','Ir em Modelos Contábeis → definir débito e crédito'),
+('processo','fluxo','Fluxo do sistema',null,'Financeiro → Token → Contábil → Relatórios') ;

@@ -103,4 +103,27 @@ create table ia_consumo (
   modelo text,
   created_at timestamp default now()
 );
+
+
+
+
+
+create table ia_conhecimento (
+  id serial primary key,
+  tipo text,         -- conceito, processo, navegacao
+  assunto text,      -- token, contas, lancamento, cartao, etc
+  titulo text,
+  conteudo text, 
+rota text null 
+);
+
+ create table ia_historico (
+  id bigserial primary key,
+  empresa_id bigint not null,
+  role text not null, -- 'user' ou 'assistant'
+  mensagem text not null,
+  created_at timestamp default now()
+);
+
+create index idx_hist_empresa on ia_historico(empresa_id);
  
