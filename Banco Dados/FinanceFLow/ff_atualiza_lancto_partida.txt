@@ -1,0 +1,56 @@
+  CREATE OR REPLACE FUNCTION contab.ff_atualiza_lancto_partida(
+    p_lote_id       BIGINT,
+    p_empresa_id    BIGINT,
+    p_debito_id     BIGINT,
+    p_credito_id    BIGINT,
+    p_valor         NUMERIC,
+    p_historico     TEXT,
+    p_data_lancto   DATE,
+    p_lembrar       BOOLEAN,
+    p_vencimento    DATE
+)
+RETURNS JSON
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_lote BIGINT;
+BEGIN
+
+  -- 🔥 EXCLUI LOTE (com proteção)
+  BEGIN
+    PERFORM contab.ff_excluir_lancamentos_lote(p_empresa_id, p_lote_id);
+  EXCEPTION WHEN OTHERS THEN
+    RETURN json_build_object(
+      'ok', false,
+      'erro', 'erro ao excluir lote',
+      'detalhe', SQLERRM,
+      'lote_id', p_lote_id
+    );
+  END;
+
+  -- 🔥 RECRIA LANÇAMENTO (SEM INTO ERRADO)
+  BEGIN
+    PERFORM contab.ff_lancamento_partida_dobrada(
+      p_empresa_id,
+      p_debito_id,
+      p_credito_id,
+      p_valor,
+      p_historico,
+      p_data_lancto,
+      p_lembrar,
+      p_vencimento
+    );
+  EXCEPTION WHEN OTHERS THEN
+    RETURN json_build_object(
+      'ok', false,
+      'erro', 'erro ao recriar lancamento',
+      'detalhe', SQLERRM,
+      'debito_id', p_debito_id,
+      'credito_id', p_credito_id
+    );
+  END;
+
+  RETURN json_build_object('ok', true);
+
+END;
+$$;
