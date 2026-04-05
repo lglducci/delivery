@@ -116,6 +116,11 @@ ALTER TABLE contab.modelos
 ADD COLUMN modelo_prazo_id BIGINT
 REFERENCES contab.modelos(id);
 
+ALTER TABLE contab.modelos
+ADD COLUMN assinatura text;
+
+CREATE UNIQUE INDEX idx_modelo_assinatura
+ON contab.modelos (empresa_id, assinatura);
 
 -----------------------------------------------------------
 -- 5) MODELOS LINHAS

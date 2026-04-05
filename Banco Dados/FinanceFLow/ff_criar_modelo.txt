@@ -1,56 +1,79 @@
-    create or replace function contab.ff_criar_modelo
-(p_empresa_id int, 
+ create or replace function contab.ff_criar_modelo
+(
+ p_empresa_id int, 
  p_nome text, 
  p_token text, 
- p_conta_cred  int,
-p_conta_deb int,
- p_tipo_automacao text ,
- p_tipo_evento text ,
+ p_conta_cred int,
+ p_conta_deb int,
+ p_tipo_automacao text,
+ p_tipo_evento text,
  p_tipo_classificacao text default null  
 )
-
-
-returns int as $$
+returns int 
+language plpgsql
+as $$
 declare
     v_modelo_id int;
-    v_conta_deb int;
-    v_conta_cred int;
+    v_assinatura text;
 begin
-    -- cria o modelo
-    insert into contab.modelos (empresa_id, nome, codigo, tipo_automacao , tipo_evento, classificacao )
-    values (p_empresa_id, p_nome, p_token, p_tipo_automacao,p_tipo_evento, p_tipo_classificacao )
+
+    -- 🔥 monta assinatura única
+    v_assinatura := p_empresa_id || '|' || p_tipo_evento || '|' || p_tipo_classificacao || '|' || p_conta_deb || '|' || p_conta_cred;
+
+    -- 🔍 verifica se já existe
+    select id into v_modelo_id
+    from contab.modelos
+    where empresa_id = p_empresa_id
+      and assinatura = v_assinatura
+    limit 1;
+
+    -- ✅ se já existe, ATUALIZA nome/token (resolve seu problema)
+    if v_modelo_id is not null then
+
+        update contab.modelos
+        set nome = p_nome,
+            codigo = p_token,
+            tipo_automacao = p_tipo_automacao,
+            tipo_evento = p_tipo_evento,
+            classificacao = p_tipo_classificacao
+        where id = v_modelo_id;
+
+        return v_modelo_id;
+    end if;
+
+    -- 🚀 cria modelo novo
+    insert into contab.modelos (
+        empresa_id, 
+        nome, 
+        codigo, 
+        tipo_automacao,
+        tipo_evento, 
+        classificacao,
+        assinatura
+    )
+    values (
+        p_empresa_id, 
+        p_nome, 
+        p_token, 
+        p_tipo_automacao,
+        p_tipo_evento, 
+        p_tipo_classificacao,
+        v_assinatura
+    )
     returning id into v_modelo_id;
 
-    -- garante conta fake debito
-    select id into v_conta_deb
-    from contab.contas
-    where empresa_id = p_empresa_id and codigo = 'XPTO_D';
+    -- 🔵 insere linhas
+    insert into contab.modelos_linhas 
+        (empresa_id, modelo_id, conta_id, dc, fonte_valor, valor_fixo)
+    values 
+        (p_empresa_id, v_modelo_id, p_conta_deb, 'D', 'Total', null);
 
-  --  if v_conta_deb is null then
-  --      insert into contab.contas (empresa_id, codigo, nome, tipo, natureza, nivel)
-  --      values (p_empresa_id, 'XPTO_D', 'Conta Padrão Débito', 'ATIVO', 'D', 1)
-   --     returning id into v_conta_deb;
-   -- end if;
-
-    -- garante conta fake crédito
- --   select id into v_conta_cred
- --   from contab.contas
- --   where empresa_id = p_empresa_id and codigo = 'XPTO_C';
-
-   -- if v_conta_cred is null then
-  --insert into contab.contas (empresa_id, codigo, nome, tipo, natureza, nivel)
-   --     values (p_empresa_id, 'XPTO_C', 'Conta Padrão Crédito', 'ATIVO', 'C', 1)
-  --      returning id into v_conta_cred;
-  --  end if;
-
-    -- insere as duas linhas do modelo
-    insert into contab.modelos_linhas (empresa_id, modelo_id, conta_id, dc ,fonte_valor, valor_fixo)
-    values (p_empresa_id, v_modelo_id, p_conta_deb , 'D','Total',null );
-
-    insert into contab.modelos_linhas (empresa_id, modelo_id, conta_id, dc  ,fonte_valor, valor_fixo)
-    values (p_empresa_id, v_modelo_id, p_conta_cred  , 'C','Total',null );
+    insert into contab.modelos_linhas 
+        (empresa_id, modelo_id, conta_id, dc, fonte_valor, valor_fixo)
+    values 
+        (p_empresa_id, v_modelo_id, p_conta_cred, 'C', 'Total', null);
 
     return v_modelo_id;
+
 end;
-$$ language plpgsql;
- 
+$$;
