@@ -147,7 +147,7 @@ END AS vencido,
     0 AS conta_id,
     0 AS categoria_id,
     0 AS fornecedor_id,
-   0 origem_id,
+   cartao_id origem_id,
     status
 FROM cartoes_faturas
 WHERE status IN ('fechada','paga','aberta');
