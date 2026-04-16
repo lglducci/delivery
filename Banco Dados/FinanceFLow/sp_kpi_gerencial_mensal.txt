@@ -1,4 +1,4 @@
-  CREATE OR REPLACE FUNCTION contab.sp_kpi_gerencial_mensal (
+ CREATE OR REPLACE FUNCTION contab.sp_kpi_gerencial_mensal (
   p_empresa_id BIGINT,
   p_ano INT,
   p_mes INT
@@ -9,6 +9,8 @@ RETURNS TABLE (
   margem_contribuicao    NUMERIC(14,2),
   despesa_fixa           NUMERIC(14,2),
   resultado_liquido      NUMERIC(14,2),
+  ebitda                 NUMERIC(14,2),
+  margem_ebitda          NUMERIC(18,6),
   liquidez_aprox         NUMERIC(18,6),
   endividamento_aprox    NUMERIC(18,6)
 )
@@ -20,18 +22,21 @@ WITH mov AS (
     c.codigo::text AS conta_codigo,
     c.tipo,
     c.natureza,
-    -- saldo normalizado pela natureza (C = crédito aumenta / D = débito aumenta)
     CASE
       WHEN c.natureza = 'C' THEN COALESCE(l.credito,0) - COALESCE(l.debito,0)
       ELSE COALESCE(l.debito,0) - COALESCE(l.credito,0)
     END AS valor_norm,
-    cc.tipo_dre
+    kc.tipo_dre
   FROM contab.lancamentos l
   JOIN contab.contas c
     ON c.id = l.conta_id
-  LEFT JOIN contab.conta_classificacao cc
-    ON cc.empresa_id = l.empresa_id
-   AND cc.conta_codigo = c.codigo
+  LEFT JOIN LATERAL (
+    SELECT k.tipo_dre
+    FROM contab.kpi_classificacao k
+    WHERE c.codigo::text LIKE k.conta_codigo || '%'
+    ORDER BY length(k.conta_codigo) DESC
+    LIMIT 1
+  ) kc ON true
   WHERE l.empresa_id = p_empresa_id
     AND EXTRACT(YEAR  FROM l.data_mov) = p_ano
     AND EXTRACT(MONTH FROM l.data_mov) = p_mes
@@ -40,11 +45,14 @@ dre_class AS (
   SELECT
     CASE
       WHEN tipo_dre IS NOT NULL THEN tipo_dre
-      -- fallback por código (se não tiver conta_classificacao)
       WHEN conta_codigo LIKE '4.1.9%' THEN 'DED_RECEITA'
-      WHEN conta_codigo LIKE '4.%'     THEN 'RECEITA_BRUTA'
-      WHEN conta_codigo LIKE '5.%'     THEN 'CMV_CSP'
-      WHEN conta_codigo LIKE '6.%'     THEN 'DESPESA_FIXA'
+      WHEN conta_codigo LIKE '4.%'    THEN 'RECEITA_BRUTA'
+      WHEN conta_codigo LIKE '5.%'    THEN 'CMV_CSP'
+      WHEN conta_codigo LIKE '6.1.1%' THEN 'DESPESA_FIXA'
+      WHEN conta_codigo LIKE '6.1.2%' THEN 'RESULTADO_FINANCEIRO'
+      WHEN conta_codigo LIKE '6.1.3%' THEN 'DEPRECIACAO_AMORTIZACAO'
+      WHEN conta_codigo LIKE '6.1.4%' THEN 'IMPOSTO_LUCRO'
+      WHEN conta_codigo LIKE '6.%'    THEN 'DESPESA_OPERACIONAL'
       ELSE NULL
     END AS tipo_dre_calc,
     valor_norm
@@ -52,11 +60,14 @@ dre_class AS (
 ),
 dre_tot AS (
   SELECT
-    -- tudo “gerencial”: receitas e custos/despesas em valores positivos
-    COALESCE(SUM(CASE WHEN tipo_dre_calc = 'RECEITA_BRUTA' THEN valor_norm ELSE 0 END),0) AS receita_bruta,
-    COALESCE(SUM(CASE WHEN tipo_dre_calc = 'DED_RECEITA'   THEN ABS(valor_norm) ELSE 0 END),0) AS deducoes,
-    COALESCE(SUM(CASE WHEN tipo_dre_calc = 'CMV_CSP'        THEN ABS(valor_norm) ELSE 0 END),0) AS cmv,
-    COALESCE(SUM(CASE WHEN tipo_dre_calc = 'DESPESA_FIXA'   THEN ABS(valor_norm) ELSE 0 END),0) AS desp_fixa
+    COALESCE(SUM(CASE WHEN tipo_dre_calc = 'RECEITA_BRUTA'             THEN valor_norm ELSE 0 END),0) AS receita_bruta,
+    COALESCE(SUM(CASE WHEN tipo_dre_calc = 'DED_RECEITA'               THEN ABS(valor_norm) ELSE 0 END),0) AS deducoes,
+    COALESCE(SUM(CASE WHEN tipo_dre_calc = 'CMV_CSP'                   THEN ABS(valor_norm) ELSE 0 END),0) AS cmv,
+    COALESCE(SUM(CASE WHEN tipo_dre_calc = 'DESPESA_FIXA'              THEN ABS(valor_norm) ELSE 0 END),0) AS desp_fixa,
+    COALESCE(SUM(CASE WHEN tipo_dre_calc = 'DESPESA_OPERACIONAL'       THEN ABS(valor_norm) ELSE 0 END),0) AS desp_operacional,
+    COALESCE(SUM(CASE WHEN tipo_dre_calc = 'DEPRECIACAO_AMORTIZACAO'   THEN ABS(valor_norm) ELSE 0 END),0) AS dep_amort,
+    COALESCE(SUM(CASE WHEN tipo_dre_calc = 'RESULTADO_FINANCEIRO'      THEN ABS(valor_norm) ELSE 0 END),0) AS resultado_financeiro,
+    COALESCE(SUM(CASE WHEN tipo_dre_calc = 'IMPOSTO_LUCRO'             THEN ABS(valor_norm) ELSE 0 END),0) AS imposto_lucro
   FROM dre_class
 ),
 balanco AS (
@@ -64,16 +75,48 @@ balanco AS (
     COALESCE(SUM(CASE WHEN tipo = 'ATIVO'   THEN valor_norm ELSE 0 END),0) AS ativo,
     COALESCE(SUM(CASE WHEN tipo = 'PASSIVO' THEN valor_norm ELSE 0 END),0) AS passivo
   FROM mov
+),
+calc AS (
+  SELECT
+    (d.receita_bruta - d.deducoes)::numeric(14,2) AS receita_liq,
+    d.cmv::numeric(14,2) AS cmv,
+    ((d.receita_bruta - d.deducoes) - d.cmv)::numeric(14,2) AS margem_contrib,
+    d.desp_fixa::numeric(14,2) AS desp_fixa,
+    (
+      ((d.receita_bruta - d.deducoes) - d.cmv)
+      - d.desp_fixa
+      - d.desp_operacional
+      - d.dep_amort
+      - d.resultado_financeiro
+      - d.imposto_lucro
+    )::numeric(14,2) AS resultado_liq,
+    (
+      (
+        ((d.receita_bruta - d.deducoes) - d.cmv)
+        - d.desp_fixa
+        - d.desp_operacional
+        - d.dep_amort
+        - d.resultado_financeiro
+        - d.imposto_lucro
+      )
+      + d.resultado_financeiro
+      + d.imposto_lucro
+      + d.dep_amort
+    )::numeric(14,2) AS ebitda_calc,
+    b.ativo,
+    b.passivo
+  FROM dre_tot d
+  CROSS JOIN balanco b
 )
 SELECT
-  -- Receita líquida = Receita bruta - Deduções
-  (d.receita_bruta - d.deducoes)::numeric(14,2)                                   AS receita_liquida,
-  d.cmv::numeric(14,2)                                                            AS cmv_csp,
-  ((d.receita_bruta - d.deducoes) - d.cmv)::numeric(14,2)                         AS margem_contribuicao,
-  d.desp_fixa::numeric(14,2)                                                      AS despesa_fixa,
-  (((d.receita_bruta - d.deducoes) - d.cmv) - d.desp_fixa)::numeric(14,2)         AS resultado_liquido,
-  (b.ativo / NULLIF(b.passivo,0))::numeric(18,6)                                  AS liquidez_aprox,
-  (b.passivo / NULLIF(b.ativo,0))::numeric(18,6)                                  AS endividamento_aprox
-FROM dre_tot d
-CROSS JOIN balanco b;
+  receita_liq                                                   AS receita_liquida,
+  cmv                                                           AS cmv_csp,
+  margem_contrib                                                AS margem_contribuicao,
+  desp_fixa                                                     AS despesa_fixa,
+  resultado_liq                                                 AS resultado_liquido,
+  ebitda_calc                                                   AS ebitda,
+  (ebitda_calc / NULLIF(receita_liq,0))::numeric(18,6)         AS margem_ebitda,
+  (ativo / NULLIF(passivo,0))::numeric(18,6)                   AS liquidez_aprox,
+  (passivo / NULLIF(ativo,0))::numeric(18,6)                   AS endividamento_aprox
+FROM calc;
 $$;
