@@ -1,0 +1,170 @@
+  CREATE OR REPLACE FUNCTION contab.ff_balanco_patrimonial(
+  p_empresa_id bigint,
+  p_data_corte date
+)
+RETURNS TABLE (
+  ordem integer,
+  grupo text,
+  subgrupo text,
+  tipo_linha text,
+  conta_codigo text,
+  conta_nome text,
+  saldo numeric(14,2)
+)
+LANGUAGE sql
+STABLE
+AS $$
+WITH movimentos AS (
+  SELECT
+    l.conta_id,
+    SUM(
+      CASE
+        WHEN c.natureza = 'D' THEN l.debito - l.credito
+        ELSE l.credito - l.debito
+      END
+    )::numeric(14,2) AS mov
+  FROM contab.lancamentos l
+  JOIN contab.contas c
+    ON c.id = l.conta_id
+  WHERE l.empresa_id = p_empresa_id
+    AND l.data_mov <= p_data_corte
+  GROUP BY l.conta_id
+),
+
+base AS (
+  SELECT
+    CASE
+      WHEN c.tipo = 'ATIVO'   THEN 1
+      WHEN c.tipo = 'PASSIVO' THEN 2
+      WHEN c.tipo = 'PL'      THEN 3
+      ELSE 99
+    END AS ordem_grupo,
+
+    CASE
+      WHEN c.tipo = 'ATIVO'   THEN 'ATIVO'
+      WHEN c.tipo = 'PASSIVO' THEN 'PASSIVO'
+      WHEN c.tipo = 'PL'      THEN 'PATRIMONIO LIQUIDO'
+      ELSE 'OUTROS'
+    END AS grupo,
+
+    NULL::text AS subgrupo,
+
+    c.codigo AS conta_codigo,
+    c.nome   AS conta_nome,
+
+    (
+      COALESCE(si.saldo, 0)
+      + COALESCE(m.mov, 0)
+    )::numeric(14,2) AS saldo
+  FROM contab.contas c
+  LEFT JOIN contab.saldos_iniciais si
+    ON si.empresa_id = p_empresa_id
+   AND si.conta_id   = c.id
+  LEFT JOIN movimentos m
+    ON m.conta_id = c.id
+  WHERE c.empresa_id = p_empresa_id
+    AND c.analitica = true
+    AND c.tipo IN ('ATIVO','PASSIVO','PL')
+),
+
+detalhes AS (
+  SELECT
+    ordem_grupo,
+    1 AS ordem_tipo,
+    grupo,
+    subgrupo,
+    'DETALHE'::text AS tipo_linha,
+    conta_codigo,
+    conta_nome,
+    saldo
+  FROM base
+  WHERE saldo <> 0
+),
+
+total_grupo AS (
+  SELECT
+    ordem_grupo,
+    2 AS ordem_tipo,
+    grupo,
+    NULL::text AS subgrupo,
+    'TOTAL_GRUPO'::text AS tipo_linha,
+    NULL::text AS conta_codigo,
+    ('TOTAL ' || grupo)::text AS conta_nome,
+    SUM(saldo)::numeric(14,2) AS saldo
+  FROM base
+  WHERE saldo <> 0
+  GROUP BY ordem_grupo, grupo
+),
+
+fechamento AS (
+  SELECT
+    90 AS ordem_grupo,
+    1  AS ordem_tipo,
+    'FECHAMENTO'::text AS grupo,
+    NULL::text AS subgrupo,
+    'FECHAMENTO'::text AS tipo_linha,
+    NULL::text AS conta_codigo,
+    'TOTAL DO ATIVO'::text AS conta_nome,
+    COALESCE(SUM(CASE WHEN grupo = 'ATIVO' THEN saldo ELSE 0 END),0)::numeric(14,2) AS saldo
+  FROM base
+
+  UNION ALL
+
+  SELECT
+    90,
+    2,
+    'FECHAMENTO',
+    NULL,
+    'FECHAMENTO',
+    NULL,
+    'TOTAL DO PASSIVO + PL',
+    COALESCE(SUM(CASE WHEN grupo IN ('PASSIVO','PATRIMONIO LIQUIDO') THEN saldo ELSE 0 END),0)::numeric(14,2)
+  FROM base
+
+  UNION ALL
+
+  SELECT
+    90,
+    3,
+    'FECHAMENTO',
+    NULL,
+    'FECHAMENTO',
+    NULL,
+    'DIFERENCA (ATIVO - PASSIVO - PL)',
+    (
+      COALESCE(SUM(CASE WHEN grupo = 'ATIVO' THEN saldo ELSE 0 END),0)
+      -
+      COALESCE(SUM(CASE WHEN grupo IN ('PASSIVO','PATRIMONIO LIQUIDO') THEN saldo ELSE 0 END),0)
+    )::numeric(14,2)
+  FROM base
+),
+
+final AS (
+  SELECT * FROM detalhes
+  UNION ALL
+  SELECT * FROM total_grupo
+  UNION ALL
+  SELECT * FROM fechamento
+)
+
+SELECT
+  ROW_NUMBER() OVER (
+    ORDER BY
+      ordem_grupo,
+      ordem_tipo,
+      conta_codigo NULLS LAST,
+      conta_nome
+  )::integer AS ordem,
+  grupo,
+  subgrupo,
+  tipo_linha,
+  conta_codigo,
+  conta_nome,
+  saldo
+FROM final
+ORDER BY
+  ordem_grupo,
+  ordem_tipo,
+  conta_codigo NULLS LAST,
+  conta_nome;
+$$;
