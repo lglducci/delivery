@@ -65,7 +65,7 @@ WHERE c.id = v_id
       AND empresa_id = p_empresa_id;
  
   END LOOP;
-
+   PERFORM contab.marcar_reprocessamento(p_empresa_id , CURRENT_DATE);
   RETURN 'Contas recebidas com sucesso';
 END;
 $$;

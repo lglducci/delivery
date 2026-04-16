@@ -9,10 +9,11 @@ DECLARE
   v_fatura_id BIGINT;
   v_valor NUMERIC;
   v_total_parcelas INT;
+   v_data_parcela date;
 BEGIN
   -- 1) Buscar dados da transação
-  SELECT fatura_id, valor
-    INTO v_fatura_id, v_valor
+  SELECT fatura_id, valor, data_parcela
+    INTO v_fatura_id, v_valor, v_data_parcela 
   FROM cartoes_transacoes
   WHERE id = p_transacao_id
     AND empresa_id = p_empresa_id;
@@ -31,7 +32,7 @@ BEGIN
   DELETE FROM cartoes_transacoes
    WHERE id = p_transacao_id
      AND empresa_id = p_empresa_id;
-
+  PERFORM contab.marcar_reprocessamento(p_empresa_id, v_data_parcela );
   RETURN 'OK';
 END;
 $$;

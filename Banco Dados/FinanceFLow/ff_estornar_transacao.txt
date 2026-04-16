@@ -79,6 +79,11 @@ BEGIN
     DELETE FROM transacoes
      WHERE id = p_transacao_id;
 
+PERFORM contab.marcar_reprocessamento(
+  p_empresa_id,
+  v_transacao.data_movimento
+);
+
     RETURN 'sucesso';
   END IF;
 
@@ -158,6 +163,10 @@ UPDATE transacoes
  WHERE id = v_transacao.id 
    AND empresa_id = p_empresa_id;
 
+PERFORM contab.marcar_reprocessamento(
+  p_empresa_id,
+  LEAST(v_transacao.data_movimento, current_date)
+);
 
   RETURN 'sucesso';
 

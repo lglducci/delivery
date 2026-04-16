@@ -6,69 +6,69 @@ RETURNS VOID
 LANGUAGE plpgsql
 AS $$
 DECLARE
-    v_fatura_id      BIGINT;
-    v_status_fatura  TEXT;
-    v_valor_total    NUMERIC(12,2);
+    v_valor_total NUMERIC(12,2);
+     v_data_compra DATE;
 BEGIN
-    ------------------------------------------------------------
-    -- 1) Localiza fatura da compra
-    ------------------------------------------------------------
-    SELECT t.fatura_id
-      INTO v_fatura_id
-      FROM cartoes_transacoes t
-     WHERE t.compra_id  = p_compra_id
-       AND t.empresa_id = p_empresa_id
-     LIMIT 1;
 
-    IF v_fatura_id IS NULL THEN
-        RAISE EXCEPTION
-          'Compra % não possui transações vinculadas.', p_compra_id;
+
+  ------------------------------------------------------------
+    -- 0) Busca a data da compra antes de excluir
+    ------------------------------------------------------------
+    SELECT c.data_compra
+      INTO v_data_compra
+      FROM cartoes_compras c
+     WHERE c.id = p_compra_id
+       AND c.empresa_id = p_empresa_id;
+
+    IF v_data_compra IS NULL THEN
+        RAISE EXCEPTION 'Compra não encontrada.';
     END IF;
 
     ------------------------------------------------------------
-    -- 2) Valida status da fatura
+    -- 1) Verifica se existe alguma fatura NÃO aberta
     ------------------------------------------------------------
-    SELECT status
-      INTO v_status_fatura
-      FROM cartoes_faturas
-     WHERE id = v_fatura_id
-       AND empresa_id = p_empresa_id;
-
-    IF lower(v_status_fatura) <> 'aberta' THEN
+    IF EXISTS (
+        SELECT 1
+          FROM cartoes_transacoes t
+          JOIN cartoes_faturas f 
+            ON f.id = t.fatura_id
+         WHERE t.compra_id  = p_compra_id
+           AND t.empresa_id = p_empresa_id
+           AND lower(f.status) <> 'aberta'
+    ) THEN
         RAISE EXCEPTION
-          'Compra só pode ser excluída se a fatura estiver ABERTA.';
+        'Não é possível excluir. Existem parcelas em faturas fechadas ou pagas.';
     END IF;
 
     ------------------------------------------------------------
-    -- 3) Soma valor das transações da compra
+    -- 2) Atualiza valor das faturas
     ------------------------------------------------------------
-    SELECT COALESCE(SUM(valor), 0)
-      INTO v_valor_total
-      FROM cartoes_transacoes
-     WHERE compra_id  = p_compra_id
-       AND empresa_id = p_empresa_id;
+    UPDATE cartoes_faturas f
+       SET valor_total = f.valor_total - sub.total
+      FROM (
+            SELECT t.fatura_id,
+                   SUM(t.valor) AS total
+              FROM cartoes_transacoes t
+             WHERE t.compra_id  = p_compra_id
+               AND t.empresa_id = p_empresa_id
+             GROUP BY t.fatura_id
+           ) sub
+     WHERE f.id = sub.fatura_id
+       AND f.empresa_id = p_empresa_id;
 
     ------------------------------------------------------------
-    -- 4) Atualiza valor da fatura
-    ------------------------------------------------------------
-    UPDATE cartoes_faturas
-       SET valor_total = valor_total - v_valor_total
-     WHERE id = v_fatura_id
-       AND empresa_id = p_empresa_id;
-
-    ------------------------------------------------------------
-    -- 5) Exclui transações
+    -- 3) Exclui transações
     ------------------------------------------------------------
     DELETE FROM cartoes_transacoes
      WHERE compra_id  = p_compra_id
        AND empresa_id = p_empresa_id;
 
     ------------------------------------------------------------
-    -- 6) Exclui compra
+    -- 4) Exclui compra
     ------------------------------------------------------------
     DELETE FROM cartoes_compras
      WHERE id = p_compra_id
        AND empresa_id = p_empresa_id;
-
+ PERFORM contab.marcar_reprocessamento(p_empresa_id, v_data_compra);
 END;
 $$;
