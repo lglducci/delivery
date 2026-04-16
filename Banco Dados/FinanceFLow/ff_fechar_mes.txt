@@ -13,6 +13,7 @@ DECLARE
   v_resultado numeric(14,2);
   v_conta_resultado bigint;
   v_conta_pl bigint;
+  v_lote_id bigint;
 
   v_ultimo_ano int;
   v_ultimo_mes int;
@@ -23,7 +24,7 @@ BEGIN
      0) ÚLTIMA APURAÇÃO
   ========================================================= */
   SELECT ano, mes
-  INTO v_ultimo_ano, v_ultimo_mes
+    INTO v_ultimo_ano, v_ultimo_mes
   FROM contab.apuracoes_resultado
   WHERE empresa_id = p_empresa_id
   ORDER BY ano DESC, mes DESC
@@ -33,6 +34,11 @@ BEGIN
   IF v_ultimo_ano IS NULL THEN
     v_ano_esperado := EXTRACT(YEAR FROM current_date);
     v_mes_esperado := EXTRACT(MONTH FROM current_date) - 1;
+
+    IF v_mes_esperado = 0 THEN
+      v_mes_esperado := 12;
+      v_ano_esperado := v_ano_esperado - 1;
+    END IF;
   ELSE
     v_ano_esperado := v_ultimo_ano;
     v_mes_esperado := v_ultimo_mes + 1;
@@ -54,8 +60,8 @@ BEGIN
       v_mes_esperado, v_ano_esperado;
   END IF;
 
-  IF make_date(p_ano, p_mes, 1) >= date_trunc('month', current_date) THEN
-    RAISE EXCEPTION ' Ainda não é permitido fechar o mês corrente. Aguarde o próximo mês.';
+  IF make_date(p_ano, p_mes, 1) >= date_trunc('month', current_date)::date THEN
+    RAISE EXCEPTION 'Ainda não é permitido fechar o mês corrente. Aguarde o próximo mês.';
   END IF;
 
   /* =========================================================
@@ -81,7 +87,7 @@ BEGIN
      4) RESULTADO DO MÊS
   ========================================================= */
   SELECT valor_periodo
-  INTO v_resultado
+    INTO v_resultado
   FROM contab.ff_dre_periodo(p_empresa_id, v_data_ini, v_data_fim)
   WHERE grupo = 'RESULTADO_LIQUIDO';
 
@@ -92,12 +98,14 @@ BEGIN
   /* =========================================================
      5) CONTAS TÉCNICAS
   ========================================================= */
-  SELECT id INTO v_conta_resultado
+  SELECT id
+    INTO v_conta_resultado
   FROM contab.contas
   WHERE codigo = '3.2.1.01'
     AND empresa_id = p_empresa_id;
 
-  SELECT id INTO v_conta_pl
+  SELECT id
+    INTO v_conta_pl
   FROM contab.contas
   WHERE codigo = '3.1.2.01'
     AND empresa_id = p_empresa_id;
@@ -117,7 +125,12 @@ BEGIN
   );
 
   /* =========================================================
-     7) LANÇAMENTOS CONTÁBEIS
+     7) GERA LOTE ÚNICO DO FECHAMENTO
+  ========================================================= */
+  v_lote_id := nextval('contab.lote_id_seq');
+
+  /* =========================================================
+     8) LANÇAMENTOS CONTÁBEIS
   ========================================================= */
   INSERT INTO contab.lancamentos (
     empresa_id,
@@ -127,7 +140,8 @@ BEGIN
     credito,
     historico,
     diario_id,
-   origem
+    lote_id,
+    origem
   )
   VALUES
     (
@@ -137,7 +151,9 @@ BEGIN
       v_resultado,
       0,
       'Fechamento do mês ' || p_mes || '/' || p_ano,
-      0
+      0,
+      v_lote_id,
+      'CONTABIL'
     ),
     (
       p_empresa_id,
@@ -147,7 +163,8 @@ BEGIN
       v_resultado,
       'Fechamento do mês ' || p_mes || '/' || p_ano,
       0,
-'CONTABIL'
+      v_lote_id,
+      'CONTABIL'
     );
 
 END;

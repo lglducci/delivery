@@ -239,6 +239,10 @@ CREATE TABLE contab.controle_fechamento (
   ultimo_dia_processado date NOT NULL
 );
 
+ALTER TABLE contab.controle_fechamento
+ADD COLUMN data_reprocessar_de date;
+
+
 
 CREATE TABLE IF NOT EXISTS contab.saldos_iniciais (
   empresa_id  BIGINT NOT NULL,
@@ -367,3 +371,28 @@ INSERT INTO contab.eventos (codigo, descricao, modelo_codigo, origem) VALUES
 ('TRANSFERENCIA_ENTRE_CONTAS', 'Transferência entre contas', 'TRANSFERENCIA', 'TRANSACAO'),
 ('AJUSTE_SALDO_ENTRADA', 'Ajuste positivo de saldo', 'AJUSTE_ENTRADA', 'TRANSACAO'),
 ('AJUSTE_SALDO_SAIDA', 'Ajuste negativo de saldo', 'AJUSTE_SAIDA', 'TRANSACAO');
+
+DROP TABLE IF EXISTS contab.kpi_classificacao;
+
+CREATE TABLE contab.kpi_classificacao (
+  id           BIGSERIAL PRIMARY KEY,
+  conta_codigo TEXT NOT NULL UNIQUE,
+  tipo_dre     TEXT NOT NULL,
+  criado_em    TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT now(),
+
+  CONSTRAINT ck_kpi_classificacao_tipo_dre
+    CHECK (
+      tipo_dre IN (
+        'RECEITA_BRUTA',
+        'DED_RECEITA',
+        'CMV_CSP',
+        'DESPESA_FIXA',
+        'DESPESA_OPERACIONAL',
+        'DEPRECIACAO_AMORTIZACAO',
+        'RESULTADO_FINANCEIRO',
+        'IMPOSTO_LUCRO'
+      )
+    )
+);
+
+ 

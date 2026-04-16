@@ -1,0 +1,82 @@
+ CREATE OR REPLACE FUNCTION contab.ff_processa_automatico(
+    p_empresa_id bigint
+)
+RETURNS TABLE (
+    mensagem text,
+    data_ini date,
+    data_fim date
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_data_ini date;
+    v_data_fim date := CURRENT_DATE;
+    v_ultimo date;
+    v_reprocessar date;
+BEGIN
+
+    -- 🔎 pega controle
+    SELECT 
+        ultimo_dia_processado,
+        data_reprocessar_de
+    INTO 
+        v_ultimo,
+        v_reprocessar
+    FROM contab.controle_fechamento
+    WHERE empresa_id = p_empresa_id;
+
+    -- 👉 define data_ini correta
+    IF v_reprocessar IS NOT NULL THEN
+        v_data_ini := v_reprocessar;
+    ELSE
+        IF v_ultimo IS NULL THEN
+            v_data_ini := v_data_fim;
+        ELSE
+            v_data_ini := v_ultimo + 1;
+        END IF;
+    END IF;
+
+    -- ⚠️ nada pra processar
+    IF v_data_ini > v_data_fim THEN
+        RETURN QUERY
+        SELECT 
+            'Nada para processar'::text,
+            v_data_ini,
+            v_data_fim;
+        RETURN;
+    END IF;
+
+    -- 🔥 FASE 1
+    PERFORM contab.ff_gerar_diario_tudo(
+        p_empresa_id,
+        v_data_ini,
+        v_data_fim
+    );
+
+    -- 🔥 FASE 2
+    PERFORM contab.ff_consolidar_diario_staging(
+        p_empresa_id
+    );
+
+    -- 🔥 FASE 3
+    PERFORM contab.ff_gerar_contabil_final(
+        p_empresa_id,
+        v_data_ini,
+        v_data_fim
+    );
+
+    -- ✅ atualiza controle
+    UPDATE contab.controle_fechamento
+    SET 
+        ultimo_dia_processado = v_data_fim,
+        data_reprocessar_de = NULL
+    WHERE empresa_id = p_empresa_id;
+
+    RETURN QUERY
+    SELECT 
+        'Processamento realizado com sucesso'::text,
+        v_data_ini,
+        v_data_fim;
+
+END;
+$$;
