@@ -1,0 +1,83 @@
+ CREATE OR REPLACE FUNCTION contab.sp_fluxo_caixa_grafico_agrupado (
+    p_empresa_id BIGINT,
+    p_data_ini   DATE,
+    p_data_fim   DATE,
+    p_tipo       TEXT
+)
+RETURNS TABLE (
+    periodo_ini   DATE,
+    periodo_fim   DATE,
+    entrada       NUMERIC(14,2),
+    saida         NUMERIC(14,2),
+    saldo_inicial NUMERIC(14,2),
+    saldo_final   NUMERIC(14,2),
+    legenda       TEXT
+)
+LANGUAGE sql
+AS $$
+WITH base_diaria AS (
+    SELECT *
+    FROM contab.sp_fluxo_caixa_grafico_diario(p_empresa_id, p_data_ini, p_data_fim)
+),
+
+marcada AS (
+    SELECT
+        b.*,
+        CASE
+            WHEN p_tipo = '7D' THEN
+                ((b.data_ref - p_data_ini) / 7)::int
+            WHEN p_tipo = '15D' THEN
+                ((b.data_ref - p_data_ini) / 15)::int
+            WHEN p_tipo = 'MENSAL' THEN
+                (
+                    EXTRACT(YEAR FROM b.data_ref)::int * 12
+                    + EXTRACT(MONTH FROM b.data_ref)::int
+                )
+            ELSE
+                0
+        END AS grupo
+    FROM base_diaria b
+),
+
+ordenada AS (
+    SELECT
+        m.*,
+        ROW_NUMBER() OVER (
+            PARTITION BY m.grupo
+            ORDER BY m.data_ref
+        ) AS rn_ini,
+        ROW_NUMBER() OVER (
+            PARTITION BY m.grupo
+            ORDER BY m.data_ref DESC
+        ) AS rn_fim
+    FROM marcada m
+),
+
+agrupado AS (
+    SELECT
+        MIN(data_ref) AS periodo_ini,
+        MAX(data_ref) AS periodo_fim,
+        SUM(entrada)  AS entrada,
+        SUM(saida)    AS saida,
+        MAX(CASE WHEN rn_ini = 1 THEN saldo_inicial END) AS saldo_inicial,
+        MAX(CASE WHEN rn_fim = 1 THEN saldo_final END)   AS saldo_final,
+        grupo
+    FROM ordenada
+    GROUP BY grupo
+)
+
+SELECT
+    periodo_ini,
+    periodo_fim,
+    entrada,
+    saida,
+    saldo_inicial,
+    saldo_final,
+    CASE
+        WHEN p_tipo = 'MENSAL'
+            THEN to_char(periodo_ini, 'MM/YYYY')
+        ELSE to_char(periodo_ini, 'DD/MM/YYYY') || ' a ' || to_char(periodo_fim, 'DD/MM/YYYY')
+    END AS legenda
+FROM agrupado
+ORDER BY periodo_ini;
+$$;

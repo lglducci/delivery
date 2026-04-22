@@ -1,6 +1,7 @@
- CREATE OR REPLACE FUNCTION contab.ff_excluir_lancamentos_lote( 
-    p_empresa_id BIGINT,
-    p_lote_id    BIGINT
+ CREATE OR REPLACE FUNCTION contab.ff_excluir_lancamentos_lote(
+    p_empresa_id    BIGINT,
+    p_lote_id       BIGINT DEFAULT 0,
+    p_importacao_id BIGINT DEFAULT 0
 )
 RETURNS VOID
 LANGUAGE plpgsql
@@ -8,31 +9,67 @@ AS $$
 DECLARE
     v_qtd INT;
 BEGIN
-    -- valida existência do lote
-    IF NOT EXISTS (
-        SELECT 1
-        FROM contab.lancamentos
-        WHERE empresa_id = p_empresa_id
-          AND lote_id = p_lote_id
-    ) THEN
-        RAISE EXCEPTION
-            'Lote % não encontrado para empresa %',
-            p_lote_id, p_empresa_id;
+    IF COALESCE(p_lote_id, 0) = 0 AND COALESCE(p_importacao_id, 0) = 0 THEN
+        RAISE EXCEPTION 'Informe p_lote_id ou p_importacao_id';
     END IF;
 
-    -- exclusão
-    DELETE
-      FROM contab.lancamentos
-     WHERE empresa_id = p_empresa_id
-       AND lote_id = p_lote_id;
+    IF COALESCE(p_lote_id, 0) > 0 AND COALESCE(p_importacao_id, 0) > 0 THEN
+        RAISE EXCEPTION 'Informe apenas um dos parâmetros: p_lote_id ou p_importacao_id';
+    END IF;
 
-    GET DIAGNOSTICS v_qtd = ROW_COUNT;
+    -- exclui um lote
+    IF COALESCE(p_lote_id, 0) > 0 AND COALESCE(p_importacao_id, 0) = 0 THEN
 
-    -- proteção mínima
-    IF v_qtd < 2 THEN
+        IF NOT EXISTS (
+            SELECT 1
+            FROM contab.lancamentos
+            WHERE empresa_id = p_empresa_id
+              AND lote_id = p_lote_id
+        ) THEN
+            RAISE EXCEPTION
+                'Lote % não encontrado para empresa %',
+                p_lote_id, p_empresa_id;
+        END IF;
+
+        DELETE
+          FROM contab.lancamentos
+         WHERE empresa_id = p_empresa_id
+           AND lote_id = p_lote_id;
+
+        GET DIAGNOSTICS v_qtd = ROW_COUNT;
+
+        IF v_qtd < 2 THEN
+            RAISE NOTICE
+                'Atenção: lote % excluído com apenas % linha(s)',
+                p_lote_id, v_qtd;
+        END IF;
+
+    END IF;
+
+    -- exclui uma importação inteira
+    IF COALESCE(p_lote_id, 0) = 0 AND COALESCE(p_importacao_id, 0) > 0 THEN
+
+        IF NOT EXISTS (
+            SELECT 1
+            FROM contab.lancamentos
+            WHERE empresa_id = p_empresa_id
+              AND importacao_id = p_importacao_id
+        ) THEN
+            RAISE EXCEPTION
+                'Importação % não encontrada para empresa %',
+                p_importacao_id, p_empresa_id;
+        END IF;
+
+        DELETE
+          FROM contab.lancamentos
+         WHERE empresa_id = p_empresa_id
+           AND importacao_id = p_importacao_id;
+
+        GET DIAGNOSTICS v_qtd = ROW_COUNT;
+
         RAISE NOTICE
-            'Atenção: lote % excluído com apenas % linha(s)',
-            p_lote_id, v_qtd;
+            'Importação % excluída com % linha(s)',
+            p_importacao_id, v_qtd;
     END IF;
 
 END;

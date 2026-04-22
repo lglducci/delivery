@@ -53,14 +53,18 @@ lancamentos_filtrados AS (
     AND l.data_mov BETWEEN p_data_ini AND p_data_fim
 ),
 
-contrapartidas AS (
+ contrapartidas AS (
   SELECT
     l1.id AS id_principal,
-    string_agg(c2.codigo || ' - ' || c2.nome, ' | ' ORDER BY c2.codigo) AS conta_contrapartida
+    string_agg(
+      DISTINCT c2.codigo || ' - ' || c2.nome,
+      ' | ' ORDER BY c2.codigo
+    ) AS conta_contrapartida
   FROM contab.lancamentos l1
   JOIN contab.lancamentos l2
     ON l1.lote_id = l2.lote_id
    AND l1.id <> l2.id
+   AND l2.conta_id <> l1.conta_id
   JOIN contab.contas c2
     ON c2.id = l2.conta_id
   WHERE l1.empresa_id = p_empresa_id

@@ -1,20 +1,21 @@
-  CREATE OR REPLACE FUNCTION contab.ff_lancamento_partida_dobrada (
+ CREATE OR REPLACE FUNCTION contab.ff_lancamento_partida_dobrada (
     p_empresa_id        BIGINT,
     p_conta_debito_id   BIGINT,
     p_conta_credito_id  BIGINT,
     p_valor             NUMERIC(14,2),
     p_historico         TEXT,
-    p_data_lanc         DATE DEFAULT CURRENT_DATE,
-    p_lembrete          BOOLEAN DEFAULT FALSE,
-    p_data_vencimento   DATE DEFAULT NULL
+    p_data_lanc         DATE,
+    p_lembrete          BOOLEAN,
+    p_data_vencimento   DATE,
+    p_lote_id           BIGINT
 )
 RETURNS VOID
 LANGUAGE plpgsql
 AS $$
 DECLARE
     v_lote_id BIGINT;
+    v_importacao_id BIGINT;
 BEGIN
-    -- validações básicas
     IF p_valor <= 0 THEN
         RAISE EXCEPTION 'Valor deve ser maior que zero';
     END IF;
@@ -23,10 +24,14 @@ BEGIN
         RAISE EXCEPTION 'Conta débito e crédito não podem ser a mesma';
     END IF;
 
-    -- 🔢 próximo lote_id
- v_lote_id := nextval('contab.lote_id_seq');
+    v_lote_id := nextval('contab.lote_id_seq');
 
-    -- 🔴 DÉBITO
+    IF COALESCE(p_lote_id, 0) > 0 THEN
+        v_importacao_id := p_lote_id;
+    ELSE
+        v_importacao_id := NULL;
+    END IF;
+
     INSERT INTO contab.lancamentos (
         empresa_id,
         diario_id,
@@ -37,7 +42,8 @@ BEGIN
         historico,
         criado_em,
         lote_id,
-       origem
+        importacao_id,
+        origem
     ) VALUES (
         p_empresa_id,
         0,
@@ -48,10 +54,10 @@ BEGIN
         p_historico,
         NOW(),
         v_lote_id,
-       'CONTABIL'
+        v_importacao_id,
+        'CONTABIL'
     );
 
-    -- 🔵 CRÉDITO
     INSERT INTO contab.lancamentos (
         empresa_id,
         diario_id,
@@ -62,7 +68,8 @@ BEGIN
         historico,
         criado_em,
         lote_id,
-       origem
+        importacao_id,
+        origem
     ) VALUES (
         p_empresa_id,
         0,
@@ -73,10 +80,10 @@ BEGIN
         p_historico,
         NOW(),
         v_lote_id,
-       'CONTABIL'
+        v_importacao_id,
+        'CONTABIL'
     );
 
-    -- 🔔 LEMBRETE (opcional)
     IF p_lembrete = TRUE THEN
         IF p_data_vencimento IS NULL THEN
             RAISE EXCEPTION 'Data de vencimento é obrigatória quando lembrete estiver ativo';
@@ -98,6 +105,5 @@ BEGIN
             p_data_vencimento
         );
     END IF;
-
 END;
 $$;

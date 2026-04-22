@@ -1,0 +1,105 @@
+ CREATE OR REPLACE FUNCTION contab.sp_fluxo_caixa_projetado_diario(
+    p_empresa_id bigint,
+    p_data_ini date,
+    p_data_fim date
+)
+RETURNS TABLE(
+    data_ref date,
+    saldo_inicial numeric,
+    entrada numeric,
+    saida numeric,
+    saldo_final numeric
+)
+LANGUAGE sql
+AS $function$
+WITH saldo_base AS (
+    SELECT COALESCE(
+        contab.sp_saldo_fluxo_realizado_ate_data(
+            p_empresa_id,
+            p_data_ini - 1
+        ),
+        0
+    ) AS saldo_inicial_base
+),
+dias AS (
+    SELECT generate_series(p_data_ini, p_data_fim, interval '1 day')::date AS data_ref
+),
+movimentos_futuros AS (
+    SELECT
+        cr.vencimento::date AS data_ref,
+        SUM(COALESCE(cr.valor, 0))::numeric(14,2) AS entrada,
+        0::numeric(14,2) AS saida
+    FROM public.contas_a_receber cr
+    WHERE cr.empresa_id = p_empresa_id
+      AND cr.status = 'aberto'
+      AND cr.vencimento BETWEEN p_data_ini AND p_data_fim
+    GROUP BY cr.vencimento::date
+
+    UNION ALL
+
+    SELECT
+        cp.vencimento::date AS data_ref,
+        0::numeric(14,2) AS entrada,
+        SUM(COALESCE(cp.valor, 0))::numeric(14,2) AS saida
+    FROM public.contas_a_pagar cp
+    WHERE cp.empresa_id = p_empresa_id
+      AND cp.status = 'aberto'
+      AND cp.vencimento BETWEEN p_data_ini AND p_data_fim
+    GROUP BY cp.vencimento::date
+
+    UNION ALL
+
+    SELECT
+        cf.vencimento::date AS data_ref,
+        0::numeric(14,2) AS entrada,
+        SUM(COALESCE(cf.valor_total, 0))::numeric(14,2) AS saida
+    FROM public.cartoes_faturas cf
+    WHERE cf.empresa_id = p_empresa_id
+      AND cf.status = 'aberta'
+      AND cf.vencimento IS NOT NULL
+      AND cf.vencimento BETWEEN p_data_ini AND p_data_fim
+    GROUP BY cf.vencimento::date
+),
+mov_diario AS (
+    SELECT
+        d.data_ref,
+        COALESCE(SUM(mf.entrada), 0)::numeric(14,2) AS entrada,
+        COALESCE(SUM(mf.saida), 0)::numeric(14,2) AS saida
+    FROM dias d
+    LEFT JOIN movimentos_futuros mf
+      ON mf.data_ref = d.data_ref
+    GROUP BY d.data_ref
+),
+acum AS (
+    SELECT
+        m.data_ref,
+        m.entrada,
+        m.saida,
+        (
+            SELECT saldo_inicial_base FROM saldo_base
+        )
+        + COALESCE(
+            SUM(m.entrada - m.saida) OVER (
+                ORDER BY m.data_ref
+                ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING
+            ),
+            0
+        ) AS saldo_inicial,
+        (
+            SELECT saldo_inicial_base FROM saldo_base
+        )
+        + SUM(m.entrada - m.saida) OVER (
+            ORDER BY m.data_ref
+            ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+        ) AS saldo_final
+    FROM mov_diario m
+)
+SELECT
+    data_ref,
+    saldo_inicial::numeric(14,2),
+    entrada::numeric(14,2),
+    saida::numeric(14,2),
+    saldo_final::numeric(14,2)
+FROM acum
+ORDER BY data_ref;
+$function$;

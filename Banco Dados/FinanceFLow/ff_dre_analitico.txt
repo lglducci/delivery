@@ -1,4 +1,8 @@
-   CREATE OR REPLACE FUNCTION contab.ff_dre_analitico(
+  
+ 
+  DROP FUNCTION contab.ff_dre_analitico(bigint,date,date) ;
+
+ CREATE OR REPLACE FUNCTION contab.ff_dre_analitico(
   p_empresa_id BIGINT,
   p_data_ini   DATE,
   p_data_fim   DATE
@@ -8,35 +12,49 @@ RETURNS TABLE (
   conta_codigo TEXT,
   conta_nome TEXT,
   valor NUMERIC(18,2),
-  classificacao_gerencial text
+  classificacao_gerencial TEXT,
+  perc_sobre_grupo NUMERIC(18,2)
 )
 LANGUAGE sql
 AS $$
+WITH base AS (
+  SELECT
+    c.tipo AS grupo,
+    c.codigo AS conta_codigo,
+    c.nome AS conta_nome,
+    CASE
+      WHEN c.tipo = 'RECEITA' THEN (SUM(l.credito) - SUM(l.debito))
+      WHEN c.tipo IN ('CUSTO', 'DESPESA') THEN (SUM(l.debito) - SUM(l.credito))
+      ELSE 0
+    END::numeric(18,2) AS valor,
+    c.classificacao_gerencial
+  FROM contab.lancamentos l
+  JOIN contab.contas c
+    ON c.id = l.conta_id
+  WHERE l.empresa_id = p_empresa_id
+    AND l.data_mov BETWEEN p_data_ini AND p_data_fim
+    AND c.analitica = true
+    AND c.tipo IN ('RECEITA', 'CUSTO', 'DESPESA')
+  GROUP BY
+    c.tipo,
+    c.codigo,
+    c.nome,
+    c.classificacao_gerencial
+  HAVING SUM(l.debito) <> 0 OR SUM(l.credito) <> 0
+),
+calc AS (
+  SELECT
+    b.*,
+    SUM(b.valor) OVER (PARTITION BY b.grupo) AS total_grupo
+  FROM base b
+)
 SELECT
-  c.tipo AS grupo,
-  c.codigo AS conta_codigo,
-  c.nome AS conta_nome,
-
-  CASE
-    WHEN c.tipo = 'RECEITA' THEN (SUM(l.credito) - SUM(l.debito))
-    WHEN c.tipo IN ('CUSTO', 'DESPESA') THEN (SUM(l.debito) - SUM(l.credito))
-    ELSE 0
-  END::numeric(18,2) AS valor,
-   c.classificacao_gerencial
-
-FROM contab.lancamentos l
-JOIN contab.contas c ON c.id = l.conta_id
-
-WHERE l.empresa_id = p_empresa_id
-  AND l.data_mov BETWEEN p_data_ini AND p_data_fim
-  AND c.analitica = true
-  AND c.tipo IN ('RECEITA', 'CUSTO', 'DESPESA')
-
-GROUP BY c.tipo, c.codigo, c.nome,
-   c.classificacao_gerencial
-
-HAVING
-  SUM(l.debito) <> 0 OR SUM(l.credito) <> 0
-
-ORDER BY c.tipo, c.codigo;
+  grupo,
+  conta_codigo,
+  conta_nome,
+  valor,
+  classificacao_gerencial,
+  ROUND((valor / NULLIF(total_grupo, 0)) * 100, 2) AS perc_sobre_grupo
+FROM calc
+ORDER BY grupo, conta_codigo;
 $$;

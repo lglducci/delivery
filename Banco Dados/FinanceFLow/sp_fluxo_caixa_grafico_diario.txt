@@ -1,12 +1,13 @@
-  CREATE OR REPLACE FUNCTION contab.sp_fluxo_caixa_consolidado (
+CREATE OR REPLACE FUNCTION contab.sp_fluxo_caixa_grafico_diario (
     p_empresa_id BIGINT,
     p_data_ini   DATE,
     p_data_fim   DATE
 )
 RETURNS TABLE (
-    saldo_inicial NUMERIC(14,2),
+    data_ref      DATE,
     entrada       NUMERIC(14,2),
     saida         NUMERIC(14,2),
+    saldo_inicial NUMERIC(14,2),
     saldo_final   NUMERIC(14,2)
 )
 LANGUAGE sql
@@ -28,10 +29,7 @@ WITH param AS (
 ),
 
 contas_caixa AS (
-    SELECT
-        c.id,
-        c.codigo,
-        c.nome
+    SELECT c.id
     FROM contab.contas c
     CROSS JOIN param p
     WHERE c.empresa_id = p_empresa_id
@@ -59,38 +57,64 @@ movimentos AS (
     FROM contab.lancamentos l
     WHERE l.empresa_id = p_empresa_id
       AND l.conta_id IN (SELECT id FROM contas_caixa)
-)
+),
 
-SELECT
-    (
-        sb.saldo
-        + COALESCE((
+calendario AS (
+    SELECT generate_series(p_data_ini, p_data_fim, interval '1 day')::date AS data_ref
+),
+
+mov_diario AS (
+    SELECT
+        c.data_ref,
+        COALESCE(SUM(m.entrada), 0) AS entrada,
+        COALESCE(SUM(m.saida), 0) AS saida,
+        COALESCE(SUM(m.mov_liquido), 0) AS mov_dia
+    FROM calendario c
+    LEFT JOIN movimentos m
+      ON m.data_mov = c.data_ref
+    GROUP BY c.data_ref
+),
+
+saldo_anterior AS (
+    SELECT
+        COALESCE(sb.saldo, 0)
+        +
+        COALESCE((
             SELECT SUM(m.mov_liquido)
             FROM movimentos m
             WHERE m.data_mov < p_data_ini
-        ), 0)
-    ) AS saldo_inicial,
+        ), 0) AS saldo_ini_periodo
+    FROM saldo_base sb
+),
 
-    COALESCE((
-        SELECT SUM(m.entrada)
-        FROM movimentos m
-        WHERE m.data_mov BETWEEN p_data_ini AND p_data_fim
-    ), 0) AS entrada,
+serie AS (
+    SELECT
+        d.data_ref,
+        d.entrada,
+        d.saida,
+        d.mov_dia,
+        sa.saldo_ini_periodo
+        +
+        COALESCE(SUM(d.mov_dia) OVER (
+            ORDER BY d.data_ref
+            ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING
+        ), 0) AS saldo_inicial,
+        sa.saldo_ini_periodo
+        +
+        SUM(d.mov_dia) OVER (
+            ORDER BY d.data_ref
+            ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+        ) AS saldo_final
+    FROM mov_diario d
+    CROSS JOIN saldo_anterior sa
+)
 
-    COALESCE((
-        SELECT SUM(m.saida)
-        FROM movimentos m
-        WHERE m.data_mov BETWEEN p_data_ini AND p_data_fim
-    ), 0) AS saida,
-
-    (
-        sb.saldo
-        + COALESCE((
-            SELECT SUM(m.mov_liquido)
-            FROM movimentos m
-            WHERE m.data_mov <= p_data_fim
-        ), 0)
-    ) AS saldo_final
-
-FROM saldo_base sb;
+SELECT
+    data_ref,
+    entrada,
+    saida,
+    saldo_inicial,
+    saldo_final
+FROM serie
+ORDER BY data_ref;
 $$;

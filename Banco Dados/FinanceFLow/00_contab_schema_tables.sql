@@ -171,6 +171,17 @@ START 1;
 ALTER COLUMN lote_id SET DEFAULT nextval('contab.lote_id_seq');
 
 
+ALTER TABLE contab.lancamentos
+ADD COLUMN importacao_id bigint;
+
+CREATE SEQUENCE IF NOT EXISTS contab.importacao_id_seq;
+
+CREATE INDEX idx_lancamentos_importacao_id
+ON contab.lancamentos (empresa_id, importacao_id);
+
+CREATE INDEX idx_lancamentos_lote_id
+ON contab.lancamentos (empresa_id, lote_id);
+
   
 /*drop table contab.diario_staging cascade 
 CREATE TABLE contab.diario_staging (
