@@ -2,6 +2,7 @@
   p_empresa_id     	BIGINT,
   p_descricao      	TEXT,
   p_valor_total    	NUMERIC,
+  p_data                        DATE,
   p_vencimento   	  DATE,
   p_categoria     	 TEXT DEFAULT NULL,
   p_parcelas     	  INT DEFAULT 1,
@@ -75,7 +76,8 @@ end if;
           doc_ref , 
          modelo_codigo ,
          classificacao,
-        forma_pagamento 
+        forma_pagamento , 
+       criado_em
         )
         VALUES (
             p_empresa_id,
@@ -91,7 +93,8 @@ end if;
            p_doc_ref , 
            modelo_codigo ,
              p_classsificacao,
-            p_forma_pagamento   
+            p_forma_pagamento  ,
+           p_data                         
         )
         RETURNING id INTO v_id;
  

@@ -2,6 +2,7 @@
   p_empresa_id     BIGINT,
   p_descricao      TEXT,
   p_valor_total    NUMERIC,
+ p_data                    DATE,
   p_vencimento     DATE,
   p_categoria      TEXT DEFAULT NULL,
   p_parcelas       INT DEFAULT 1,
@@ -77,7 +78,8 @@ modelo_codigo := NULLIF(p_codigo  , '');
           conta_id,
           classificacao,
           canal,
-         forma_recebimento
+         forma_recebimento,
+         criado_em
         )
         VALUES (
             p_empresa_id,
@@ -95,10 +97,14 @@ modelo_codigo := NULLIF(p_codigo  , '');
               p_conta_id   ,
               p_classificacao,
                p_canal  ,
-               p_forma_recebimento     
+               p_forma_recebimento  ,
+              p_data   
         )
         RETURNING id INTO v_id;
-  
+   PERFORM contab.marcar_reprocessamento(
+  p_empresa_id,
+  p_data                    
+);
 
     END LOOP; 
     RETURN v_id;

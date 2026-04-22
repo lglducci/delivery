@@ -23,7 +23,7 @@ EXECUTE FUNCTION contab.trg_transacoes_reprocesso();
 
 
 -- 2 CONTAS A RECEBER  
- CREATE OR REPLACE FUNCTION contab.trg_contas_receber_reprocesso()
+   CREATE OR REPLACE FUNCTION contab.trg_contas_receber_reprocesso()
 RETURNS trigger
 LANGUAGE plpgsql
 AS $$
@@ -34,18 +34,14 @@ BEGIN
     v_data_base := NEW.criado_em::date;
 
   ELSIF TG_OP = 'UPDATE' THEN
-    v_data_base := LEAST(
-      COALESCE(OLD.criado_em::date, '9999-12-31'::date),
-      COALESCE(NEW.criado_em::date, '9999-12-31'::date),
-      COALESCE(OLD.data_recebimento::date, '9999-12-31'::date),
-      COALESCE(NEW.data_recebimento::date, '9999-12-31'::date),
-      COALESCE(OLD.vencimento::date, '9999-12-31'::date),
-      COALESCE(NEW.vencimento::date, '9999-12-31'::date)
-    );
+    IF OLD.data_recebimento IS DISTINCT FROM NEW.data_recebimento THEN
+      v_data_base := COALESCE(NEW.data_recebimento::date, CURRENT_DATE);
+    ELSE
+      v_data_base := NULL;
+    END IF;
   END IF;
 
-  IF v_data_base IS NOT NULL
-     AND v_data_base <> '9999-12-31'::date THEN
+  IF v_data_base IS NOT NULL THEN
     PERFORM contab.marcar_reprocessamento(NEW.empresa_id, v_data_base);
   END IF;
 
@@ -53,12 +49,8 @@ BEGIN
 END;
 $$;
 
-DROP TRIGGER IF EXISTS trg_contas_receber_reprocesso ON public.contas_a_receber;
 
-CREATE TRIGGER trg_contas_receber_reprocesso
-AFTER INSERT OR UPDATE ON public.contas_a_receber
-FOR EACH ROW
-EXECUTE FUNCTION contab.trg_contas_receber_reprocesso();
+
 --  3  Contas a pagar
   
  CREATE OR REPLACE FUNCTION contab.trg_contas_pagar_reprocesso()
@@ -68,11 +60,19 @@ AS $$
 DECLARE
   v_data_base date;
 BEGIN
-  v_data_base := LEAST(
-    COALESCE(NEW.vencimento::date, '9999-12-31'::date),
-    COALESCE(NEW.data_pagamento::date, '9999-12-31'::date),
-    COALESCE(NEW.criado_em::date, '9999-12-31'::date)
-  );
+  IF TG_OP = 'INSERT' THEN
+    v_data_base := LEAST(
+      COALESCE(NEW.vencimento::date, '9999-12-31'::date),
+      COALESCE(NEW.data_pagamento::date, '9999-12-31'::date),
+      COALESCE(NEW.criado_em::date, '9999-12-31'::date)
+    );
+
+  ELSIF TG_OP = 'UPDATE' THEN
+    v_data_base := LEAST(
+      COALESCE(NEW.vencimento::date, '9999-12-31'::date),
+      COALESCE(NEW.data_pagamento::date, '9999-12-31'::date)
+    );
+  END IF;
 
   IF v_data_base <> '9999-12-31'::date THEN
     PERFORM contab.marcar_reprocessamento(
@@ -91,8 +91,6 @@ CREATE TRIGGER trg_contas_pagar_reprocesso
 AFTER INSERT OR UPDATE ON public.contas_a_pagar
 FOR EACH ROW
 EXECUTE FUNCTION contab.trg_contas_pagar_reprocesso();
-
-
 
 --  4    compra no cartão 
 CREATE OR REPLACE FUNCTION contab.trg_cartoes_compras_reprocesso()

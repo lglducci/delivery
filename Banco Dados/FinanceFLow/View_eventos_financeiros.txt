@@ -1,7 +1,5 @@
       
-
- drop view vw_eventos_financeiros;
-
+ 
  
  DROP VIEW vw_eventos_financeiros;
 
