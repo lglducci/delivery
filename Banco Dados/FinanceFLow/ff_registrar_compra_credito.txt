@@ -114,7 +114,7 @@ BEGIN
        SET valor_total = COALESCE(valor_total,0) + v_valor_parc
      WHERE id = v_fatura_id;
   END LOOP;
-
+ PERFORM contab.marcar_reprocessamento(p_empresa_id, p_data_compra  );
   RETURN v_id_ultima;
 END;
 $$;

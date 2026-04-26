@@ -1,0 +1,39 @@
+create or replace function public.fn_importar_extrato_revisar_evento(
+    p_empresa_id bigint,
+    p_conta_financeira_id bigint
+)
+returns void
+language plpgsql
+as $$
+begin
+    update public.conciliacao_financeira
+       set tipo_evento = 'financeiro'
+     where empresa_id = p_empresa_id
+       and conta_financeira_id = p_conta_financeira_id
+       and tipo_evento = 'receber'
+       and fornecedor_id is null
+       and categoria_id is null
+       and upper(coalesce(historico, '')) not like '%BOLETO%'
+       and upper(coalesce(historico, '')) not like '%COBRANCA%'
+       and upper(coalesce(historico, '')) not like '%DUPLICATA%'
+       and upper(coalesce(historico, '')) not like '%PARCELA%'
+       and upper(coalesce(historico, '')) not like '%VENC%'
+       and upper(coalesce(historico, '')) not like '%NOTA%'
+       and upper(coalesce(historico, '')) not like '%NF%'
+        and upper(coalesce(historico, '')) not like '%BENEFI%';
+
+    update public.conciliacao_financeira
+       set tipo_evento = 'financeiro'
+     where empresa_id = p_empresa_id
+       and conta_financeira_id = p_conta_financeira_id
+       and tipo_evento = 'pagar'
+       and fornecedor_id is null
+       and categoria_id is null
+       and upper(coalesce(historico, '')) not like '%BOLETO%'
+       and upper(coalesce(historico, '')) not like '%FATURA%'
+       and upper(coalesce(historico, '')) not like '%PARCELA%'
+       and upper(coalesce(historico, '')) not like '%VENC%'
+        and upper(coalesce(historico, '')) not like '%BENEFI%';
+
+end;
+$$;

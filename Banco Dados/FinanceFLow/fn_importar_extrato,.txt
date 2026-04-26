@@ -1,0 +1,330 @@
+ create or replace function public.fn_importar_extrato(
+    p_empresa_id bigint,
+    p_conta_financeira_id bigint,
+    p_lancamentos jsonb
+)
+returns jsonb
+language plpgsql
+as $$
+declare
+    v_item jsonb;
+    v_data date;
+    v_historico text;
+    v_valor numeric(14,2);
+
+    v_tipo varchar(10);
+    v_forma varchar(30);
+    v_classificacao varchar(50);
+    v_tipo_evento varchar(30);
+    v_categoria_id bigint;
+    v_fornecedor_id bigint;
+    v_modelo_codigo varchar(50);
+    v_tipo_destino varchar(30);
+    v_destino_id bigint;
+
+    v_qtd integer := 0;
+begin
+   
+     DELETE FROM public.conciliacao_financeira
+WHERE empresa_id = p_empresa_id
+     AND conta_financeira_id = p_conta_financeira_id
+     AND COALESCE(status_conciliacao, 'pendente') IN ('pendente', 'rejeitado', 'ok')
+     AND transacao_id IS NULL;
+
+    for v_item in
+        select value
+        from jsonb_array_elements(p_lancamentos)
+    loop
+        v_data := (v_item->>'data')::date;
+        v_historico := trim(coalesce(v_item->>'historico', ''));
+        v_valor := coalesce((v_item->>'valor')::numeric, 0);
+
+        v_tipo := null;
+        v_forma := null;
+        v_classificacao := null;
+        v_tipo_evento := null;
+        v_categoria_id := null;
+        v_fornecedor_id := null;
+        v_modelo_codigo := null;
+        v_tipo_destino := null;
+        v_destino_id := null;
+
+        -- tipo
+        if v_valor >= 0 then
+            v_tipo := 'entrada';
+        else
+            v_tipo := 'saida';
+        end if;
+
+        -- forma
+        if v_tipo = 'entrada' then
+            if upper(v_historico) like '%PIX%' then
+                v_forma := 'pix';
+            elsif upper(v_historico) like '%BOLETO%' then
+                v_forma := 'boleto';
+            elsif upper(v_historico) like '%CARTAO%'
+               or upper(v_historico) like '%CARD%' then
+                v_forma := 'cartao_credito';
+            elsif upper(v_historico) like '%TED%'
+               or upper(v_historico) like '%DOC%'
+               or upper(v_historico) like '%TRANSF%' then
+                v_forma := 'avista';
+            else
+                v_forma := 'avista';
+            end if;
+
+        else
+            if upper(v_historico) like '%PIX%' then
+                v_forma := 'pix';
+            elsif upper(v_historico) like '%FAT.CARTAO%'
+               or upper(v_historico) like '%FAT CARTAO%'
+               or upper(v_historico) like '%CARTAO CREDITO%'
+               or upper(v_historico) like '%MASTER CARD%'
+               or upper(v_historico) like '%VISA%'
+               or upper(v_historico) like '%ELO%' then
+                v_forma := 'cartao_credito';
+            elsif upper(v_historico) like '%DEBITO%' then
+                v_forma := 'cartao_debito';
+            elsif upper(v_historico) like '%BOLETO%'
+               or upper(v_historico) like '%DEBITO AUT%' then
+                v_forma := 'boleto';
+            elsif upper(v_historico) like '%EMPRESTIMO%'
+               or upper(v_historico) like '%FINANCIAMENTO%' then
+                v_forma := 'aprazo';
+            elsif upper(v_historico) like '%TED%'
+               or upper(v_historico) like '%DOC%'
+               or upper(v_historico) like '%TRANSF%' then
+                v_forma := 'avista';
+            else
+                v_forma := 'avista';
+            end if;
+        end if;
+
+        -- classificacao
+        if v_tipo = 'entrada' then
+            if upper(v_historico) like '%EMPRESTIMO%'
+               or upper(v_historico) like '%FINANCIAMENTO%' then
+                v_classificacao := 'passivo';
+            elsif upper(v_historico) like '%APORTE%'
+               or upper(v_historico) like '%SOCIO%'
+               or upper(v_historico) like '%SÓCIO%' then
+                v_classificacao := 'ativo';
+            else
+                v_classificacao := 'receita';
+            end if;
+        else
+            if upper(v_historico) like '%IMOBILIZADO%'
+               or upper(v_historico) like '%MAQUINA%'
+               or upper(v_historico) like '%MÁQUINA%'
+               or upper(v_historico) like '%EQUIPAMENTO%'
+               or upper(v_historico) like '%VEICULO%'
+               or upper(v_historico) like '%VEÍCULO%'
+               or upper(v_historico) like '%MOVEIS%'
+               or upper(v_historico) like '%MÓVEIS%' then
+                v_classificacao := 'imobilizado';
+            elsif upper(v_historico) like '%INSUMO%'
+               or upper(v_historico) like '%MERCADORIA%'
+               or upper(v_historico) like '%ESTOQUE%'
+               or upper(v_historico) like '%MAT PRIMA%'
+               or upper(v_historico) like '%MATÉRIA PRIMA%' then
+                v_classificacao := 'custo';
+            else
+                v_classificacao := 'despesa';
+            end if;
+        end if;
+
+        -- tipo_evento
+        if upper(v_historico) like '%RENDIMENTO%'
+           or upper(v_historico) like '%JUROS%'
+           or upper(v_historico) like '%IOF%' then
+            v_tipo_evento := 'juros';
+
+        elsif upper(v_historico) like '%PAGAMENTO CARTAO%'
+           or upper(v_historico) like '%FAT.CARTAO%'
+           or upper(v_historico) like '%FAT CARTAO%'
+           or upper(v_historico) like '%MASTER CARD%'
+           or upper(v_historico) like '%VISA%' then
+            v_tipo_evento := 'pagar_fatura';
+
+        elsif upper(v_historico) like '%CARTAO CREDITO%'
+           and v_tipo = 'saida' then
+            v_tipo_evento := 'cartao_compra';
+
+        elsif upper(v_historico) like '%GETNET%'
+           or upper(v_historico) like '%ANTECIPACAO GETNET%' then
+            v_tipo_evento := 'receber_cartao';
+
+        elsif v_tipo = 'saida'
+           and (
+                upper(v_historico) like '%PAGAMENTO%'
+                or upper(v_historico) like '%BOLETO%'
+                or upper(v_historico) like '%DEBITO AUT%'
+                or upper(v_historico) like '%EMPRESTIMO%'
+                or upper(v_historico) like '%FINANCIAMENTO%'
+               or upper(v_historico) like '%BENEFI%'
+               ) then
+            v_tipo_evento := 'pagar';
+
+        elsif v_tipo = 'entrada'
+           and (
+                upper(v_historico) like '%PIX RECEBIDO%'
+                or upper(v_historico) like '%TED RECEBIDA%'
+                or upper(v_historico) like '%TRANSFERENCIA RECEBIDA%'
+               ) then
+            v_tipo_evento := 'receber';
+
+        else
+            v_tipo_evento := 'financeiro';
+        end if;
+
+        -- fornecedor
+      -- fornecedor / pessoa
+SELECT x.id
+INTO v_fornecedor_id
+FROM (
+    SELECT
+        p.id,
+        p.nome,
+
+        CASE
+            -- nome da pessoa está dentro do histórico
+            WHEN unaccent(upper(v_historico)) LIKE '%' || unaccent(upper(p.nome)) || '%'
+                THEN 100
+
+            -- histórico está dentro do nome da pessoa
+            WHEN unaccent(upper(p.nome)) LIKE '%' || unaccent(upper(v_historico)) || '%'
+                THEN 90
+
+            -- parecido por similaridade
+            ELSE similarity(
+                unaccent(lower(v_historico)),
+                unaccent(lower(p.nome))
+            ) * 100
+        END AS score
+
+    FROM public.pessoa p
+    WHERE p.empresa_id = p_empresa_id
+) x
+WHERE x.score >= 45
+ORDER BY x.score DESC, length(x.nome) DESC
+LIMIT 1;
+
+        -- categoria
+        select c.id
+          into v_categoria_id
+        from public.categorias_gerenciais c
+        where c.empresa_id = p_empresa_id
+          and upper(v_historico) like '%' || upper(c.nome) || '%'
+        order by length(c.nome) desc
+        limit 1;
+
+ INSERT INTO public.conciliacao_financeira (
+    empresa_id,
+    conta_financeira_id,
+    data_mov,
+    historico,
+    valor,
+    tipo,
+    forma,
+    classificacao,
+    categoria_id,
+    fornecedor_id,
+    modelo_codigo,
+    tipo_evento,
+    tipo_destino,
+    destino_id,
+    chave_importacao,
+    importar,
+    status_conciliacao,
+    mensagem_conciliacao
+)
+VALUES (
+    p_empresa_id,
+    p_conta_financeira_id,
+    v_data,
+    v_historico,
+    v_valor,
+    v_tipo,
+    v_forma,
+    v_classificacao,
+    v_categoria_id,
+    v_fornecedor_id,
+    v_modelo_codigo,
+    v_tipo_evento,
+    v_tipo_destino,
+    v_destino_id,
+
+    md5(
+        p_empresa_id::text || '|' ||
+        p_conta_financeira_id::text || '|' ||
+        v_data::text || '|' ||
+        upper(trim(regexp_replace(coalesce(v_historico, ''), '\s+', ' ', 'g'))) || '|' ||
+        round(v_valor::numeric, 2)::text
+    ),
+
+    CASE
+      WHEN EXISTS (
+        SELECT 1
+        FROM public.conciliacao_financeira ja
+        WHERE ja.chave_importacao =
+          md5(
+            p_empresa_id::text || '|' ||
+            p_conta_financeira_id::text || '|' ||
+            v_data::text || '|' ||
+            upper(trim(regexp_replace(coalesce(v_historico, ''), '\s+', ' ', 'g'))) || '|' ||
+            round(v_valor::numeric, 2)::text
+          )
+      )
+      THEN false
+      ELSE true
+    END,
+
+    CASE
+      WHEN EXISTS (
+        SELECT 1
+        FROM public.conciliacao_financeira ja
+        WHERE ja.chave_importacao =
+          md5(
+            p_empresa_id::text || '|' ||
+            p_conta_financeira_id::text || '|' ||
+            v_data::text || '|' ||
+            upper(trim(regexp_replace(coalesce(v_historico, ''), '\s+', ' ', 'g'))) || '|' ||
+            round(v_valor::numeric, 2)::text
+          )
+      )
+      THEN 'rejeitado'
+      ELSE 'pendente'
+    END,
+
+    CASE
+      WHEN EXISTS (
+        SELECT 1
+        FROM public.conciliacao_financeira ja
+        WHERE ja.chave_importacao =
+          md5(
+            p_empresa_id::text || '|' ||
+            p_conta_financeira_id::text || '|' ||
+            v_data::text || '|' ||
+            upper(trim(regexp_replace(coalesce(v_historico, ''), '\s+', ' ', 'g'))) || '|' ||
+            round(v_valor::numeric, 2)::text
+          )
+      )
+      THEN 'Registro duplicado: esta linha já foi importada anteriormente'
+      ELSE 'Linha importada para revisão'
+    END
+);
+
+
+
+
+        v_qtd := v_qtd + 1;
+    end loop;
+
+    return jsonb_build_object(
+        'ok', true,
+        'empresa_id', p_empresa_id,
+        'conta_financeira_id', p_conta_financeira_id,
+        'linhas_processadas', v_qtd
+    );
+end;
+$$;

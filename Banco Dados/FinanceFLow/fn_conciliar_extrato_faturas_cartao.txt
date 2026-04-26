@@ -1,0 +1,79 @@
+ CREATE OR REPLACE FUNCTION public.fn_conciliar_extrato_faturas_cartao(
+    prm_empresa_id bigint,
+    prm_conta_financeira_id bigint,
+    prm_id_maior_que bigint DEFAULT 0
+)
+RETURNS void
+LANGUAGE plpgsql
+AS $$
+BEGIN
+
+    WITH candidatos AS (
+        SELECT
+            cf.id AS conciliacao_id,
+            f.id AS fatura_id,
+            COUNT(*) OVER (PARTITION BY cf.id) AS qtd_opcoes,
+
+            (
+              50
+              +
+              CASE
+                WHEN abs(COALESCE(f.valor_total,0) - abs(cf.valor)) <= 0.05 THEN 30
+                WHEN abs(COALESCE(f.valor_total,0) - abs(cf.valor)) <= 5 THEN 20
+                ELSE 0
+              END
+              +
+              CASE
+                WHEN abs(f.vencimento - cf.data_mov) <= 3 THEN 20
+                WHEN abs(f.vencimento - cf.data_mov) <= 7 THEN 10
+                WHEN abs(f.vencimento - cf.data_mov) <= 15 THEN 5
+                ELSE 0
+              END
+            )::numeric(5,2) AS score,
+
+            concat(
+              'status=', f.status,
+              '; fatura_id=', f.id,
+              '; valor_fatura=', COALESCE(f.valor_total,0),
+              '; valor_extrato=', abs(cf.valor),
+              '; dif_valor=', abs(COALESCE(f.valor_total,0) - abs(cf.valor)),
+              '; vencimento=', f.vencimento,
+              '; data_mov=', cf.data_mov,
+              '; dif_dias=', abs(f.vencimento - cf.data_mov)
+            ) AS criterio
+
+        FROM public.conciliacao_financeira cf
+        JOIN public.cartoes_faturas f
+          ON f.empresa_id = cf.empresa_id
+         AND COALESCE(f.status, 'aberta') <> 'paga'
+         AND abs(COALESCE(f.valor_total,0) - abs(cf.valor)) <= 0.10
+         AND abs(f.vencimento - cf.data_mov) <= 15
+
+        WHERE cf.empresa_id = prm_empresa_id
+          AND cf.conta_financeira_id = prm_conta_financeira_id
+          AND cf.tipo = 'saida'
+          AND cf.fatura_id IS NULL
+          AND cf.pagar_id IS NULL
+          AND cf.id > prm_id_maior_que
+          AND upper(cf.historico) LIKE '%FATURA%'
+    ),
+
+    unicos AS (
+        SELECT *
+        FROM candidatos
+        WHERE qtd_opcoes = 1
+          AND score >= 70
+    )
+
+    UPDATE public.conciliacao_financeira cf
+       SET fatura_id = u.fatura_id,
+           match_score = u.score,
+           match_criterio = u.criterio,
+           tipo_evento = 'fatura_cartao',
+           status_conciliacao = 'ok',
+           mensagem_conciliacao = 'Fatura identificada automaticamente'
+      FROM unicos u
+     WHERE cf.id = u.conciliacao_id;
+
+END;
+$$;

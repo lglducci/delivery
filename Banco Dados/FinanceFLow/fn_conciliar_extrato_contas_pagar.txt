@@ -1,0 +1,84 @@
+ CREATE OR REPLACE FUNCTION public.fn_conciliar_extrato_contas_pagar(
+    prm_empresa_id bigint,
+    prm_conta_financeira_id bigint,
+    prm_id_maior_que bigint DEFAULT 0,
+    prm_conciliacao_id bigint DEFAULT NULL
+)
+RETURNS void
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    r record;
+    x record;
+BEGIN
+    FOR r IN
+        SELECT *
+        FROM public.conciliacao_financeira
+        WHERE empresa_id = prm_empresa_id
+          AND conta_financeira_id = prm_conta_financeira_id
+          AND tipo = 'saida'
+          AND pagar_id IS NULL
+           AND id > prm_id_maior_que
+  AND (
+      prm_conciliacao_id IS NULL
+      OR id = prm_conciliacao_id
+  )
+        ORDER BY data_mov, id
+    LOOP
+        x := NULL;
+
+        SELECT
+            p.id AS pagar_id,
+            (
+              50
+              + CASE 
+                  WHEN abs(p.valor - abs(r.valor)) <= 0.05 THEN 30
+                  WHEN abs(p.valor - abs(r.valor)) <= 5 THEN 20
+                  WHEN abs(p.valor - abs(r.valor)) <= 20 THEN 10
+                  ELSE 0
+                END
+              + CASE 
+                  WHEN abs(p.vencimento - r.data_mov) <= 3 THEN 20
+                  WHEN abs(p.vencimento - r.data_mov) <= 7 THEN 10
+                  WHEN abs(p.vencimento - r.data_mov) <= 15 THEN 5
+                  WHEN abs(p.vencimento - r.data_mov) <= 45 THEN 2
+                  ELSE 0
+                END
+            )::numeric(5,2) AS score,
+            concat(
+              'status=', p.status,
+              '; fornecedor=sim',
+              '; valor_conta=', p.valor,
+              '; valor_extrato=', abs(r.valor),
+              '; dif_valor=', abs(p.valor - abs(r.valor)),
+              '; vencimento=', p.vencimento,
+              '; data_mov=', r.data_mov,
+              '; dif_dias=', abs(p.vencimento - r.data_mov)
+            ) AS criterio
+        INTO x
+        FROM public.contas_a_pagar p
+        WHERE p.empresa_id = r.empresa_id
+          AND p.fornecedor_id = r.fornecedor_id
+          AND COALESCE(p.status, 'aberto') <> 'pago'
+          AND abs(p.valor - abs(r.valor)) <= 20
+          AND abs(p.vencimento - r.data_mov) <= 45
+          AND NOT EXISTS (
+              SELECT 1
+              FROM public.conciliacao_financeira ja
+              WHERE ja.empresa_id = r.empresa_id
+                AND ja.pagar_id = p.id
+          )
+        ORDER BY score DESC, abs(p.valor - abs(r.valor)) ASC, p.vencimento ASC, p.id ASC
+        LIMIT 1;
+
+        IF x.pagar_id IS NOT NULL AND x.score >= 70 THEN
+            UPDATE public.conciliacao_financeira
+               SET pagar_id = x.pagar_id,
+                   match_score = x.score,
+                   match_criterio = x.criterio,
+                   tipo_evento = 'pagar'
+             WHERE id = r.id;
+        END IF;
+    END LOOP;
+END;
+$$;
