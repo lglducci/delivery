@@ -169,7 +169,20 @@ CREATE TABLE transacoes (
 
  alter table public.transacoes add column evento_codigo text;
 
+
+
+
+
+
+ALTER TABLE public.transacoes
+ADD COLUMN IF NOT EXISTS importacao_id bigint;
+
+ 
+CREATE INDEX IF NOT EXISTS idx_transacoes_importacao_id
+ON public.transacoes(importacao_id);
 ALTER TABLE transacoes
+
+
 ADD COLUMN origem_id BIGINT NULL
 REFERENCES transacoes(id);
 

@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION public.fn_executar_conciliacao(
+ CREATE OR REPLACE FUNCTION public.fn_executar_conciliacao(
     p_empresa_id bigint,
     p_conta_id bigint
 )
@@ -11,7 +11,7 @@ DECLARE
     v_fatura_ids json;
 
     r record;
-
+   v_inicio_execucao timestamp;
     v_qtd_pagar int := 0;
     v_qtd_receber int := 0;
     v_qtd_fatura int := 0;
@@ -99,43 +99,44 @@ BEGIN
           AND pagar_id IS NULL
           AND receber_id IS NULL
           AND fatura_id IS NULL
-          AND COALESCE(tipo_evento, 'financeiro') IN ('financeiro', 'transacao')
+              AND COALESCE(tipo_evento, 'financeiro') IN ('financeiro', 'transacao','receber_cartao','pagar_fatura', 'juros','pagar')
+
     LOOP
 
         IF r.tipo = 'entrada' THEN
 
-            PERFORM public.ff_registrar_receita(
-                p_empresa_id,
-                p_conta_id,
-                r.categoria_id,
-                NULL,
-                NULL,
-                abs(r.valor),
-                r.historico,
-                r.data_mov,
-                'Conciliação Bancária',
-                COALESCE(r.classificacao, 'receita'),
-                r.modelo_codigo,
-                r.forma
-            );
+        PERFORM public.ff_registrar_receita(
+            p_empresa_id::integer,
+            p_conta_id::integer,
+            r.categoria_id::integer,
+            NULL::text,
+            NULL::text,
+            abs(r.valor)::numeric,
+            r.historico::text,
+            r.data_mov::date,
+            'conciliacao'::text,
+            COALESCE(r.classificacao, 'receita')::text,
+            r.modelo_codigo::text,
+            r.forma::text
+        );
 
             v_qtd_transacao := v_qtd_transacao + 1;
 
         ELSIF r.tipo = 'saida' THEN
 
-            PERFORM public.ff_registrar_despesa(
-                p_empresa_id,
-                p_conta_id,
-                r.categoria_id,
-                NULL,
-                NULL,
-                abs(r.valor),
-                r.historico,
-                r.data_mov,
-                'Conciliação Bancária',
-                COALESCE(r.classificacao, 'despesa'),
-                r.modelo_codigo,
-                r.forma
+          PERFORM public.ff_registrar_despesa(
+                p_empresa_id::integer,
+                p_conta_id::integer,
+                r.categoria_id::integer,
+                NULL::text,
+                NULL::text,
+                abs(r.valor)::numeric,
+                r.historico::text,
+                r.data_mov::date,
+                'conciliacao'::text,
+                COALESCE(r.classificacao, 'despesa')::text,
+                r.modelo_codigo::text,
+                r.forma::text
             );
 
             v_qtd_transacao := v_qtd_transacao + 1;
@@ -148,17 +149,32 @@ BEGIN
     ------------------------------------------------------------------
     -- MARCA COMO EXECUTADO
     ------------------------------------------------------------------
-    UPDATE public.conciliacao_financeira
-    SET status_conciliacao = 'executado',
-        mensagem_conciliacao = 'Conciliação executada com sucesso',
-       lote_conciliacao_id = v_lote_conciliacao_id
-    WHERE empresa_id = p_empresa_id
-      AND importar = true
-      AND status_conciliacao = 'ok';
+
+ v_lote_conciliacao_id := nextval('public.conciliacao_lote_seq');
+
+UPDATE public.conciliacao_financeira
+SET status_conciliacao = 'executado',
+    mensagem_conciliacao = 'Conciliação executada com sucesso',
+    lote_conciliacao_id = v_lote_conciliacao_id
+WHERE empresa_id = p_empresa_id
+  AND importar = true
+  AND status_conciliacao = 'ok'
+  AND COALESCE(lote_conciliacao_id, 0) = 0;
+
+v_inicio_execucao := now();
+
+UPDATE public.transacoes
+SET importacao_id = v_lote_conciliacao_id
+WHERE empresa_id = p_empresa_id
+  AND conta_id = p_conta_id
+  AND origem = 'conciliacao'
+  AND COALESCE(importacao_id, 0) = 0
+  AND criado_em >= v_inicio_execucao;
 
 
     RETURN jsonb_build_object(
         'ok', true,
+         'lote_conciliacao_id', v_lote_conciliacao_id,
         'pagar', v_qtd_pagar,
         'receber', v_qtd_receber,
         'faturas', v_qtd_fatura,

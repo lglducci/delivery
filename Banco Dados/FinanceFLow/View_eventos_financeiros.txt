@@ -29,7 +29,8 @@ SELECT
     0 AS categoria_id,
     0 AS fornecedor_id,
     0 AS origem_id,
-    '' AS status
+    '' AS status,
+   0 importacao_id
 FROM cartoes_compras
 
 UNION ALL
@@ -77,7 +78,8 @@ SELECT
     categoria_id,
     fornecedor_id,
     0 AS origem_id,
-    status
+    status,
+   0 importacao_id
 FROM contas_a_pagar
 
 UNION ALL
@@ -125,7 +127,8 @@ SELECT
     categoria_id,
     fornecedor_id,
     0 AS origem_id,
-    status
+    status ,
+   0 importacao_id
 FROM contas_a_receber
 
 UNION ALL
@@ -160,7 +163,8 @@ SELECT
     categoria_id,
     0 AS fornecedor_id,
     origem_id,
-    '' AS status
+    '' AS status,
+    importacao_id
 FROM transacoes
 
 UNION ALL
@@ -205,6 +209,7 @@ SELECT
     0 AS categoria_id,
     0 AS fornecedor_id,
     cartao_id AS origem_id,
-    status
+    status,
+   0 importacao_id
 FROM cartoes_faturas
 WHERE status IN ('fechada','paga','aberta');
