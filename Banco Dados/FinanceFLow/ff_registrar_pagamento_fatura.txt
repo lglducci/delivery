@@ -88,7 +88,7 @@ v_cat_id := ff_get_categoria_id(p_empresa_id, 'Pagamento de Fatura', 'saida');
         v_valor_fatura,
         'Pagamento fatura cartão ' || v_cartao_nome,
         CURRENT_DATE,
-        'web',
+        'pagamento_fatura',
          v_cat_id ,
         v_fatura_id  ,
         v_evento_codigo ,

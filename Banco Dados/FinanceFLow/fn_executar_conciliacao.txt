@@ -163,13 +163,23 @@ WHERE empresa_id = p_empresa_id
 
 v_inicio_execucao := now();
 
+ 
+
+
 UPDATE public.transacoes
 SET importacao_id = v_lote_conciliacao_id
 WHERE empresa_id = p_empresa_id
   AND conta_id = p_conta_id
-  AND origem = 'conciliacao'
   AND COALESCE(importacao_id, 0) = 0
-  AND criado_em >= v_inicio_execucao;
+  AND criado_em >= v_inicio_execucao
+  AND lower(origem) IN (
+    'conciliacao',
+    'pagamento',
+    'recebimento',
+    'pagamento_fatura'
+  );
+
+
 
 
     RETURN jsonb_build_object(
