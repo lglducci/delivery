@@ -44,6 +44,39 @@ BEGIN
         v_ultimo_id, null
     );
 
+
+  INSERT INTO public.transferencia_mesma_titularidade_pendente (
+  empresa_id,
+  conciliacao_id,
+  conta_origem_id,
+  data_mov,
+  historico,
+  valor,
+  status
+)
+SELECT
+  c.empresa_id,
+  c.id,
+  c.conta_financeira_id,
+  c.data_mov,
+  c.historico,
+  abs(c.valor),
+  'pendente'
+FROM public.conciliacao_financeira c
+WHERE c.status_conciliacao = 'rejeitado'
+  AND c.lote_conciliacao_id IS NULL
+  AND c.empresa_id = p_empresa_id
+  AND c.conta_financeira_id = p_conta_financeira_id
+  AND c.id > v_ultimo_id
+  AND unaccent(upper(coalesce(c.mensagem_conciliacao, ''))) LIKE '%TRANSFER%'
+  AND NOT EXISTS (
+    SELECT 1
+    FROM public.transferencia_mesma_titularidade_pendente t
+    WHERE t.empresa_id = c.empresa_id
+      AND t.conciliacao_id = c.id
+  );
+
+ 
     RETURN jsonb_build_object(
         'ok', true,
         'id_inicial', v_ultimo_id

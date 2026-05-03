@@ -1,0 +1,43 @@
+CREATE OR REPLACE FUNCTION public.ff_estorno_conciliacao(
+    p_empresa_id bigint,
+    p_importacao_id bigint,
+    p_transacoes jsonb
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_qtd_conciliacao int := 0;
+    v_resultado_estorno text;
+BEGIN
+
+
+ -- 2) amarra transferências ao mesmo lote
+  DELETE FROM public.transferencia_mesma_titularidade_pendente  
+  WHERE empresa_id = p_empresa_id
+      AND lote_conciliacao_id = p_importacao_id;
+
+      
+    DELETE FROM public.conciliacao_financeira
+    WHERE empresa_id = p_empresa_id
+      AND lote_conciliacao_id = p_importacao_id;
+
+    GET DIAGNOSTICS v_qtd_conciliacao = ROW_COUNT;
+
+    
+
+    SELECT public.ff_estornar_transacoes_lote(
+        p_empresa_id,
+        p_transacoes
+    )
+    INTO v_resultado_estorno;
+
+    RETURN jsonb_build_object(
+        'ok', true,
+        'importacao_id', p_importacao_id,
+        'conciliacoes_excluidas', v_qtd_conciliacao,
+        'resultado_estorno', v_resultado_estorno
+    );
+
+END;
+$$;

@@ -1,0 +1,8 @@
+CREATE OR REPLACE FUNCTION public.fn_limpa_cnpj(p_text text)
+RETURNS text
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  RETURN regexp_replace(coalesce(p_text,''), '\D', '', 'g');
+END;
+$$;
