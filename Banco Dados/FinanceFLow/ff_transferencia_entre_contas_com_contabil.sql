@@ -13,10 +13,10 @@ AS $$
 DECLARE
     v_contabil_origem_id bigint;
     v_contabil_destino_id bigint;
-
+    v_lote_transferencia  bigint;
     v_nome_origem text;
     v_nome_destino text;
-
+    
     v_historico text;
     v_retorno_financeiro jsonb;
 BEGIN
@@ -63,6 +63,8 @@ BEGIN
         p_data_mov
     );
 
+ v_lote_transferencia := (v_retorno_financeiro->>'lote_transferencia')::bigint;
+
     -- 2) cria o contábil correto
     -- Débito: conta destino
     -- Crédito: conta origem
@@ -75,7 +77,7 @@ BEGIN
         p_data_mov,
         false,
         NULL,
-        p_lote_id
+        v_lote_transferencia
     );
 
     RETURN jsonb_build_object(

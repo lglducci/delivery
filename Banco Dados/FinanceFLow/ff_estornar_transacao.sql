@@ -1,0 +1,189 @@
+ CREATE OR REPLACE FUNCTION ff_estornar_transacao(
+  p_empresa_id    BIGINT,
+  p_transacao_id  BIGINT
+)
+RETURNS TEXT
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_transacao       transacoes%ROWTYPE;
+  v_evento_estorno  TEXT;
+  v_tipo_estorno    TEXT;
+  v_estorno_id BIGINT;
+
+BEGIN
+  ------------------------------------------------------------------
+  -- 1) Buscar transação original
+  ------------------------------------------------------------------
+  SELECT *
+    INTO v_transacao
+    FROM transacoes
+   WHERE id = p_transacao_id
+     AND empresa_id = p_empresa_id;
+ 
+ IF NOT FOUND THEN
+  RETURN 'transacao_ja_excluida';
+END IF;
+
+--Se for uma transferencia então exclui o lote inteiro 
+ IF COALESCE(v_transacao.lote_transferencia, 0) > 0 THEN
+  PERFORM public.ff_excluir_transferencia(
+    p_empresa_id,
+    v_transacao.lote_transferencia
+  );
+
+  PERFORM contab.marcar_reprocessamento(
+    p_empresa_id,
+    v_transacao.data_movimento
+  );
+
+  RETURN 'transferencia_estornada';
+END IF;
+ 
+  ------------------------------------------------------------------
+  -- 2) Descobrir EVENTO REVERSO pelo MODELO
+  ------------------------------------------------------------------
+  SELECT m.codigo_estorno
+    INTO v_evento_estorno
+    FROM contab.modelos m
+   WHERE m.empresa_id = p_empresa_id
+     AND m.codigo = v_transacao.evento_codigo;
+
+  -- fallback (segurança)
+  v_evento_estorno := COALESCE(v_evento_estorno, 'ESTORNO');
+
+  ------------------------------------------------------------------
+  -- 3) Tipo reverso (entrada <-> saída)
+  ------------------------------------------------------------------
+  v_tipo_estorno :=
+    CASE
+      WHEN lower(v_transacao.tipo) = 'entrada' THEN 'saida'
+      WHEN lower(v_transacao.tipo) = 'saida'   THEN 'entrada'
+      ELSE v_transacao.tipo
+    END;
+
+  ------------------------------------------------------------------
+  -- 4) MESMO DIA → DELETE (erro operacional)
+  ------------------------------------------------------------------
+  IF v_transacao.data_movimento = current_date THEN
+
+    IF v_transacao.pagar_id IS NOT NULL THEN
+      UPDATE contas_a_pagar
+         SET status = 'aberto',
+              data_pagamento = null 
+       WHERE id = v_transacao.pagar_id
+         AND empresa_id = p_empresa_id;
+    END IF;
+
+    IF v_transacao.receber_id IS NOT NULL THEN
+      UPDATE contas_a_receber
+         SET status = 'aberto',
+                data_recebimento = null 
+       WHERE id = v_transacao.receber_id
+         AND empresa_id = p_empresa_id;
+    END IF;
+
+    IF v_transacao.fatura_id IS NOT NULL THEN
+      UPDATE cartoes_faturas
+         SET status = 'aberta',
+                data_pagamento = null 
+       WHERE id = v_transacao.fatura_id
+         AND empresa_id = p_empresa_id;
+    END IF;
+
+    DELETE FROM transacoes
+     WHERE id = p_transacao_id;
+
+PERFORM contab.marcar_reprocessamento(
+  p_empresa_id,
+  v_transacao.data_movimento
+);
+
+    RETURN 'sucesso';
+  END IF;
+
+  ------------------------------------------------------------------
+  -- 5) D+1 → ESTORNO (novo fato financeiro)
+  ------------------------------------------------------------------
+
+  -- Reabre origens
+  IF v_transacao.pagar_id IS NOT NULL THEN
+    UPDATE contas_a_pagar
+       SET status = 'aberto',
+              data_pagamento = null 
+     WHERE id = v_transacao.pagar_id
+       AND empresa_id = p_empresa_id;
+  END IF;
+
+  IF v_transacao.receber_id IS NOT NULL THEN
+    UPDATE contas_a_receber
+       SET status = 'aberto',
+        data_recebimento = null 
+     WHERE id = v_transacao.receber_id
+       AND empresa_id = p_empresa_id;
+  END IF;
+
+  IF v_transacao.fatura_id IS NOT NULL THEN
+    UPDATE cartoes_faturas
+       SET status = 'aberta',
+              data_pagamento = null 
+     WHERE id = v_transacao.fatura_id
+       AND empresa_id = p_empresa_id;
+  END IF;
+
+  ------------------------------------------------------------------
+  -- 6) Insere transação de ESTORNO
+  ------------------------------------------------------------------
+  INSERT INTO transacoes (
+    empresa_id,
+    conta_id,
+    categoria_id,
+    tipo,
+    valor,
+    descricao,
+    data_movimento,
+    origem,
+    pagar_id,
+    receber_id,
+    fatura_id,
+    evento_codigo,
+   classificacao
+  )
+  VALUES (
+    p_empresa_id,
+    v_transacao.conta_id,
+    v_transacao.categoria_id,
+    v_tipo_estorno,
+    v_transacao.valor,
+    'ESTORNO DA TRANSACAO ' || v_transacao.id,
+    current_date,
+    'estorno',
+    v_transacao.pagar_id,
+    v_transacao.receber_id,
+    v_transacao.fatura_id,
+    v_evento_estorno,
+     v_transacao.classificacao
+  ) 
+RETURNING id INTO v_estorno_id;
+
+UPDATE transacoes
+   SET origem_id =   v_transacao.id
+ WHERE id = v_estorno_id  
+   AND empresa_id = p_empresa_id;
+
+
+
+UPDATE transacoes
+   SET origem_id =   v_estorno_id   
+ WHERE id = v_transacao.id 
+   AND empresa_id = p_empresa_id;
+
+PERFORM contab.marcar_reprocessamento(
+  p_empresa_id,
+  LEAST(v_transacao.data_movimento, current_date)
+);
+
+  RETURN 'sucesso';
+
+END;
+$$;

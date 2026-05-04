@@ -283,6 +283,14 @@ IF EXISTS (
     v_classificacao := 'financeiro';
 END IF;
 
+IF unaccent(upper(v_historico)) LIKE '%DIF.TITULARIDADE%'
+   OR unaccent(upper(v_historico)) LIKE '%DIF TITULARIDADE%'
+   OR unaccent(upper(v_historico)) LIKE '%DIFERENTE TITULARIDADE%'
+THEN
+   v_tipo_evento := 'transferencia';
+   v_classificacao := 'financeiro';
+END IF;
+
         INSERT INTO public.conciliacao_financeira (
             empresa_id,
             conta_financeira_id,

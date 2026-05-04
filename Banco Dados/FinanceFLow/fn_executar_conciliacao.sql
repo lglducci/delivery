@@ -180,6 +180,7 @@ WHERE classificacao = 'financeiro'
 -- TRANSFERÊNCIA MESMA TITULARIDADE
 -- gera 2 transações financeiras + 1 partida dobrada contábil
 ------------------------------------------------------------------
+ 
 FOR r IN
     SELECT *
     FROM public.conciliacao_financeira
@@ -190,20 +191,33 @@ FOR r IN
       AND lote_conciliacao_id = v_lote_conciliacao_id
 LOOP
 
-    PERFORM public.ff_transferencia_entre_contas_com_contabil(
-        p_empresa_id,
-        p_conta_id,
-        r.destino_id, -- precisa existir na conciliacao ou vir de tabela pendente
-        abs(r.valor),
-        r.historico,
-        r.data_mov,
-        v_lote_conciliacao_id
-    );
+    IF r.valor < 0 THEN
+        -- saiu da conta importada
+        PERFORM public.ff_transferencia_entre_contas_com_contabil(
+            p_empresa_id,
+            p_conta_id,
+            r.destino_id,
+            abs(r.valor),
+            r.historico,
+            r.data_mov,
+            v_lote_conciliacao_id
+        );
+    ELSE
+        -- entrou na conta importada
+        PERFORM public.ff_transferencia_entre_contas_com_contabil(
+            p_empresa_id,
+            r.destino_id,
+            p_conta_id,
+            abs(r.valor),
+            r.historico,
+            r.data_mov,
+            v_lote_conciliacao_id
+        );
+    END IF;
 
     v_qtd_transacao := v_qtd_transacao + 2;
 
 END LOOP;
-
     ------------------------------------------------------------------
     -- MARCA COMO EXECUTADO
     ------------------------------------------------------------------

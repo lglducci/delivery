@@ -11,7 +11,8 @@ LANGUAGE plpgsql
 AS $$
 DECLARE
     v_id_saida bigint;
-    v_id_entrada bigint;
+    v_id_entrada bigint; 
+    v_lote_id  bigint;
 BEGIN
     IF p_conta_origem_id = p_conta_destino_id THEN
         RAISE EXCEPTION 'Conta origem e destino não podem ser iguais';
@@ -20,6 +21,9 @@ BEGIN
     IF p_valor IS NULL OR p_valor <= 0 THEN
         RAISE EXCEPTION 'Valor da transferência deve ser maior que zero';
     END IF;
+ 
+   v_lote_id := nextval('contab.lote_id_seq');
+
 
     -- 1) Saída da conta origem
     INSERT INTO public.transacoes (
@@ -32,7 +36,8 @@ BEGIN
         classificacao,
         forma_pagamento,
         tipo_evento,
-        origem
+        origem,
+        lote_transferencia 
     )
     VALUES (
         p_empresa_id,
@@ -44,7 +49,8 @@ BEGIN
         'despesa',
         'transferencia',
         'financeiro',
-        'transferencia'
+        'transferencia',
+         v_lote_id
     )
     RETURNING id INTO v_id_saida;
 
@@ -59,7 +65,9 @@ BEGIN
         classificacao,
         forma_pagamento,
         tipo_evento,
-        origem 
+        origem , 
+        lote_transferencia 
+         
     )
     VALUES (
         p_empresa_id,
@@ -71,7 +79,8 @@ BEGIN
         'receita',
         'transferencia',
         'financeiro',
-        'transferencia' 
+        'transferencia' ,
+        v_lote_id
     )
     RETURNING id INTO v_id_entrada;
 
@@ -87,7 +96,8 @@ BEGIN
         'transacao_entrada_id', v_id_entrada,
         'conta_origem_id', p_conta_origem_id,
         'conta_destino_id', p_conta_destino_id,
-        'valor', abs(p_valor)
+        'valor', abs(p_valor),
+        'lote_transferencia', v_lote_id
     );
 END;
 $$;
