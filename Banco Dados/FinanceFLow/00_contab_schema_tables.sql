@@ -162,7 +162,8 @@ CREATE TABLE contab.lancamentos (
 
  ALTER TABLE contab.lancamentos
 ADD COLUMN lote_id BIGINT;
-
+ALTER TABLE contab.lancamentos
+ADD COLUMN IF NOT EXISTS lote_transferencia bigint;
 
 CREATE SEQUENCE contab.lote_id_seq
 START 1;
