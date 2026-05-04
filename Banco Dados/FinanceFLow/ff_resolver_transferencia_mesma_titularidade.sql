@@ -21,20 +21,21 @@ BEGIN
     RETURN jsonb_build_object('ok', false, 'message', 'Conta origem e destino não podem ser iguais.');
   END IF;
 
-  UPDATE public.transferencia_mesma_titularidade_pendente
+  UPDATE public.conciliacao_financeira
   SET
-    conta_origem_id = p_conta_origem_id,
-    conta_destino_id = p_conta_destino_id,
-    status = 'resolvido',
-    executado_em = now()
+    conta_financeira_id = p_conta_origem_id,
+    destino_id = p_conta_destino_id,
+    status_conciliacao = 'ok' ,
+    mensagem_conciliacao = 'Transferência de mesma titularidade resolvida manualmente',
+    importar = true 
   WHERE id = p_id
     AND empresa_id = p_empresa_id
     AND lote_conciliacao_id = p_lote_id
-    AND conciliacao_id = p_conciliacao_id;
+    AND  id = p_id;
 
   GET DIAGNOSTICS v_qtd_transf = ROW_COUNT;
 
-  UPDATE public.conciliacao_financeira
+  /*UPDATE public.conciliacao_financeira
   SET
     status_conciliacao = 'ok',
     mensagem_conciliacao = 'Transferência de mesma titularidade resolvida manualmente',
@@ -58,12 +59,12 @@ BEGIN
       'message', 'Conciliação não encontrada.'
     );
   END IF;
-
+*/
   RETURN jsonb_build_object(
     'ok', true,
     'message', 'Transferência resolvida com sucesso.',
     'transferencia_id', p_id,
-    'conciliacao_id', p_conciliacao_id,
+    'conciliacao_id', p_id,
     'lote_id', p_lote_id
   );
 END;

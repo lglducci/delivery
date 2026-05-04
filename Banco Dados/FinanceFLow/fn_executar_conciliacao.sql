@@ -1,6 +1,7 @@
  CREATE OR REPLACE FUNCTION public.fn_executar_conciliacao(
     p_empresa_id bigint,
-    p_conta_id bigint
+    p_conta_id bigint,
+    v_lote_conciliacao_id bigint 
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -16,9 +17,25 @@ DECLARE
     v_qtd_receber int := 0;
     v_qtd_fatura int := 0;
     v_qtd_transacao int := 0;
-   v_lote_conciliacao_id bigint;
+  
 BEGIN
    v_inicio_execucao := now();
+
+ UPDATE public.conciliacao_financeira
+SET classificacao =
+  CASE
+    WHEN upper(historico) LIKE '%RECEBIDO%'
+      OR upper(historico) LIKE '%RECEBIMENTO%'
+      OR upper(historico) LIKE '%RECEBIDA%'
+      OR upper(historico) LIKE '%CRÉD%'
+      OR upper(historico) LIKE '%CRED%'
+    THEN 'receita'
+    ELSE 'despesa'
+  END
+WHERE classificacao = 'financeiro'
+  AND empresa_id = p_empresa_id 
+  AND lote_conciliacao_id = v_lote_conciliacao_id;
+
     ------------------------------------------------------------------
     -- CONTAS A PAGAR
     ------------------------------------------------------------------
@@ -28,7 +45,8 @@ BEGIN
     WHERE empresa_id = p_empresa_id
       AND importar = true
       AND status_conciliacao = 'ok'
-      AND pagar_id IS NOT NULL;
+      AND pagar_id IS NOT NULL   
+      AND lote_conciliacao_id = v_lote_conciliacao_id;
 
     SELECT json_array_length(v_pagar_ids) INTO v_qtd_pagar;
 
@@ -51,7 +69,8 @@ BEGIN
       AND conta_financeira_id = p_conta_id
       AND importar = true
       AND status_conciliacao = 'ok'
-      AND receber_id IS NOT NULL;
+      AND receber_id IS NOT NULL
+      AND lote_conciliacao_id = v_lote_conciliacao_id;
 
     SELECT json_array_length(v_receber_ids) INTO v_qtd_receber;
 
@@ -73,7 +92,8 @@ BEGIN
     WHERE empresa_id = p_empresa_id
       AND importar = true
       AND status_conciliacao = 'ok'
-      AND fatura_id IS NOT NULL;
+      AND fatura_id IS NOT NULL
+      AND lote_conciliacao_id = v_lote_conciliacao_id;
 
     SELECT json_array_length(v_fatura_ids) INTO v_qtd_fatura;
 
@@ -100,8 +120,17 @@ BEGIN
           AND pagar_id IS NULL
           AND receber_id IS NULL
           AND fatura_id IS NULL
-              AND COALESCE(tipo_evento, 'financeiro') IN ('financeiro', 'transacao','receber_cartao','pagar_fatura', 'juros','pagar')
-
+               AND COALESCE(tipo_evento, 'financeiro') IN (
+                    'transferencia',
+                    'financeiro',
+                    'transacao',
+                    'receber_cartao',
+                    'pagar_fatura',
+                    'juros',
+                    'pagar',
+                    'receber' 
+                    )
+         AND lote_conciliacao_id = v_lote_conciliacao_id 
     LOOP
 
         IF r.tipo = 'entrada' THEN
@@ -147,20 +176,47 @@ BEGIN
     END LOOP;
 
 
+------------------------------------------------------------------
+-- TRANSFERÊNCIA MESMA TITULARIDADE
+-- gera 2 transações financeiras + 1 partida dobrada contábil
+------------------------------------------------------------------
+FOR r IN
+    SELECT *
+    FROM public.conciliacao_financeira
+    WHERE empresa_id = p_empresa_id
+      AND importar = true
+      AND status_conciliacao = 'ok'
+      AND tipo_evento = 'transf_mesma_tit'
+      AND lote_conciliacao_id = v_lote_conciliacao_id
+LOOP
+
+    PERFORM public.ff_transferencia_entre_contas_com_contabil(
+        p_empresa_id,
+        p_conta_id,
+        r.destino_id, -- precisa existir na conciliacao ou vir de tabela pendente
+        abs(r.valor),
+        r.historico,
+        r.data_mov,
+        v_lote_conciliacao_id
+    );
+
+    v_qtd_transacao := v_qtd_transacao + 2;
+
+END LOOP;
+
     ------------------------------------------------------------------
     -- MARCA COMO EXECUTADO
     ------------------------------------------------------------------
 
- v_lote_conciliacao_id := nextval('public.conciliacao_lote_seq');
+ 
 
 UPDATE public.conciliacao_financeira
 SET status_conciliacao = 'executado',
-    mensagem_conciliacao = 'Conciliação executada com sucesso',
-    lote_conciliacao_id = v_lote_conciliacao_id
+    mensagem_conciliacao = 'Conciliação executada com sucesso' 
 WHERE empresa_id = p_empresa_id
   AND importar = true
-  AND status_conciliacao = 'ok'
-  AND COALESCE(lote_conciliacao_id, 0) = 0;
+  AND status_conciliacao = 'ok' 
+  AND lote_conciliacao_id = v_lote_conciliacao_id;
 
   
 UPDATE public.conciliacao_financeira
@@ -174,7 +230,7 @@ WHERE empresa_id = p_empresa_id
 
  
 -- 2) amarra transferências ao mesmo lote
-UPDATE public.transferencia_mesma_titularidade_pendente t
+/*UPDATE public.transferencia_mesma_titularidade_pendente t
 SET 
     lote_conciliacao_id = v_lote_conciliacao_id 
    
@@ -182,7 +238,7 @@ FROM public.conciliacao_financeira c
 WHERE c.id = t.conciliacao_id
   AND c.empresa_id = t.empresa_id
   AND t.empresa_id = p_empresa_id 
-  AND COALESCE(t.lote_conciliacao_id, 0) = 0;
+  AND COALESCE(t.lote_conciliacao_id, 0) = 0;*/
  
 
 

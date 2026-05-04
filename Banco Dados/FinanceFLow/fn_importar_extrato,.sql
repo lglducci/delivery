@@ -24,19 +24,36 @@ DECLARE
     v_nome_fornecedor   text;
     v_chave_importacao text;
     v_duplicado boolean;
-
+      v_lote_conciliacao_id bigint;
     v_qtd integer := 0;
 BEGIN
 
+ v_lote_conciliacao_id := nextval('public.conciliacao_lote_seq');
 
-DELETE FROM public.transferencia_mesma_titularidade_pendente t
+INSERT INTO public.lote_conciliacao (
+  empresa_id,
+  conta_financeira_id,
+  data_ini,
+  data_fim,
+  status
+)
+VALUES (
+  p_empresa_id,
+  p_conta_financeira_id,
+  null,
+  null,
+  'aberto'
+)
+RETURNING id INTO v_lote_conciliacao_id;
+ 
+/*DELETE FROM public.transferencia_mesma_titularidade_pendente t
 USING public.conciliacao_financeira c
 WHERE t.empresa_id = c.empresa_id
   AND t.conciliacao_id = c.id
   AND c.empresa_id = p_empresa_id
   AND c.conta_financeira_id = p_conta_financeira_id
   AND COALESCE(c.status_conciliacao, 'pendente') IN ('pendente', 'rejeitado', 'ok')
-  AND c.transacao_id IS NULL;
+  AND c.transacao_id IS NULL;*/
 
 
     DELETE FROM public.conciliacao_financeira
@@ -284,7 +301,8 @@ END IF;
             chave_importacao,
             importar,
             status_conciliacao,
-            mensagem_conciliacao 
+            mensagem_conciliacao ,
+            lote_conciliacao_id
         )
         VALUES (
             p_empresa_id,
@@ -324,11 +342,36 @@ END IF;
 
                 ELSE
                     'Linha importada para revisão'
-            END
+            END,
+            v_lote_conciliacao_id
         );
 
         v_qtd := v_qtd + 1;
     END LOOP;
+ 
+ UPDATE public.lote_conciliacao l
+SET
+  data_ini = x.data_ini,
+  data_fim = x.data_fim,
+  total_linhas = x.total_linhas,
+  total_valor = x.total_valor
+FROM (
+  SELECT
+    lote_conciliacao_id,
+    MIN(data_mov)::date AS data_ini,
+    MAX(data_mov)::date AS data_fim,
+    COUNT(*)::integer AS total_linhas,
+    COALESCE(SUM(valor), 0)::numeric(15,2) AS total_valor
+  FROM public.conciliacao_financeira
+  WHERE empresa_id = p_empresa_id
+    AND conta_financeira_id = p_conta_financeira_id
+    AND lote_conciliacao_id = v_lote_conciliacao_id
+  GROUP BY lote_conciliacao_id
+) x
+WHERE l.id = x.lote_conciliacao_id
+  AND l.empresa_id = p_empresa_id
+  AND l.conta_financeira_id = p_conta_financeira_id;
+   
 
     RETURN jsonb_build_object(
         'ok', true,
