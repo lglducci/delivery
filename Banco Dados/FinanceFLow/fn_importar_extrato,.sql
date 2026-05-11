@@ -253,7 +253,7 @@ WHERE t.empresa_id = c.empresa_id
             WHERE ja.chave_importacao = v_chave_importacao
         )
         INTO v_duplicado;
-
+ 
         -- BLOQUEIO SOMENTE SE EXISTIR NA CONFIGURAÇÃO DE MESMA TITULARIDADE
   -- TRANSFERÊNCIA MESMA TITULARIDADE
 IF EXISTS (

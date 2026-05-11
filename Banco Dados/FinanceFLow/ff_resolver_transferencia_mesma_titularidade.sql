@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION public.ff_resolver_transferencia_mesma_titularidade(
+ CREATE OR REPLACE FUNCTION public.ff_resolver_transferencia_mesma_titularidade(
   p_empresa_id bigint,
   p_lote_id bigint,
   p_id bigint,
@@ -10,8 +10,10 @@ RETURNS jsonb
 LANGUAGE plpgsql
 AS $$
 DECLARE
-  v_qtd_transf int;
-  v_qtd_conc int;
+  v_chave text;
+  v_valor numeric;
+  v_data_mov date;
+  v_historico text;
 BEGIN
   IF p_conta_origem_id IS NULL OR p_conta_destino_id IS NULL THEN
     RETURN jsonb_build_object('ok', false, 'message', 'Informe conta origem e conta destino.');
@@ -21,51 +23,57 @@ BEGIN
     RETURN jsonb_build_object('ok', false, 'message', 'Conta origem e destino não podem ser iguais.');
   END IF;
 
+  SELECT valor, data_mov, historico
+  INTO v_valor, v_data_mov, v_historico
+  FROM public.conciliacao_financeira
+  WHERE id = p_id
+    AND empresa_id = p_empresa_id
+    AND lote_conciliacao_id = p_lote_id;
+
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object(
+      'ok', false,
+      'message', 'Conciliação não encontrada para este lote.'
+    );
+  END IF;
+
+ v_chave :=
+  p_empresa_id || '|' ||
+  v_data_mov || '|' ||
+  p_conta_origem_id || '|' ||
+  p_conta_destino_id || '|' ||
+  ROUND(ABS(v_valor), 2)::text;
+
+  IF EXISTS (
+    SELECT 1
+    FROM public.transferencia_contas
+    WHERE empresa_id = p_empresa_id
+      AND chave = v_chave
+  ) THEN
+    RETURN jsonb_build_object(
+      'ok', false,
+      'message', 'Transferência duplicada. Já existe uma transferência igual registrada.',
+      'chave', v_chave
+    );
+  END IF;
+
   UPDATE public.conciliacao_financeira
   SET
     conta_financeira_id = p_conta_origem_id,
     destino_id = p_conta_destino_id,
-    status_conciliacao = 'ok' ,
-    mensagem_conciliacao = 'Transferência de mesma titularidade resolvida manualmente',
-    importar = true 
-  WHERE id = p_id
-    AND empresa_id = p_empresa_id
-    AND lote_conciliacao_id = p_lote_id
-    AND  id = p_id;
-
-  GET DIAGNOSTICS v_qtd_transf = ROW_COUNT;
-
-  /*UPDATE public.conciliacao_financeira
-  SET
     status_conciliacao = 'ok',
     mensagem_conciliacao = 'Transferência de mesma titularidade resolvida manualmente',
-    importar = false,
-    lote_conciliacao_id = p_lote_id
-  WHERE id = p_conciliacao_id
-    AND empresa_id = p_empresa_id;
+    importar = true
+  WHERE id = p_id
+    AND empresa_id = p_empresa_id
+    AND lote_conciliacao_id = p_lote_id;
 
-  GET DIAGNOSTICS v_qtd_conc = ROW_COUNT;
-
-  IF v_qtd_transf = 0 THEN
-    RETURN jsonb_build_object(
-      'ok', false,
-      'message', 'Transferência não encontrada para este lote/conciliação.'
-    );
-  END IF;
-
-  IF v_qtd_conc = 0 THEN
-    RETURN jsonb_build_object(
-      'ok', false,
-      'message', 'Conciliação não encontrada.'
-    );
-  END IF;
-*/
   RETURN jsonb_build_object(
     'ok', true,
     'message', 'Transferência resolvida com sucesso.',
-    'transferencia_id', p_id,
     'conciliacao_id', p_id,
-    'lote_id', p_lote_id
+    'lote_id', p_lote_id,
+    'chave', v_chave
   );
 END;
 $$;

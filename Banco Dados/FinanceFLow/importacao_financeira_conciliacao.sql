@@ -90,3 +90,30 @@ ALTER TABLE public.conciliacao_financeira
 ADD CONSTRAINT fk_conciliacao_lote
 FOREIGN KEY (lote_conciliacao_id)
 REFERENCES public.lote_conciliacao(id);
+
+
+CREATE TABLE IF NOT EXISTS public.transferencia_contas (
+  id bigserial PRIMARY KEY,
+  empresa_id bigint NOT NULL,
+  data_mov date NOT NULL,
+  origem_id bigint NOT NULL,
+  destino_id bigint NOT NULL,
+  valor numeric(15,2) NOT NULL CHECK (valor > 0),
+  historico text,
+  lote_id bigint,
+  origem_registro text DEFAULT 'web',
+  conciliacao_id bigint,
+  chave text,
+  duplicada boolean DEFAULT false,
+  criado_em timestamptz DEFAULT now()
+);
+
+  
+CREATE INDEX IF NOT EXISTS idx_transferencia_contas_empresa
+ON public.transferencia_contas (empresa_id);
+
+CREATE INDEX IF NOT EXISTS idx_transferencia_contas_chave
+ON public.transferencia_contas (empresa_id, chave);
+
+CREATE INDEX IF NOT EXISTS idx_transferencia_contas_lote
+ON public.transferencia_contas (empresa_id, lote_id);

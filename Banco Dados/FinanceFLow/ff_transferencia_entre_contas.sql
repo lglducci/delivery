@@ -12,8 +12,13 @@ AS $$
 DECLARE
     v_id_saida bigint;
     v_id_entrada bigint; 
-    v_lote_id  bigint;
+    v_lote_id  bigint;  
+    v_chave text;
+    v_transferencia_id bigint;
+ 
 BEGIN
+
+
     IF p_conta_origem_id = p_conta_destino_id THEN
         RAISE EXCEPTION 'Conta origem e destino não podem ser iguais';
     END IF;
@@ -22,7 +27,29 @@ BEGIN
         RAISE EXCEPTION 'Valor da transferência deve ser maior que zero';
     END IF;
  
-   v_lote_id := nextval('contab.lote_id_seq');
+ 
+
+        v_chave :=
+        p_empresa_id || '|' ||
+        p_data_mov || '|' ||
+        p_conta_origem_id || '|' ||
+        p_conta_destino_id || '|' ||
+        ROUND(ABS(p_valor), 2)::text;
+
+        IF EXISTS (
+                SELECT 1
+                FROM public.transferencia_contas
+                WHERE empresa_id = p_empresa_id
+                    AND chave = v_chave
+                ) THEN
+                RETURN jsonb_build_object(
+                    'ok', false,
+                    'erro', 'Transferência duplicada. Já existe uma transferência igual registrada.',
+                    'chave', v_chave
+                );
+                END IF;
+
+    v_lote_id := nextval('contab.lote_id_seq');
 
 
     -- 1) Saída da conta origem
@@ -84,10 +111,29 @@ BEGIN
     )
     RETURNING id INTO v_id_entrada;
 
-    -- vincula a saída com a entrada
-   --- UPDATE public.transacoes
-   -- SET origem_id = v_id_entrada
-    --WHERE id = v_id_saida;
+  INSERT INTO public.transferencia_contas (
+  empresa_id,
+  data_mov,
+  origem_id,
+  destino_id,
+  valor,
+  historico,
+  lote_id,
+  origem_registro,
+  chave
+)
+VALUES (
+  p_empresa_id,
+  p_data_mov,
+  p_conta_origem_id,
+  p_conta_destino_id,
+  ABS(p_valor),
+  COALESCE(p_historico, 'Transferência entre contas próprias'),
+  v_lote_id,
+  'web',
+  v_chave
+)
+RETURNING id INTO v_transferencia_id;
 
     RETURN jsonb_build_object(
         'ok', true,

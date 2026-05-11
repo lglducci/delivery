@@ -9,14 +9,16 @@ AS $$
 DECLARE
     v_pagar_ids json;
     v_receber_ids json;
-    v_fatura_ids json;
-
+    v_fatura_ids json; 
     r record;
    v_inicio_execucao timestamp;
     v_qtd_pagar int := 0;
     v_qtd_receber int := 0;
     v_qtd_fatura int := 0;
     v_qtd_transacao int := 0;
+    v_chave text;
+v_conta_origem_id bigint;
+v_conta_destino_id bigint;
   
 BEGIN
    v_inicio_execucao := now();
@@ -180,7 +182,7 @@ WHERE classificacao = 'financeiro'
 -- TRANSFERÊNCIA MESMA TITULARIDADE
 -- gera 2 transações financeiras + 1 partida dobrada contábil
 ------------------------------------------------------------------
- 
+/* 
 FOR r IN
     SELECT *
     FROM public.conciliacao_financeira
@@ -189,6 +191,8 @@ FOR r IN
       AND status_conciliacao = 'ok'
       AND tipo_evento = 'transf_mesma_tit'
       AND lote_conciliacao_id = v_lote_conciliacao_id
+ 
+ 
 LOOP
 
     IF r.valor < 0 THEN
@@ -217,7 +221,68 @@ LOOP
 
     v_qtd_transacao := v_qtd_transacao + 2;
 
-END LOOP;
+END LOOP;*/
+
+
+        FOR r IN
+                SELECT *
+                FROM public.conciliacao_financeira
+                WHERE empresa_id = p_empresa_id
+                    AND importar = true
+                    AND status_conciliacao = 'ok'
+                    AND tipo_evento = 'transf_mesma_tit'
+                    AND lote_conciliacao_id = v_lote_conciliacao_id
+                LOOP
+
+                IF r.valor < 0 THEN
+                    -- saiu da conta importada
+                    v_conta_origem_id := p_conta_id;
+                    v_conta_destino_id := r.destino_id;
+                ELSE
+                    -- entrou na conta importada
+                    v_conta_origem_id := r.destino_id;
+                    v_conta_destino_id := p_conta_id;
+                END IF;
+
+                v_chave :=
+                    p_empresa_id || '|' ||
+                    r.data_mov || '|' ||
+                    v_conta_origem_id || '|' ||
+                    v_conta_destino_id || '|' ||
+                    ROUND(ABS(r.valor), 2)::text || '|' ||
+                    COALESCE(v_lote_conciliacao_id, 0);
+
+                IF EXISTS (
+                    SELECT 1
+                    FROM public.transferencia_contas
+                    WHERE empresa_id = p_empresa_id
+                    AND chave = v_chave
+                ) THEN
+                    UPDATE public.conciliacao_financeira
+                    SET
+                    status_conciliacao = 'rejeitado',
+                    importar = false,
+                    mensagem_conciliacao = 'Valor duplicado. Já existe transferência igual registrada.'
+                    WHERE id = r.id
+                    AND empresa_id = p_empresa_id;
+
+                    CONTINUE;
+                END IF;
+
+                PERFORM public.ff_transferencia_entre_contas_com_contabil(
+                    p_empresa_id,
+                    v_conta_origem_id,
+                    v_conta_destino_id,
+                    ABS(r.valor),
+                    r.historico,
+                    r.data_mov,
+                    v_lote_conciliacao_id
+                );
+
+                v_qtd_transacao := v_qtd_transacao + 2;
+
+        END LOOP;
+
     ------------------------------------------------------------------
     -- MARCA COMO EXECUTADO
     ------------------------------------------------------------------
