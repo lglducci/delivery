@@ -1,0 +1,33 @@
+CREATE OR REPLACE FUNCTION contab.dispatch_gerar_lancamentos(
+    p_diario_id  BIGINT,
+    p_empresa_id BIGINT,
+    p_modelo_codigo TEXT
+)
+RETURNS VOID
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    ------------------------------------------------------------------
+    -- ESTORNOS
+    ------------------------------------------------------------------
+    IF p_modelo_codigo = 'ESTORNO' THEN
+        PERFORM contab.gerar_lancamentos_estorno_generico(p_diario_id, p_empresa_id);
+        RETURN;
+    END IF;
+
+ 
+ 
+------------------------------------------------------------------
+-- PADRÃO
+------------------------------------------------------------------
+ 
+    ------------------------------------------------------------------
+    -- PADRÃO (MODELOS COMUNS / À VISTA / CATEGORIA)
+    ------------------------------------------------------------------
+    PERFORM contab.gerar_lancamentos_por_diario(p_diario_id, p_empresa_id);
+
+   
+
+
+END;
+$$;

@@ -1,0 +1,72 @@
+ CREATE OR REPLACE FUNCTION contab.ff_lote_lancamentos(
+    p_empresa_id BIGINT,
+    p_conta_observada BIGINT,
+    p_lancamentos JSONB,
+    p_importacao INTEGER DEFAULT 0
+)
+RETURNS VOID
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_item JSONB;
+    v_conta_debito BIGINT;
+    v_conta_credito BIGINT;
+    v_valor NUMERIC;
+    v_tipo TEXT;
+    v_historico TEXT;
+    v_conta_contra BIGINT;
+    v_data DATE;
+    v_importacao_id BIGINT := 0;
+BEGIN
+    IF COALESCE(p_importacao, 0) = 1 THEN
+        v_importacao_id := nextval('contab.importacao_id_seq');
+    END IF;
+
+    FOR v_item IN
+        SELECT * FROM jsonb_array_elements(p_lancamentos)
+    LOOP
+        v_valor        := (v_item->>'valor')::NUMERIC;
+        v_tipo         := v_item->>'tipo';
+        v_historico    := v_item->>'historico';
+        v_conta_contra := (v_item->>'conta_contra')::BIGINT;
+        v_data         := (v_item->>'data')::DATE;
+
+        IF v_conta_contra IS NULL THEN
+            RAISE EXCEPTION 'Conta contra não informada no lançamento: %', v_item;
+        END IF;
+
+        IF v_valor <= 0 THEN
+            RAISE EXCEPTION 'Valor inválido no lançamento: %', v_item;
+        END IF;
+
+        IF v_tipo = 'entrada' THEN
+            v_conta_debito  := p_conta_observada;
+            v_conta_credito := v_conta_contra;
+        ELSE
+            v_conta_debito  := v_conta_contra;
+            v_conta_credito := p_conta_observada;
+        END IF;
+
+        IF COALESCE(p_importacao, 0) = 1 THEN
+            PERFORM public.ff_aprender_regra_contabil(
+                p_empresa_id,
+                v_historico,
+                v_tipo,
+                v_conta_contra
+            );
+            END IF;
+
+        PERFORM contab.ff_lancamento_partida_dobrada(
+            p_empresa_id,
+            v_conta_debito,
+            v_conta_credito,
+            v_valor,
+            v_historico,
+            v_data,
+            FALSE,
+            NULL,
+            v_importacao_id
+        );
+    END LOOP;
+END;
+$$;

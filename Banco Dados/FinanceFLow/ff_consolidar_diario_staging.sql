@@ -1,0 +1,57 @@
+ CREATE OR REPLACE FUNCTION contab.ff_consolidar_diario_staging( 
+    p_empresa_id bigint
+) 
+RETURNS  SETOF contab.diario
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_lote_id uuid;
+BEGIN
+    --------------------------------------------------------------------
+    -- 1) OBTÉM O ÚLTIMO LOTE IMPORTADO (EVITA PEGAR LOTE ERRADO)
+    --------------------------------------------------------------------
+    SELECT lote_id 
+    INTO v_lote_id
+    FROM contab.diario_staging
+    WHERE empresa_id = p_empresa_id
+      AND lote_id IS NOT NULL
+    ORDER BY id DESC
+    LIMIT 1;
+
+    IF v_lote_id IS NULL THEN
+        RAISE NOTICE 'Nenhum lote pendente para consolidar.';
+        RETURN;
+    END IF;
+
+    --------------------------------------------------------------------
+    -- 2) COPIA APENAS REGISTROS VÁLIDOS PARA O DIÁRIO DEFINITIVO
+    --------------------------------------------------------------------
+    INSERT INTO contab.diario (
+        empresa_id, data_mov, modelo_codigo, historico, doc_ref,
+       data_vencto, valor_total, valor_custo,
+        valor_imposto, desconto, outros, status, lote_id , transacao_id , contabil_id
+    )
+    SELECT 
+        empresa_id, data_mov, modelo_codigo, historico, doc_ref,
+         data_vencto, valor_total, valor_custo,
+        valor_imposto, 0, outros, 'rascunho', lote_id , transacao_id , contabil_id
+    FROM contab.diario_staging
+    WHERE empresa_id = p_empresa_id
+      AND lote_id = v_lote_id
+      AND validacao IS NULL;
+
+    --------------------------------------------------------------------
+    -- 3) REMOVE APENAS AS LINHAS DO LOTE CONSOLIDADO
+    --------------------------------------------------------------------
+    DELETE FROM contab.diario_staging
+    WHERE empresa_id = p_empresa_id
+      AND lote_id = v_lote_id;
+
+
+  RETURN QUERY
+    SELECT *
+    FROM contab.diario 
+    WHERE empresa_id = p_empresa_id
+      AND lote_id = v_lote_id;
+END;
+$$;

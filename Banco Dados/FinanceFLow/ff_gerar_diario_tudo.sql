@@ -1,0 +1,75 @@
+  
+ CREATE OR REPLACE FUNCTION contab.ff_gerar_diario_tudo(
+    p_empresa_id BIGINT,
+    p_data_ini   DATE,
+    p_data_fim   DATE
+)
+RETURNS  SETOF contab.diario_staging
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_dia     DATE;
+    v_lote_id UUID := gen_random_uuid();
+BEGIN
+
+    -- 1) limpa staging só do dia (apenas o que ainda não foi fechado)
+        DELETE FROM contab.diario_staging s
+         WHERE s.empresa_id = p_empresa_id
+           AND s.data_mov  between  p_data_ini    and  p_data_fim   ;
+         
+    DELETE FROM contab.diario  d
+         WHERE d.empresa_id = p_empresa_id
+           AND d.data_mov   between  p_data_ini    and  p_data_fim  ;
+
+DELETE FROM contab.lancamentos l
+         WHERE l.empresa_id = p_empresa_id
+           AND l.data_mov   between  p_data_ini    and  p_data_fim 
+           AND (origem IS NULL OR origem <> 'CONTABIL');
+
+
+
+    -- processa por DIA, pulando dias já processados/estornados
+    FOR v_dia IN
+        SELECT d.dia::date
+        FROM generate_series(p_data_ini, p_data_fim, interval '1 day') d(dia)
+        WHERE NOT EXISTS (
+            SELECT 1
+            FROM contab.diario x
+            WHERE x.empresa_id = p_empresa_id
+              AND x.data_mov   = d.dia::date
+              AND x.status IN ('processado','estornado')
+        )
+    LOOP
+     
+   
+        -- 2) gera staging do dia (mantendo suas assinaturas atuais)
+        PERFORM contab.ff_gerar_diario_staging_transacoes(p_empresa_id, v_dia);
+  --   PERFORM contab.ff_diario_gerar_de_contas_pagar(p_empresa_id, v_dia);
+        PERFORM contab.ff_gerar_diario_cria_pagar(p_empresa_id, v_dia );
+--     PERFORM contab.ff_diario_gerar_de_contas_receber(p_empresa_id, v_dia);
+        PERFORM contab.ff_gerar_diario_cria_receber(p_empresa_id, v_dia);
+     --   PERFORM contab.ff_diario_gerar_de_cartao(p_empresa_id, v_dia);
+-- CARTÃO (NOVO MODELO CORRETO) 
+         PERFORM contab.ff_diario_compra_cartao(p_empresa_id, v_dia, v_dia);
+      --   PERFORM contab.ff_diario_pagamento_fatura_cartao(p_empresa_id, v_dia);
+
+        -- 3) marca o lote_id único dessa execução no staging do dia
+        UPDATE contab.diario_staging s
+           SET lote_id = v_lote_id
+         WHERE s.empresa_id = p_empresa_id
+           AND s.data_mov   = v_dia
+           AND (s.lote_id IS NULL OR s.lote_id <> v_lote_id);
+    END LOOP;
+ 
+    PERFORM  contab.ff_diario_staging_conciliar_automatico( p_empresa_id ,  v_lote_id); 
+ 
+  --   PERFORM   contab.ff_validar_modelos_incompletos_staging( p_empresa_id , p_data_ini, p_data_fim );
+
+
+  RETURN QUERY
+    SELECT *
+    FROM contab.diario_staging
+    WHERE empresa_id = p_empresa_id
+      AND lote_id = v_lote_id;
+END;
+$$;

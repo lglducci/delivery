@@ -35,7 +35,8 @@ BEGIN
         desconto,
         status,
         outros ,
-       transacao_id
+        transacao_id,
+        contabil_id
     )
     SELECT
         t.empresa_id,
@@ -79,8 +80,11 @@ BEGIN
             'receber_id', t.receber_id,
             'conta_contabil_id',cf.contabil_id ,
             'categoria_id', t.categoria_id ,
-            'origem_id', t.origem_id
-        )  , t.id
+            'origem_id', t.origem_id,
+            'importacao_id', t.importacao_id,
+            'tipo',t.tipo
+
+        )  , t.id, t.contabil_id
     FROM public.transacoes t
     LEFT JOIN public.categorias_gerenciais cg
            ON cg.id = t.categoria_id

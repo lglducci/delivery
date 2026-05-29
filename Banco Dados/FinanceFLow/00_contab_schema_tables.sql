@@ -237,6 +237,28 @@ CREATE UNIQUE INDEX ux_diario_transacao_staging
 ON contab.diario_staging (empresa_id, transacao_id)
 WHERE transacao_id IS NOT NULL;
 
+ALTER TABLE  contab.diario_staging 
+ADD COLUMN IF NOT EXISTS contabil_id bigint;
+
+ALTER TABLE contab.diario_staging 
+ADD CONSTRAINT diario_staging_contabil_id_fkey
+FOREIGN KEY (contabil_id)
+REFERENCES contab.contas(id)
+ON DELETE SET NULL;
+
+ALTER TABLE  contab.diario
+ADD COLUMN IF NOT EXISTS contabil_id bigint;
+
+ALTER TABLE contab.diario
+ADD CONSTRAINT diario_contabil_id_fkey
+FOREIGN KEY (contabil_id)
+REFERENCES contab.contas(id)
+ON DELETE SET NULL;
+
+
+
+
+
  CREATE TABLE contab.eventos (
     codigo text PRIMARY KEY,
     descricao text NOT NULL,
