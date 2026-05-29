@@ -53,6 +53,7 @@ on public.conciliacao_financeira(conta_financeira_id);
 create index idx_conciliacao_data
 on public.conciliacao_financeira(data_mov);
 
+
  
 
 ALTER TABLE public.conciliacao_financeira
@@ -64,6 +65,18 @@ alter table public.conciliacao_financeira
 add column if not exists importar boolean default true,
 add column if not exists status_conciliacao varchar(30),
 add column if not exists mensagem_conciliacao text;
+
+// ajustando a criacao da conta na conciliacao 
+ALTER TABLE public.conciliacao_financeira
+ADD COLUMN IF NOT EXISTS conta_id integer;
+
+ALTER TABLE public.conciliacao_financeira
+ADD CONSTRAINT conciliacao_financeira_conta_id_fkey
+FOREIGN KEY (conta_id)
+REFERENCES contab.contas(id)
+ON DELETE SET NULL;
+// fim implantacao 
+
 
 
 drop table  public.lote_conciliacao;

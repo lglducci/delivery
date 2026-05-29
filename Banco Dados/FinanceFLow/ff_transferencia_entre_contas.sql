@@ -4,7 +4,8 @@ CREATE OR REPLACE FUNCTION public.ff_transferencia_entre_contas(
     p_conta_destino_id bigint,
     p_valor numeric,
     p_historico text,
-    p_data_mov date
+    p_data_mov date,
+    p_conciliacao_id  bigint DEFAULT NULL
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -64,7 +65,7 @@ BEGIN
         forma_pagamento,
         tipo_evento,
         origem,
-        lote_transferencia 
+        lote_transferencia  
     )
     VALUES (
         p_empresa_id,
@@ -77,7 +78,7 @@ BEGIN
         'transferencia',
         'financeiro',
         'transferencia',
-         v_lote_id
+         v_lote_id 
     )
     RETURNING id INTO v_id_saida;
 
@@ -120,7 +121,8 @@ BEGIN
   historico,
   lote_id,
   origem_registro,
-  chave
+  chave,
+  conciliacao_id 
 )
 VALUES (
   p_empresa_id,
@@ -131,7 +133,8 @@ VALUES (
   COALESCE(p_historico, 'Transferência entre contas próprias'),
   v_lote_id,
   'web',
-  v_chave
+  v_chave,
+  p_conciliacao_id
 )
 RETURNING id INTO v_transferencia_id;
 

@@ -26,6 +26,7 @@ DECLARE
     v_duplicado boolean;
       v_lote_conciliacao_id bigint;
     v_qtd integer := 0;
+    v_conta_id bigint;
 BEGIN
 
  v_lote_conciliacao_id := nextval('public.conciliacao_lote_seq');
@@ -46,14 +47,14 @@ VALUES (
 )
 RETURNING id INTO v_lote_conciliacao_id;
  
-/*DELETE FROM public.transferencia_mesma_titularidade_pendente t
+ DELETE FROM public.transferencia_contas t
 USING public.conciliacao_financeira c
 WHERE t.empresa_id = c.empresa_id
   AND t.conciliacao_id = c.id
   AND c.empresa_id = p_empresa_id
   AND c.conta_financeira_id = p_conta_financeira_id
   AND COALESCE(c.status_conciliacao, 'pendente') IN ('pendente', 'rejeitado', 'ok')
-  AND c.transacao_id IS NULL;*/
+  AND c.transacao_id IS NULL; 
 
 
     DELETE FROM public.conciliacao_financeira
@@ -83,7 +84,7 @@ WHERE t.empresa_id = c.empresa_id
         v_modelo_codigo := NULL;
         v_tipo_destino := NULL;
         v_destino_id := NULL;
-
+         v_conta_id := NULL;
         IF v_valor >= 0 THEN
             v_tipo := 'entrada';
         ELSE
@@ -291,6 +292,16 @@ THEN
    v_classificacao := 'financeiro';
 END IF;
 
+SELECT r.conta_id
+INTO v_conta_id
+FROM public.regras_classificacao_contabil r
+WHERE r.empresa_id = p_empresa_id
+  AND r.ativo = true
+  AND (r.tipo_movimento IS NULL OR r.tipo_movimento = v_tipo)
+  AND unaccent(upper(v_historico)) LIKE '%' || unaccent(upper(r.texto_busca)) || '%'
+ORDER BY r.prioridade ASC, length(r.texto_busca) DESC, r.id DESC
+LIMIT 1;
+
         INSERT INTO public.conciliacao_financeira (
             empresa_id,
             conta_financeira_id,
@@ -310,7 +321,8 @@ END IF;
             importar,
             status_conciliacao,
             mensagem_conciliacao ,
-            lote_conciliacao_id
+            lote_conciliacao_id,
+            conta_id
         )
         VALUES (
             p_empresa_id,
@@ -351,7 +363,8 @@ END IF;
                 ELSE
                     'Linha importada para revisão'
             END,
-            v_lote_conciliacao_id
+            v_lote_conciliacao_id,
+            v_conta_id
         );
 
         v_qtd := v_qtd + 1;

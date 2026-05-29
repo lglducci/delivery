@@ -5,7 +5,8 @@ CREATE OR REPLACE FUNCTION public.ff_transferencia_entre_contas_com_contabil(
     p_valor numeric,
     p_historico text DEFAULT NULL,
     p_data_mov date DEFAULT CURRENT_DATE,
-    p_lote_id bigint DEFAULT NULL
+    p_lote_id bigint DEFAULT NULL,
+    p_conciliacao_id  bigint DEFAULT NULL
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -60,7 +61,8 @@ BEGIN
         p_conta_destino_id,
         abs(p_valor),
         v_historico,
-        p_data_mov
+        p_data_mov,
+        p_conciliacao_id
     );
 
  v_lote_transferencia := (v_retorno_financeiro->>'lote_transferencia')::bigint;

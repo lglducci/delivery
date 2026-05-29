@@ -19,7 +19,7 @@ DECLARE
     v_chave text;
 v_conta_origem_id bigint;
 v_conta_destino_id bigint;
-  
+v_transacao_id  bigint;
 BEGIN
    v_inicio_execucao := now();
 
@@ -137,7 +137,7 @@ WHERE classificacao = 'financeiro'
 
         IF r.tipo = 'entrada' THEN
 
-        PERFORM public.ff_registrar_receita(
+        SELECT  public.ff_registrar_receita(
             p_empresa_id::integer,
             p_conta_id::integer,
             r.categoria_id::integer,
@@ -150,13 +150,13 @@ WHERE classificacao = 'financeiro'
             COALESCE(r.classificacao, 'receita')::text,
             r.modelo_codigo::text,
             r.forma::text
-        );
+        ) INTO v_transacao_id;
 
             v_qtd_transacao := v_qtd_transacao + 1;
 
         ELSIF r.tipo = 'saida' THEN
 
-          PERFORM public.ff_registrar_despesa(
+          select  public.ff_registrar_despesa(
                 p_empresa_id::integer,
                 p_conta_id::integer,
                 r.categoria_id::integer,
@@ -169,10 +169,17 @@ WHERE classificacao = 'financeiro'
                 COALESCE(r.classificacao, 'despesa')::text,
                 r.modelo_codigo::text,
                 r.forma::text
-            );
+             ) INTO v_transacao_id;
 
             v_qtd_transacao := v_qtd_transacao + 1;
 
+        END IF;
+
+        IF v_transacao_id IS NOT NULL AND r.conta_id IS NOT NULL THEN
+        UPDATE public.transacoes
+        SET contabil_id = r.conta_id
+        WHERE id = v_transacao_id
+            AND empresa_id = p_empresa_id;
         END IF;
 
     END LOOP;
@@ -276,8 +283,9 @@ END LOOP;*/
                     ABS(r.valor),
                     r.historico,
                     r.data_mov,
-                    v_lote_conciliacao_id
-                );
+                    v_lote_conciliacao_id,
+                    r.id
+                ); 
 
                 v_qtd_transacao := v_qtd_transacao + 2;
 
@@ -333,8 +341,27 @@ WHERE empresa_id = p_empresa_id
     'recebimento',
     'pagamento_fatura'
   );
+  
 
-          PERFORM  contab.ff_processa_automatico ( p_empresa_id  ) ;
+ UPDATE contab.controle_fechamento cf
+SET data_reprocessar_de = x.menor_data
+FROM (
+    SELECT MIN(c.data_mov) AS menor_data
+    FROM public.conciliacao_financeira c
+    WHERE c.empresa_id = p_empresa_id
+      AND c.lote_conciliacao_id = v_lote_conciliacao_id
+      AND c.status_conciliacao = 'executado'
+) x
+WHERE cf.empresa_id = p_empresa_id
+  AND x.menor_data IS NOT NULL
+  AND (
+    cf.data_reprocessar_de IS NULL
+    OR x.menor_data < cf.data_reprocessar_de
+  );
+
+PERFORM  contab.ff_processa_automatico ( p_empresa_id  ) ;
+
+ 
 
     RETURN jsonb_build_object(
         'ok', true,

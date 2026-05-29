@@ -205,6 +205,15 @@ CREATE TABLE transacoes (
     fatura_id BIGINT
 );
 
+ALTER TABLE public.transacoes
+ADD COLUMN IF NOT EXISTS contabil_id bigint;
+
+ALTER TABLE public.transacoes
+ADD CONSTRAINT transacoes_contabil_id_fkey
+FOREIGN KEY (contabil_id)
+REFERENCES contab.contas(id)
+ON DELETE SET NULL;
+
  alter table public.transacoes add column evento_codigo text;
 
 CREATE SEQUENCE IF NOT EXISTS public.transferencia_lote_seq;

@@ -1,0 +1,167 @@
+   CREATE OR REPLACE FUNCTION ff_registrar_compra_credito(
+  p_empresa_id   	 BIGINT,
+  p_cartao_nome   	TEXT,
+  p_descricao     	TEXT,
+  p_valor_total  	  NUMERIC,
+  p_parcelas      	INT DEFAULT 1,
+  p_data_compra  	  DATE DEFAULT CURRENT_DATE,
+  p_contabil_id     BIGINT DEFAULT NULL,
+  p_classificacao    text default not null , 
+  p_modelo_codigo  text default   null
+  
+)
+RETURNS BIGINT
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_cartao_id     BIGINT;
+  v_parcela       INT;
+  v_valor_parc    NUMERIC;
+  v_valor_acum    NUMERIC;
+  v_ajuste        NUMERIC;
+  v_id_ultima     BIGINT;
+  v_data_parcela  DATE;
+  v_fatura_id     BIGINT;
+  v_compra_id     BIGINT;
+  v_modelo_codigo  TEXT;
+BEGIN
+  IF p_parcelas IS NULL OR p_parcelas < 1 THEN
+    p_parcelas := 1;
+  END IF;
+     v_modelo_codigo  := NULLIF(TRIM(p_modelo_codigo  ), '');
+      IF   v_modelo_codigo   IS NULL OR v_modelo_codigo  = 'null' THEN 
+               v_modelo_codigo   := contab.ff_get_modelo_evento(   p_empresa_id, p_classificacao,  'cartao_compra');
+        end if;    
+  -- descobre o cartão (igual lógica da fatura)
+  IF p_cartao_nome IS NULL
+     OR trim(p_cartao_nome) = ''
+     OR lower(trim(p_cartao_nome)) IN ('null','undefined')
+  THEN
+    SELECT id
+      INTO v_cartao_id
+    FROM cartoes
+    WHERE empresa_id = p_empresa_id
+      AND escolhido  = TRUE
+    ORDER BY id
+    LIMIT 1;
+  ELSE
+    SELECT id
+      INTO v_cartao_id
+    FROM cartoes
+    WHERE empresa_id = p_empresa_id
+      AND lower(nome) = lower(p_cartao_nome)
+    LIMIT 1;
+  END IF;
+
+  IF v_cartao_id IS NULL THEN
+    RAISE EXCEPTION 'Cartão "%" não encontrado para empresa %', p_cartao_nome, p_empresa_id;
+  END IF;
+
+  -- valor base da parcela + ajuste na última
+  v_valor_parc := ROUND(p_valor_total / p_parcelas, 2);
+  v_valor_acum := v_valor_parc * p_parcelas;
+  v_ajuste     := p_valor_total - v_valor_acum;
+
+
+
+
+
+IF p_contabil_id IS NULL THEN
+  SELECT r.conta_id
+  INTO p_contabil_id
+  FROM public.regras_classificacao_contabil r
+  WHERE r.empresa_id = p_empresa_id
+    AND r.ativo = true
+    AND r.conta_id IS NOT NULL
+    AND r.tipo_evento = 'cartao_compra'
+    AND r.tipo_movimento = 'entrada'
+    AND lower(trim(p_descricao)) LIKE '%' || lower(trim(r.texto_busca)) || '%'
+  ORDER BY r.prioridade ASC, length(r.texto_busca) DESC
+  LIMIT 1;
+END IF;
+
+
+
+IF p_contabil_id IS NULL THEN
+  INSERT INTO public.regras_classificacao_contabil (
+    empresa_id,
+    texto_busca,
+    tipo_movimento,
+    conta_id,
+    ativo,
+    prioridade,
+    tipo_evento,
+    classificacao
+  )
+  VALUES (
+    p_empresa_id,
+    trim(p_descricao),
+    'entrada',
+    NULL,
+    false,
+    100,
+    'cartao_compra',
+    COALESCE(NULLIF(p_classificacao, ''), 'despesa')
+  )
+  ON CONFLICT (empresa_id, texto_busca, tipo_movimento) DO NOTHING;
+END IF;
+
+
+
+
+  -- cabeçalho da compra
+  INSERT INTO cartoes_compras (
+    empresa_id, cartao_id, descricao, valor_total, parcelas, data_compra, conta_contabil_id, classificacao  , modelo_codigo ,evento_codigo 
+  )
+  VALUES (
+    p_empresa_id, v_cartao_id, p_descricao, p_valor_total, p_parcelas, p_data_compra, p_contabil_id    ,p_classificacao, v_modelo_codigo   ,v_modelo_codigo
+  )
+  RETURNING id INTO v_compra_id;
+
+  -- parcelas -> cada uma vai para SUA fatura
+  FOR v_parcela IN 1..p_parcelas LOOP
+    v_data_parcela := ff_calcula_data_parcela(p_data_compra, v_parcela);
+
+    v_fatura_id := ff_get_or_create_fatura(
+      p_empresa_id,
+      p_cartao_nome,
+      v_data_parcela
+    );
+
+    -- ajuste só na última parcela
+    IF v_parcela = p_parcelas THEN
+      v_valor_parc := v_valor_parc + v_ajuste;
+    END IF;
+
+    INSERT INTO cartoes_transacoes (
+      fatura_id,
+      empresa_id,
+      compra_id,
+      descricao,
+      valor,
+      parcela_num,
+      parcela_total,
+      data_compra,
+      data_parcela  
+    )
+    VALUES (
+      v_fatura_id,
+      p_empresa_id,
+      v_compra_id,
+      p_descricao,
+      v_valor_parc,
+      v_parcela,
+      p_parcelas,
+      p_data_compra,
+      v_data_parcela   
+    )
+    RETURNING id INTO v_id_ultima;
+
+    UPDATE cartoes_faturas
+       SET valor_total = COALESCE(valor_total,0) + v_valor_parc
+     WHERE id = v_fatura_id;
+  END LOOP;
+ PERFORM contab.marcar_reprocessamento(p_empresa_id, p_data_compra  );
+  RETURN v_id_ultima;
+END;
+$$;
