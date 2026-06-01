@@ -1,0 +1,56 @@
+ CREATE OR REPLACE FUNCTION contab.ff_diario_compra_cartao(
+    p_empresa_id BIGINT,
+    p_data_ini DATE,
+    p_data_fim DATE
+)
+RETURNS void
+LANGUAGE plpgsql
+AS $$
+BEGIN
+
+INSERT INTO contab.diario_staging (
+    empresa_id,
+    data_mov,
+    modelo_codigo,
+    historico,
+    doc_ref,
+   cnpj,
+    parceiro_id,
+    data_vencto,
+    valor_total,
+    status,
+    outros,
+    valor_custo ,
+    valor_imposto,
+   desconto ,
+   contabil_id
+)
+SELECT
+    c.empresa_id,
+    c.data_compra,
+   c.modelo_codigo,
+    c.descricao,
+    CONCAT('CRIA_CARTAO_COMPRA_', c.id),
+   '00000000000000',
+    c.cartao_id,
+    c.data_compra,
+    c.valor_total ,
+    'rascunho',
+    jsonb_build_object(
+        'origem', 'cartao_compra',
+        'transacao_id', c.id,
+        'compra_id', c.id, 
+        'total_parcelas', c.parcelas,
+       'conta_contabil_id', c.conta_contabil_id
+    ),
+   0,
+  0,
+  0,
+  conta_contabil_id
+FROM  cartoes_compras c 
+WHERE c.empresa_id = p_empresa_id
+  AND c.data_compra  BETWEEN p_data_ini AND p_data_fim;
+   
+
+END;
+$$;

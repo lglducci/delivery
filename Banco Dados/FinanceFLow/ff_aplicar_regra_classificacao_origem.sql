@@ -43,7 +43,8 @@ BEGIN
   WHERE cc.empresa_id = p_empresa_id
     AND cc.tipo_evento::text = COALESCE(v_regra.tipo_evento, cc.tipo_evento::text)
     AND cc.classificacao::text = COALESCE(v_regra.classificacao, cc.classificacao::text)
-    AND unaccent(upper(cc.descricao)) = unaccent(upper(v_regra.texto_busca));
+    AND unaccent(upper(trim(cc.descricao))) LIKE
+    '%' || unaccent(upper(trim(v_regra.texto_busca))) || '%';
 
   GET DIAGNOSTICS v_qtd = ROW_COUNT;
 
