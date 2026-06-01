@@ -15,7 +15,8 @@ RETURNS TABLE (
   fornecedor TEXT,
   parcelas INT,
   parcela_num INT,
-  status TEXT
+  status TEXT,
+  lote_id int 
 )
 AS $$
 SELECT
@@ -27,7 +28,8 @@ SELECT
   p.nome  AS fornecedor,
   cp.parcelas,
   cp.parcela_num,
-  cp.status
+  cp.status,
+  cp.lote_id
 FROM contas_a_pagar cp
 LEFT JOIN categorias_gerenciais cg ON cg.id = cp.categoria_id
 LEFT JOIN pessoa p ON p.id = cp.fornecedor_id

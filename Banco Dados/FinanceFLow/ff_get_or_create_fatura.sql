@@ -1,0 +1,131 @@
+ CREATE OR REPLACE FUNCTION ff_get_or_create_fatura(
+  p_empresa_id  BIGINT,
+  p_cartao_nome TEXT,
+  p_data_compra DATE
+)
+RETURNS BIGINT
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_cartao_id        BIGINT;
+  v_fechamento_dia   INT;
+  v_vencimento_dia   INT;
+
+  v_mes_ref          DATE;
+  v_data_vencimento  DATE;
+  v_doc_ref          TEXT;
+
+  v_fatura_id        BIGINT;
+  v_tem_fatura_mes   BIGINT;
+
+  v_tentativas       INT := 0;
+BEGIN
+  ------------------------------------------------------------------
+  -- 1) Seleciona cartão
+  ------------------------------------------------------------------
+  IF p_cartao_nome IS NULL
+     OR trim(p_cartao_nome) = ''
+     OR lower(trim(p_cartao_nome)) IN ('null', 'undefined')
+  THEN
+    SELECT id, fechamento_dia, vencimento_dia
+      INTO v_cartao_id, v_fechamento_dia, v_vencimento_dia
+    FROM cartoes
+    WHERE empresa_id = p_empresa_id
+      AND escolhido = TRUE
+    ORDER BY id
+    LIMIT 1;
+  ELSE
+    SELECT id, fechamento_dia, vencimento_dia
+      INTO v_cartao_id, v_fechamento_dia, v_vencimento_dia
+    FROM cartoes
+    WHERE empresa_id = p_empresa_id
+      AND lower(nome) = lower(p_cartao_nome)
+    LIMIT 1;
+  END IF;
+
+  IF v_cartao_id IS NULL THEN
+    RAISE EXCEPTION 'Cartão não encontrado para empresa %', p_empresa_id;
+  END IF;
+
+  ------------------------------------------------------------------
+  -- 2) Define mês de referência pela regra do fechamento
+  ------------------------------------------------------------------
+  IF EXTRACT(DAY FROM p_data_compra) > v_fechamento_dia THEN
+    v_mes_ref := date_trunc('month', (p_data_compra + INTERVAL '1 month'))::date;
+  ELSE
+    v_mes_ref := date_trunc('month', p_data_compra)::date;
+  END IF;
+
+  ------------------------------------------------------------------
+  -- 3) Loop: procurar fatura ABERTA.
+  --    Se existir fatura no mês e não estiver ABERTA -> MM+1.
+  --    Se não existir fatura no mês -> cria e retorna.
+  ------------------------------------------------------------------
+  LOOP
+    v_tentativas := v_tentativas + 1;
+    IF v_tentativas > 24 THEN
+      RAISE EXCEPTION 'Não foi possível localizar/criar fatura ABERTA (24 meses). Cartão %', v_cartao_id;
+    END IF;
+
+    -- 3.1) Existe fatura neste mês?
+    SELECT f.id
+      INTO v_tem_fatura_mes
+    FROM cartoes_faturas f
+    WHERE f.empresa_id = p_empresa_id
+      AND f.cartao_id   = v_cartao_id
+      AND f.mes_referencia = v_mes_ref
+    LIMIT 1;
+
+    -- 3.2) Se existe fatura no mês, tenta pegar se ela está ABERTA
+    IF v_tem_fatura_mes IS NOT NULL THEN
+      SELECT f.id
+        INTO v_fatura_id
+      FROM cartoes_faturas f
+      WHERE f.empresa_id = p_empresa_id
+        AND f.cartao_id   = v_cartao_id
+        AND f.mes_referencia = v_mes_ref
+        AND lower(f.status) = 'aberta'
+      LIMIT 1;
+
+      IF v_fatura_id IS NOT NULL THEN
+        RETURN v_fatura_id; -- achou fatura aberta do mês
+      END IF;
+
+      -- existe, mas não é aberta -> pula para o próximo mês
+      v_mes_ref := (v_mes_ref + INTERVAL '1 month')::date;
+      CONTINUE;
+    END IF;
+
+    -- 3.3) Não existe fatura neste mês -> cria aqui (é o mês certo)
+    v_data_vencimento :=
+      (v_mes_ref + (v_vencimento_dia - 1) * INTERVAL '1 day')::date;
+
+    v_doc_ref :=
+      'FATURA_CARTAO_' || v_cartao_id || '_' || to_char(v_mes_ref, 'YYYY-MM');
+
+    INSERT INTO cartoes_faturas (
+      cartao_id,
+      empresa_id,
+      mes_referencia,
+      valor_total,
+      status,
+      vencimento,
+      numero,
+     evento_codigo 
+    )
+    VALUES (
+      v_cartao_id,
+      p_empresa_id,
+      v_mes_ref,
+      0,
+      'aberta',
+      v_data_vencimento,
+      v_doc_ref,
+     'PAGAMENTO_CARTAO'
+    )
+    RETURNING id INTO v_fatura_id;
+
+    RETURN v_fatura_id;
+  END LOOP;
+END;
+$$;

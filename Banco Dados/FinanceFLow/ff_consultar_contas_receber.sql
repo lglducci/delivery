@@ -1,0 +1,63 @@
+   CREATE OR REPLACE FUNCTION ff_consultar_contas_receber(
+  p_empresa_id    BIGINT,
+  p_status        TEXT DEFAULT NULL,
+  p_data_ini      DATE DEFAULT NULL,
+  p_data_fim      DATE DEFAULT NULL,
+  p_cliente_id    BIGINT DEFAULT NULL,
+  p_somente_vencidas  BOOLEAN DEFAULT FALSE
+)
+RETURNS TABLE (
+  id BIGINT,
+  descricao TEXT,
+  valor NUMERIC,
+  vencimento DATE,
+  categoria TEXT,
+  fornecedor TEXT,
+  parcelas INT,
+  parcela_num INT,
+  status TEXT,
+  lote_id int
+)
+AS $$
+  SELECT
+    cr.id,
+    cr.descricao,
+    cr.valor,
+    cr.vencimento,
+    cg.nome AS categoria,
+    p.nome  AS fornecedor,
+    cr.parcelas,
+    cr.parcela_num,
+    cr.status,
+    cr.lote_id
+  FROM contas_a_receber cr
+  LEFT JOIN categorias_gerenciais cg ON cg.id = cr.categoria_id
+  LEFT JOIN pessoa p ON p.id = cr.fornecedor_id
+  WHERE cr.empresa_id = p_empresa_id
+
+    AND (
+                p_status IS NULL  
+                OR  cr.status = p_status 
+               or p_status ='0'     
+                )
+
+-- FORNECEDOR 
+      AND (  p_cliente_id IS NULL 
+                OR p_cliente_id = 0 
+                 OR cr.fornecedor_id = p_cliente_id)
+-- REGRA CENTRAL. 
+    AND ( 
+          ( p_somente_vencidas = FALSE 
+               AND (p_data_ini IS NULL OR cr.vencimento >= p_data_ini)
+                AND (p_data_fim IS NULL OR cr.vencimento <= p_data_fim)
+         )
+       OR
+
+        -- MODO VENCIDAS
+        (p_somente_vencidas = TRUE
+          AND cr.vencimento < CURRENT_DATE
+          AND cr.status = 'aberto'
+        )
+      )
+  ORDER BY cr.vencimento ASC, p.nome ASC, cr.parcela_num ASC;
+$$ LANGUAGE sql;
