@@ -13,7 +13,8 @@
  p_classificacao    TEXT default NULL,
  p_canal   text default null ,
  p_codigo   text default null ,
- p_forma_recebimento   text default not null 
+ p_forma_recebimento   text default not null ,
+  p_contabil_id   BIGINT DEFAULT NULL
 )
 RETURNS BIGINT
 LANGUAGE plpgsql
@@ -81,7 +82,8 @@ modelo_codigo := NULLIF(p_codigo  , '');
           classificacao,
           canal,
          forma_recebimento,
-         criado_em
+         criado_em,
+         contabil_id 
         )
         VALUES (
             p_empresa_id,
@@ -100,7 +102,8 @@ modelo_codigo := NULLIF(p_codigo  , '');
               p_classificacao,
                p_canal  ,
                p_forma_recebimento  ,
-              p_data   
+              p_data   ,
+              p_contabil_id
         )
         RETURNING id INTO v_id;
    PERFORM contab.marcar_reprocessamento(
@@ -110,7 +113,7 @@ modelo_codigo := NULLIF(p_codigo  , '');
 
     END LOOP; 
 
-
+/*
         
  IF v_contabil_id IS NULL THEN
   SELECT r.conta_id
@@ -158,7 +161,7 @@ modelo_codigo := NULLIF(p_codigo  , '');
   RETURNING id INTO v_regra_id; 
   RAISE NOTICE 'REGRA GERADA/ATUALIZADA ID: %, DESC: %', v_regra_id, trim(p_descricao);
 END IF;
-
+*/
 
     RETURN v_id;
 END;

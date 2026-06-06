@@ -27,7 +27,8 @@ add column if not exists receber_id bigint,
 add column if not exists fatura_id bigint;
 
  
- 
+ alter table public.conciliacao_financeira
+add column if not exists contabil_id bigint,
 
 alter table public.conciliacao_financeira
  
@@ -130,3 +131,26 @@ ON public.transferencia_contas (empresa_id, chave);
 
 CREATE INDEX IF NOT EXISTS idx_transferencia_contas_lote
 ON public.transferencia_contas (empresa_id, lote_id);
+
+
+
+create table public.bancos (
+  codigo text primary key,
+  nome text not null,
+  icone_url text null,
+  cor_hex text null,
+  ativo boolean default true
+);
+
+
+insert into public.bancos (codigo, nome, icone_url, cor_hex) values
+('348', 'XP', null, '#000000'),
+('033', 'Santander', null, '#E60012'),
+('341', 'Itaú', null, '#EC7000'),
+('104', 'Caixa Federal', null, '#1604a1'),
+('237', 'Bradesco', null,'#E60012'),
+('756', 'Sicoob', null, '#00A091'),
+('001', 'Banco do Brasil', null, '#e0e32c'),
+('260', 'Nubank', null, '#c12ce3'),
+('077', 'Banco Inter', null, '#2f2ce3'),
+('323', 'Mercado Pago', null, '#0c2f2c');

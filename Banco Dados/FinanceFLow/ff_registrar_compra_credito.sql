@@ -64,7 +64,7 @@ BEGIN
 
 
 
-
+/*
 
 IF p_contabil_id IS NULL THEN
   SELECT r.conta_id
@@ -105,7 +105,7 @@ IF p_contabil_id IS NULL THEN
   )
   ON CONFLICT (empresa_id, texto_busca, tipo_movimento) DO NOTHING;
 END IF;
-
+*/
 
 
 

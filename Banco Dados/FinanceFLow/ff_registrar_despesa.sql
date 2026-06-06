@@ -10,7 +10,8 @@
   p_origem text DEFAULT 'ZAP',
   p_classificacao text DEFAULT 'despesa',
   p_codigo text DEFAULT NULL,
-  p_forma_pagamento text DEFAULT NULL
+  p_forma_pagamento text DEFAULT NULL,
+  p_contabil integer  default null 
 )
 RETURNS bigint
 LANGUAGE plpgsql
@@ -23,6 +24,9 @@ DECLARE
   v_contabil_id BIGINT;
   v_regra_id  BIGINT;
 BEGIN
+
+  v_contabil_id:= p_contabil;
+
   IF p_conta_id IS NOT NULL AND p_conta_id > 0 THEN
     v_conta_id := p_conta_id;
   ELSE
@@ -56,7 +60,8 @@ BEGIN
     origem,
     classificacao,
     evento_codigo,
-    forma_pagamento
+    forma_pagamento,
+    contabil_id
   )
   VALUES (
     p_empresa_id,
@@ -69,11 +74,12 @@ BEGIN
     p_origem,
     COALESCE(NULLIF(p_classificacao, ''), 'despesa'),
     v_modelo_codigo,
-    p_forma_pagamento
+    p_forma_pagamento,
+    v_contabil_id
   )
   RETURNING id INTO v_id;
 
-  
+ /* 
  IF v_contabil_id IS NULL THEN
   SELECT r.conta_id
   INTO v_contabil_id
@@ -108,7 +114,7 @@ BEGIN
     false,
     100,
     'financeiro',
-    'despesa'
+    p_classificacao
   )
   ON CONFLICT (empresa_id, texto_busca, tipo_movimento) DO UPDATE
   SET
@@ -119,7 +125,7 @@ BEGIN
     prioridade = EXCLUDED.prioridade
   RETURNING id INTO v_regra_id; 
   RAISE NOTICE 'REGRA GERADA/ATUALIZADA ID: %, DESC: %', v_regra_id, trim(p_descricao);
-END IF;
+END IF;*/
 
 
   RETURN v_id;

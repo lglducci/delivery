@@ -9,9 +9,10 @@
   p_fornecedor_id  	BIGINT DEFAULT NULL,
   p_categoria_id    	 BIGINT DEFAULT NULL,
   p_doc_ref              	text DEFAULT NULL,
- p_classsificacao        text DEFAULT not NULL,
- codigo  text default null ,
- p_forma_pagamento   text default not null 
+   p_classsificacao        text DEFAULT not NULL,
+   codigo  text default null ,
+   p_forma_pagamento   text default not null ,
+  p_contabil_id    	 BIGINT DEFAULT NULL 
 )
 RETURNS BIGINT
 LANGUAGE plpgsql
@@ -27,7 +28,7 @@ DECLARE
    v_contabil_id  BIGINT := NULL;
    v_regra_id BIGINT := NULL;
 BEGIN
-
+ v_contabil_id:= p_contabil_id;
  -- Só gera lote se houver mais de 1 parcela
     IF p_parcelas > 1 THEN
         v_lote_id := nextval('contas_a_pagar_lote_seq');
@@ -78,12 +79,13 @@ end if;
             parcela_num,
             status,
             fornecedor_id,
-           lote_id ,
-          doc_ref , 
-         modelo_codigo ,
-         classificacao,
-          forma_pagamento , 
-          criado_em
+            lote_id ,
+            doc_ref , 
+            modelo_codigo ,
+            classificacao,
+            forma_pagamento , 
+            criado_em,
+            contabil_id
         )
         VALUES (
             p_empresa_id,
@@ -95,18 +97,19 @@ end if;
             i,
             'aberto',
             p_fornecedor_id,
-           v_lote_id ,
-           p_doc_ref , 
-           modelo_codigo ,
-             p_classsificacao,
+            v_lote_id ,
+            p_doc_ref , 
+            modelo_codigo ,
+            p_classsificacao,
             p_forma_pagamento  ,
-           p_data                         
+            p_data ,
+            v_contabil_id                        
         )
         RETURNING id INTO v_id;
  
     END LOOP; 
 
-        
+/*   
  IF v_contabil_id IS NULL THEN
   SELECT r.conta_id
   INTO v_contabil_id
@@ -153,7 +156,7 @@ end if;
   RETURNING id INTO v_regra_id; 
   RAISE NOTICE 'REGRA GERADA/ATUALIZADA ID: %, DESC: %', v_regra_id, trim(p_descricao);
 END IF;
-
+*/
 
     RETURN v_id; -- retorna a última parcela criada
 END;
