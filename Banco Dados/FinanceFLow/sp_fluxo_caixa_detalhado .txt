@@ -22,8 +22,8 @@ WITH param AS (
                 FROM contab.contas c
                 WHERE c.empresa_id = p_empresa_id
                   AND c.analitica = TRUE
-                  AND c.nivel = 4
-                  AND c.codigo LIKE '1.1.1.%'
+               
+                  AND c.codigo LIKE '1.1.%'
             )
             THEN 4
             ELSE 3
