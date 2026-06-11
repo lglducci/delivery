@@ -1,0 +1,220 @@
+        
+ 
+ 
+ DROP VIEW vw_eventos_financeiros;
+
+CREATE OR REPLACE VIEW vw_eventos_financeiros AS
+
+SELECT
+    id,
+    empresa_id,
+    descricao,
+    valor_total AS valor,
+    'saida' AS tipo,
+    1 parcelas,
+    parcelas AS parcela_total,
+    NULL AS vencimento,
+    'nao' AS vencido,
+    'nao' AS vence_hoje,
+    'nao' AS vence_sete_dias,
+    data_compra AS data_movimento,
+    evento_codigo AS evento_codigo,
+    criado_em AS data_criacao,
+    tipo_evento,
+    'compra_cartao' AS origem,
+    'cartao_credito' AS forma,
+    classificacao,
+    'cartao_compra' AS tipo_operacao,
+    0 AS conta_id,
+    0 AS categoria_id,
+    0 AS fornecedor_id,
+    0 AS origem_id,
+    '' AS status,
+   0 importacao_id,
+conta_contabil_id as contabil_id
+FROM cartoes_compras
+
+UNION ALL
+
+SELECT
+    id,
+    empresa_id,
+    descricao,
+    valor,
+    'saida' AS tipo,
+    parcela_num AS parcelas,
+    parcelas AS parcela_total,
+    vencimento,
+    CASE
+      WHEN status NOT IN ('paga','recebido','pago')
+           AND vencimento IS NOT NULL
+           AND vencimento < CURRENT_DATE
+      THEN 'sim'
+      ELSE 'nao'
+    END AS vencido,
+    CASE
+      WHEN status NOT IN ('paga','recebido','pago')
+           AND vencimento IS NOT NULL
+           AND vencimento = CURRENT_DATE
+      THEN 'sim'
+      ELSE 'nao'
+    END AS vence_hoje,
+    CASE
+      WHEN status NOT IN ('paga','recebido','pago')
+           AND vencimento IS NOT NULL
+           AND vencimento > CURRENT_DATE
+           AND vencimento <= CURRENT_DATE + 7
+      THEN 'sim'
+      ELSE 'nao'
+    END AS vence_sete_dias,
+    criado_em AS data_movimento,
+    evento_codigo AS evento_codigo,
+    criado_em AS data_criacao,
+    tipo_evento,
+    'conta_pagar' AS origem,
+    forma_pagamento AS forma,
+    classificacao,
+    'conta_pagar' AS tipo_operacao,
+    0 AS conta_id,
+    categoria_id,
+    fornecedor_id,
+    0 AS origem_id,
+    status,
+   0 importacao_id,
+contabil_id
+FROM contas_a_pagar
+
+UNION ALL
+
+SELECT
+    id,
+    empresa_id,
+    descricao,
+    valor,
+    'entrada' AS tipo,
+    parcela_num AS parcelas,
+    parcelas AS parcela_total,
+    vencimento,
+    CASE
+      WHEN status NOT IN ('paga','recebido','pago')
+           AND vencimento IS NOT NULL
+           AND vencimento < CURRENT_DATE
+      THEN 'sim'
+      ELSE 'nao'
+    END AS vencido,
+    CASE
+      WHEN status NOT IN ('paga','recebido','pago')
+           AND vencimento IS NOT NULL
+           AND vencimento = CURRENT_DATE
+      THEN 'sim'
+      ELSE 'nao'
+    END AS vence_hoje,
+    CASE
+      WHEN status NOT IN ('paga','recebido','pago')
+           AND vencimento IS NOT NULL
+           AND vencimento > CURRENT_DATE
+           AND vencimento <= CURRENT_DATE + 7
+      THEN 'sim'
+      ELSE 'nao'
+    END AS vence_sete_dias,
+    criado_em AS data_movimento,
+    evento_codigo AS evento_codigo,
+    criado_em AS data_criacao,
+    tipo_evento,
+    'conta_receber' AS origem,
+    forma_recebimento AS forma,
+    classificacao,
+    'conta_receber' AS tipo_operacao,
+    0 AS conta_id,
+    categoria_id,
+    fornecedor_id,
+    0 AS origem_id,
+    status ,
+   0 importacao_id,
+contabil_id
+FROM contas_a_receber
+
+UNION ALL
+
+SELECT
+    id,
+    empresa_id,
+    descricao,
+    valor,
+    tipo,
+    0 AS parcelas,
+    0 AS parcela_total,
+    NULL AS vencimento,
+    'nao' AS vencido,
+    'nao' AS vence_hoje,
+    'nao' AS vence_sete_dias,
+    data_movimento AS data_movimento,
+    evento_codigo AS evento_codigo,
+    criado_em AS data_criacao,
+    tipo_evento,
+    CASE
+      WHEN pagar_id IS NOT NULL THEN 'conta_pagar'
+      WHEN receber_id IS NOT NULL THEN 'conta_receber'
+      WHEN fatura_id IS NOT NULL THEN 'fatura_cartao'
+      WHEN origem_id IS NOT NULL THEN 'estorno'
+      ELSE 'transacao'
+    END AS origem,
+    forma_pagamento AS forma,
+    classificacao,
+    'transacao' AS tipo_operacao,
+    conta_id,
+    categoria_id,
+    0 AS fornecedor_id,
+    origem_id,
+    '' AS status,
+    importacao_id,
+contabil_id
+FROM transacoes
+
+UNION ALL
+
+SELECT
+    id,
+    empresa_id,
+    'Fatura cartão' AS descricao,
+    valor_total AS valor,
+    'saida' AS tipo,
+    1 AS parcelas,
+    1 AS parcela_total,
+    vencimento,
+    CASE
+      WHEN vencimento IS NOT NULL
+           AND vencimento < CURRENT_DATE
+      THEN 'sim'
+      ELSE 'nao'
+    END AS vencido,
+    CASE
+      WHEN vencimento IS NOT NULL
+           AND vencimento = CURRENT_DATE
+      THEN 'sim'
+      ELSE 'nao'
+    END AS vence_hoje,
+    CASE
+      WHEN vencimento IS NOT NULL
+           AND vencimento > CURRENT_DATE
+           AND vencimento <= CURRENT_DATE + 7
+      THEN 'sim'
+      ELSE 'nao'
+    END AS vence_sete_dias,
+    vencimento AS data_movimento,
+    evento_codigo,
+    criado_em AS data_criacao,
+    'financeiro' AS tipo_evento,
+    'fatura_cartao' AS origem,
+    'cartao_credito' AS forma,
+    'despesa' AS classificacao,
+    'fatura_cartao' AS tipo_operacao,
+    0 AS conta_id,
+    0 AS categoria_id,
+    0 AS fornecedor_id,
+    cartao_id AS origem_id,
+    status,
+   0 importacao_id,
+0 contabil_id
+FROM cartoes_faturas
+WHERE status IN ('fechada','paga','aberta');

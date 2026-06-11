@@ -1,0 +1,81 @@
+ CREATE OR REPLACE FUNCTION ff_pagar_contas(
+  p_empresa_id BIGINT,
+  p_lista_ids JSON,
+  p_conta_id BIGINT ,
+  p_data_pagto date default null 
+)
+RETURNS TEXT
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_id BIGINT;
+  v_modelo_codigo TEXT; 
+  v_classificacao TEXT;
+BEGIN
+
+ IF p_data_pagto IS NULL THEN 
+   p_data_pagto := CURRENT_DATE;
+END IF;
+
+  FOR v_id IN 
+    SELECT json_array_elements_text(p_lista_ids)::BIGINT 
+  LOOP
+
+    -- 🔹 pega classificação da conta
+    SELECT c.classificacao
+    INTO v_classificacao
+    FROM contas_a_pagar c
+    WHERE c.id = v_id
+      AND c.empresa_id = p_empresa_id;
+
+    -- 🔹 pega modelo baseado na classificação
+    v_modelo_codigo := contab.ff_get_modelo_evento(
+      p_empresa_id, 
+      v_classificacao,
+     'baixa'
+    );
+
+    -- 🔹 insere transação
+    INSERT INTO transacoes(
+      empresa_id,
+      conta_id,
+      categoria_id,
+      tipo,
+      valor,
+      data_movimento,
+      descricao,
+      pagar_id,
+      evento_codigo,
+      origem,
+      classificacao
+    )
+    SELECT 
+      c.empresa_id,
+      p_conta_id,
+      c.categoria_id,
+      'saida',
+      c.valor,
+      p_data_pagto,
+      c.descricao,
+      c.id,
+      v_modelo_codigo,
+      'Pagamento',
+      c.classificacao
+    FROM contas_a_pagar c 
+    WHERE c.id = v_id
+      AND c.empresa_id = p_empresa_id
+      AND c.status = 'aberto';
+
+    -- 🔹 atualiza status
+    UPDATE contas_a_pagar
+    SET 
+      status = 'pago',
+      data_pagamento = p_data_pagto
+    WHERE id = v_id 
+      AND empresa_id = p_empresa_id;
+
+  END LOOP;
+  PERFORM contab.marcar_reprocessamento(p_empresa_id, p_data_pagto);
+  RETURN 'Contas pagas com sucesso';
+END;
+$$;

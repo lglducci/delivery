@@ -4,7 +4,8 @@
   p_competencia date,
   p_conta_id integer,
   p_valor numeric,
-  p_data_pagamento date DEFAULT CURRENT_DATE
+  p_data_pagamento date DEFAULT CURRENT_DATE,
+    p_contabil integer  default null 
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -60,7 +61,8 @@ BEGIN
     'WebApp',
     'despesa',
     null,
-    'avista'
+    'avista',
+    p_contabil
   );
 
  INSERT INTO public.contas_recorrentes_geradas (

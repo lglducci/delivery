@@ -1,0 +1,71 @@
+
+
+CREATE OR REPLACE FUNCTION ff_receber_contas(
+  p_empresa_id BIGINT,
+  p_lista_ids JSON,
+ p_conta_id BIGINT 
+)
+RETURNS TEXT
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_id BIGINT;
+  v_modelo_codigo  text; 
+
+
+BEGIN
+
+   v_modelo_codigo   := contab.ff_get_modelo_evento(
+                     p_empresa_id,
+                     'baixa_ativo',
+                     'vista');
+
+  FOR v_id IN SELECT json_array_elements_text(p_lista_ids)::BIGINT LOOP
+
+   
+ 
+ INSERT INTO transacoes(
+  empresa_id,
+  conta_id,
+  categoria_id,
+  tipo,
+  valor,
+  data_movimento,
+  descricao,
+  receber_id,
+  evento_codigo,
+  origem,
+ classificacao
+)
+SELECT 
+  c.empresa_id,
+  p_conta_id,
+  null,
+  'entrada',
+  c.valor,
+  CURRENT_DATE,
+  c.descricao,
+  c.id,
+  v_modelo_codigo  ,
+  'Recebimento',
+ classificacao 
+FROM contas_a_receber c 
+WHERE c.id = v_id
+  and c.empresa_id = p_empresa_id
+  AND c.status = 'aberto';
+
+
+
+    -- Atualiza conta a receber
+    UPDATE contas_a_receber
+    SET 
+      status = 'recebido',
+      data_recebimento = CURRENT_DATE
+    WHERE id = v_id 
+      AND empresa_id = p_empresa_id;
+ 
+  END LOOP;
+   PERFORM contab.marcar_reprocessamento(p_empresa_id , CURRENT_DATE);
+  RETURN 'Contas recebidas com sucesso';
+END;
+$$;
