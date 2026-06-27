@@ -146,6 +146,47 @@ WHERE t.empresa_id = p_empresa_id
     'fatura_cartao',
     'estorno',
     'transferencia'
-  );
+  )
+  UNION ALL
+
+-- COMPRAS NO CARTÃO
+SELECT
+  cc.id,
+  cc.empresa_id,
+  cc.descricao,
+  cc.valor_total AS valor,
+  'saida'::text AS tipo,
+  1::int AS parcelas,
+  cc.parcelas AS parcela_total,
+  NULL::date AS vencimento,
+  cc.data_compra AS data_movimento,
+  cc.evento_codigo,
+  cc.criado_em AS data_criacao,
+  cc.tipo_evento::text,
+  'cartao_compra'::text AS origem,
+  'cartao_credito'::text AS forma,
+  cc.classificacao,
+  'cartao_compra'::text AS tipo_operacao,
+  0::bigint AS conta_id,
+  0::bigint AS categoria_id,
+  0::bigint AS fornecedor_id,
+  cc.id AS origem_id,
+  'aberto'::text AS status,
+  0::bigint AS importacao_id,
+  cc.conta_contabil_id AS contabil_id,
+  true AS pode_reclassificar,
+  'Compra no cartão ainda não liquidada e primeira parcela'::text AS motivo_reclassificacao
+FROM public.cartoes_compras cc
+WHERE cc.empresa_id = p_empresa_id
+  AND cc.data_compra BETWEEN p_data_ini AND p_data_fim   AND NOT EXISTS (
+    SELECT 1
+    FROM public.cartoes_transacoes ct
+    JOIN public.cartoes_faturas cf
+      ON cf.id = ct.fatura_id
+     AND cf.empresa_id = ct.empresa_id
+    WHERE ct.empresa_id = cc.empresa_id
+      AND ct.compra_id = cc.id
+      AND cf.status = 'paga'
+  ); 
 
 $$;

@@ -40,9 +40,11 @@ BEGIN
 
        
       modelo_codigo := NULLIF(p_codigo  , '');
-  IF   modelo_codigo IS NULL OR modelo_codigo = 'null' THEN 
-        modelo_codigo := contab.ff_get_modelo_evento(   p_empresa_id,  p_classificacao,  'financeiro');
-     end if ;    
+ 
+        IF   modelo_codigo IS NULL OR modelo_codigo = 'null'    THEN 
+              modelo_codigo := contab.ff_get_modelo_evento(   p_empresa_id,  p_classificacao,  'financeiro');
+          end if ; 
+  
 
   INSERT INTO transacoes (
     empresa_id,

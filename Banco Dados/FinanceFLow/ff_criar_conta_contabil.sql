@@ -18,6 +18,17 @@ DECLARE
   v_conta_id bigint;
   v_regra_id bigint;
 BEGIN
+
+p_classificacao_gerencial :=
+  NULLIF(NULLIF(NULLIF(trim(COALESCE(p_classificacao_gerencial, '')), ''), 'null'), 'undefined');
+
+p_texto_regra :=
+  NULLIF(NULLIF(NULLIF(trim(COALESCE(p_texto_regra, '')), ''), 'null'), 'undefined');
+
+p_tipo_movimento :=
+  NULLIF(NULLIF(NULLIF(trim(COALESCE(p_tipo_movimento, '')), ''), 'null'), 'undefined');
+  
+  
   IF p_empresa_id IS NULL THEN
     RAISE EXCEPTION 'empresa_id obrigatório.';
   END IF;

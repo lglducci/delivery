@@ -7,7 +7,9 @@
   p_data_compra  	  DATE DEFAULT CURRENT_DATE,
   p_contabil_id     BIGINT DEFAULT NULL,
   p_classificacao    text default not null , 
-  p_modelo_codigo  text default   null
+  p_modelo_codigo    text default   null,
+  p_tipo_compra      text default 'manual',
+  p_importacao_id    BIGINT DEFAULT NULL
   
 )
 RETURNS BIGINT
@@ -111,10 +113,13 @@ END IF;
 
   -- cabeçalho da compra
   INSERT INTO cartoes_compras (
-    empresa_id, cartao_id, descricao, valor_total, parcelas, data_compra, conta_contabil_id, classificacao  , modelo_codigo ,evento_codigo 
+    empresa_id, cartao_id, descricao, valor_total, parcelas, data_compra, conta_contabil_id, classificacao  , modelo_codigo ,evento_codigo ,
+  tipo_compra ,importacao_id
+ 
   )
   VALUES (
-    p_empresa_id, v_cartao_id, p_descricao, p_valor_total, p_parcelas, p_data_compra, p_contabil_id    ,p_classificacao, v_modelo_codigo   ,v_modelo_codigo
+    p_empresa_id, v_cartao_id, p_descricao, p_valor_total, p_parcelas, p_data_compra, p_contabil_id    ,p_classificacao, v_modelo_codigo   ,v_modelo_codigo, p_tipo_compra,
+    p_importacao_id
   )
   RETURNING id INTO v_compra_id;
 

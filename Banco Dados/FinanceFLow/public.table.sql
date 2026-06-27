@@ -367,7 +367,10 @@ CREATE TABLE cartoes_compras (
     criado_em TIMESTAMP DEFAULT now()
 );
  
+alter table  cartoes_compras add  tipo_compra text default 'manual'
 
+ALTER TABLE public.cartoes_compras
+ADD COLUMN IF NOT EXISTS importacao_id BIGINT default null;
 
 ---------------------------------------------------
 -- 11. FATURAS DO CARTÃO
