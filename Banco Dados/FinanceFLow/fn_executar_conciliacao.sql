@@ -10,16 +10,19 @@ DECLARE
     v_pagar_ids json;
     v_receber_ids json;
     v_fatura_ids json; 
+    v_recorrente json;
     r record;
    v_inicio_execucao timestamp;
     v_qtd_pagar int := 0;
     v_qtd_receber int := 0;
     v_qtd_fatura int := 0;
     v_qtd_transacao int := 0;
+    v_qtd_recorrente  int := 0;
     v_chave text;
-v_conta_origem_id bigint;
-v_conta_destino_id bigint;
-v_transacao_id  bigint;
+    v_conta_origem_id bigint;
+    v_conta_destino_id bigint;
+    v_transacao_id  bigint;
+      r_rec RECORD;
 BEGIN
    v_inicio_execucao := now();
 
@@ -59,6 +62,44 @@ WHERE classificacao = 'financeiro'
             p_conta_id
         );
     END IF;
+
+
+
+    ------------------------------------------------------------------
+    -- CONTAS A Recorrentes  
+    ------------------------------------------------------------------
+
+      FOR r_rec IN
+            SELECT
+                cpr.recorrente_id,
+                date_trunc('month', cf.data_mov)::date AS competencia,
+                MIN(cf.data_mov)::date AS data_pagamento,
+                SUM(abs(cf.valor))::numeric(12,2) AS valor_pago,
+                MAX(cf.conta_id)::integer AS contabil_id
+            FROM public.conciliacao_financeira cf
+            JOIN public.conta_pagar_receber_conciliacao cpr
+            ON cpr.empresa_id = cf.empresa_id
+            AND cpr.conciliacao_financeira_id = cf.id
+            WHERE cf.empresa_id = p_empresa_id
+            AND cf.importar = true
+            AND cf.status_conciliacao = 'ok'
+            AND cpr.recorrente_id IS NOT NULL
+            AND cf.lote_conciliacao_id = v_lote_conciliacao_id
+            AND cpr.lote_conciliacao_id = cf.lote_conciliacao_id
+            GROUP BY
+                cpr.recorrente_id,
+                date_trunc('month', cf.data_mov)::date
+        LOOP
+            PERFORM public.ff_gera_conta_recorrente(
+                p_empresa_id::integer,
+                r_rec.recorrente_id,
+                r_rec.competencia,
+                p_conta_id::integer,
+                r_rec.valor_pago,
+                r_rec.data_pagamento,
+                r_rec.contabil_id
+            );
+        END LOOP;
 
 
     ------------------------------------------------------------------
@@ -121,7 +162,8 @@ WHERE classificacao = 'financeiro'
           AND status_conciliacao = 'ok'
           AND pagar_id IS NULL
           AND receber_id IS NULL
-          AND fatura_id IS NULL
+          AND fatura_id IS NULL 
+          ANd  recorrente_id is null 
                AND COALESCE(tipo_evento, 'financeiro') IN (
                     'transferencia',
                     'financeiro',

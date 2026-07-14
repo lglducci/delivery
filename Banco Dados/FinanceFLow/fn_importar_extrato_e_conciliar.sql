@@ -9,6 +9,7 @@ AS $$
 DECLARE
     v_ultimo_id bigint;
     v_ultimo_lote_conciliacao_id bigint;
+    v_resultado_importacao jsonb;
 BEGIN
     SELECT COALESCE(MAX(id), 0)
     INTO v_ultimo_id
@@ -16,11 +17,12 @@ BEGIN
     WHERE empresa_id = p_empresa_id
       AND conta_financeira_id = p_conta_financeira_id;
 
-    PERFORM public.fn_importar_extrato(
-        p_empresa_id,
-        p_conta_financeira_id,
-        p_lancamentos
-    );
+     SELECT public.fn_importar_extrato(
+            p_empresa_id,
+            p_conta_financeira_id,
+            p_lancamentos
+        )
+        INTO v_resultado_importacao;
 
     PERFORM public.fn_importar_extrato_revisar_evento(
         p_empresa_id,
@@ -51,10 +53,28 @@ WHERE empresa_id = p_empresa_id
   AND conta_financeira_id = p_conta_financeira_id
   AND COALESCE(lote_conciliacao_id, 0) > 0;
  
-    RETURN jsonb_build_object(
-        'ok', true,
-        'id_inicial', v_ultimo_id,
-        'lote_id',v_ultimo_lote_conciliacao_id
-    );
+     RETURN jsonb_build_object(
+    'ok', true,
+    'id_inicial', v_ultimo_id,
+    'lote_id', v_ultimo_lote_conciliacao_id,
+
+    'linhas_processadas',
+        COALESCE(
+            (v_resultado_importacao ->> 'linhas_processadas')::integer,
+            0
+        ),
+
+    'comparacao_financeiro',
+        COALESCE(
+            v_resultado_importacao -> 'comparacao_financeiro',
+            '{}'::jsonb
+        ),
+
+    'divergencias_financeiro',
+        COALESCE(
+            v_resultado_importacao -> 'divergencias_financeiro',
+            '{}'::jsonb
+        )
+);
 END;
 $$;

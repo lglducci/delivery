@@ -11,7 +11,17 @@ DECLARE
   v_id BIGINT;
   v_modelo_codigo TEXT; 
   v_classificacao TEXT;
+    v_contabil_id BIGINT;
 BEGIN
+
+
+  SELECT cf.contabil_id
+    INTO v_contabil_id
+  FROM contas_financeiras cf
+  WHERE cf.empresa_id = p_empresa_id
+    AND cf.id = p_conta_id;
+
+
 
  IF p_data_pagto IS NULL THEN 
    p_data_pagto := CURRENT_DATE;
@@ -47,7 +57,8 @@ END IF;
       pagar_id,
       evento_codigo,
       origem,
-      classificacao
+      classificacao,
+      contabil_id
     )
     SELECT 
       c.empresa_id,
@@ -60,7 +71,8 @@ END IF;
       c.id,
       v_modelo_codigo,
       'Pagamento',
-      c.classificacao
+      c.classificacao,
+      v_contabil_id
     FROM contas_a_pagar c 
     WHERE c.id = v_id
       AND c.empresa_id = p_empresa_id

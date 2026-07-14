@@ -16,6 +16,8 @@ DECLARE
   v_cat_id BIGINT;
    v_evento_codigo         TEXT;
    v_classificacao           TEXT;
+    v_contabil_id BIGINT;
+
 BEGIN
 
   IF p_faturas IS NULL THEN
@@ -25,6 +27,15 @@ BEGIN
   IF p_conta_id IS NULL OR p_conta_id = 0 THEN
     RAISE EXCEPTION 'Conta bancária inválida.';
   END IF;
+
+
+  
+  SELECT cf.contabil_id
+    INTO v_contabil_id
+  FROM contas_financeiras cf
+  WHERE cf.empresa_id = p_empresa_id
+    AND cf.id = p_conta_id;
+
 
 v_cat_id := ff_get_categoria_id(p_empresa_id, 'Pagamento de Fatura', 'saida');
 
@@ -78,7 +89,8 @@ v_cat_id := ff_get_categoria_id(p_empresa_id, 'Pagamento de Fatura', 'saida');
         categoria_id,
         fatura_id    ,
         evento_codigo ,
-        classificacao
+        classificacao,
+         contabil_id
          
       )
       VALUES (
@@ -92,7 +104,8 @@ v_cat_id := ff_get_categoria_id(p_empresa_id, 'Pagamento de Fatura', 'saida');
          v_cat_id ,
         v_fatura_id  ,
         v_evento_codigo ,
-        'despesa'
+        'despesa',
+        v_contabil_id
       )
       RETURNING id INTO v_transacao_id;
 

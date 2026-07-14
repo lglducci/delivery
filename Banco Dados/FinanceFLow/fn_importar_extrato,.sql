@@ -23,10 +23,12 @@ DECLARE
     v_destino_id bigint;
     v_nome_fornecedor   text;
     v_chave_importacao text;
-    v_duplicado boolean;
+ 
       v_lote_conciliacao_id bigint;
     v_qtd integer := 0;
     v_conta_id bigint;
+    v_relatorio_comparacao jsonb;
+    v_relatorio_divergencias jsonb;
 BEGIN
 
  v_lote_conciliacao_id := nextval('public.conciliacao_lote_seq');
@@ -46,6 +48,15 @@ VALUES (
   'aberto'
 )
 RETURNING id INTO v_lote_conciliacao_id;
+
+
+ DELETE FROM public.conta_pagar_receber_conciliacao cpr
+USING public.conciliacao_financeira c
+WHERE cpr.empresa_id = c.empresa_id
+  AND cpr.conciliacao_financeira_id = c.id
+  AND c.empresa_id = p_empresa_id
+  AND c.conta_financeira_id = p_conta_financeira_id
+  AND COALESCE(c.status_conciliacao, 'pendente') IN  ('pendente', 'rejeitado', 'rejeitada', 'ok') ; 
  
  DELETE FROM public.transferencia_contas t
 USING public.conciliacao_financeira c
@@ -53,15 +64,13 @@ WHERE t.empresa_id = c.empresa_id
   AND t.conciliacao_id = c.id
   AND c.empresa_id = p_empresa_id
   AND c.conta_financeira_id = p_conta_financeira_id
-  AND COALESCE(c.status_conciliacao, 'pendente') IN ('pendente', 'rejeitado', 'ok')
-  AND c.transacao_id IS NULL; 
+  AND COALESCE(c.status_conciliacao, 'pendente')  IN ('pendente', 'rejeitado', 'rejeitada', 'ok') ; 
 
 
     DELETE FROM public.conciliacao_financeira
     WHERE empresa_id = p_empresa_id
       AND conta_financeira_id = p_conta_financeira_id
-      AND COALESCE(status_conciliacao, 'pendente') IN ('pendente', 'rejeitado', 'ok')
-      AND transacao_id IS NULL;
+      AND COALESCE(status_conciliacao, 'pendente') IN ('pendente', 'rejeitado', 'rejeitada', 'ok') ;
 
     FOR v_item IN
         SELECT value
@@ -247,13 +256,7 @@ WHERE t.empresa_id = c.empresa_id
             upper(trim(regexp_replace(coalesce(v_historico, ''), '\s+', ' ', 'g'))) || '|' ||
             round(v_valor::numeric, 2)::text
         );
-
-        SELECT EXISTS (
-            SELECT 1
-            FROM public.conciliacao_financeira ja
-            WHERE ja.chave_importacao = v_chave_importacao
-        )
-        INTO v_duplicado;
+ 
  
         -- BLOQUEIO SOMENTE SE EXISTIR NA CONFIGURAÇÃO DE MESMA TITULARIDADE
   -- TRANSFERÊNCIA MESMA TITULARIDADE
@@ -340,26 +343,19 @@ LIMIT 1;
             v_tipo_destino,
             v_destino_id,
             v_chave_importacao,
-
-            CASE
+             CASE
                 WHEN v_tipo_evento = 'transf_mesma_tit' THEN false
-                WHEN v_duplicado THEN false
                 ELSE true
             END,
 
-        CASE 
-           WHEN v_duplicado THEN 'rejeitado'
-             WHEN v_tipo_evento = 'transf_mesma_tit' THEN 'rejeitado'
-            ELSE 'pendente'
-        END,
-         CASE
-                WHEN v_duplicado = true THEN
-                    'Registro duplicado: esta linha já foi importada anteriormente'
+            CASE
+                WHEN v_tipo_evento = 'transf_mesma_tit' THEN 'rejeitado'
+                ELSE 'pendente'
+            END,
 
-                WHEN v_tipo_evento = 'transf_mesma_tit'
-                    AND COALESCE(v_duplicado, false) = false THEN
+            CASE
+                WHEN v_tipo_evento = 'transf_mesma_tit' THEN
                     'Transferência entre contas: lançar manualmente informando conta origem e destino'
-
                 ELSE
                     'Linha importada para revisão'
             END,
@@ -393,12 +389,38 @@ WHERE l.id = x.lote_conciliacao_id
   AND l.empresa_id = p_empresa_id
   AND l.conta_financeira_id = p_conta_financeira_id;
    
+SELECT public.fn_conciliar_extrato_transacoes(
+    p_empresa_id,
+    p_conta_financeira_id,
+    v_lote_conciliacao_id
+)
+INTO v_relatorio_comparacao;
 
-    RETURN jsonb_build_object(
-        'ok', true,
-        'empresa_id', p_empresa_id,
-        'conta_financeira_id', p_conta_financeira_id,
-        'linhas_processadas', v_qtd
-    );
+
+SELECT public.fn_inserir_divergencias_financeiro(
+    p_empresa_id,
+    p_conta_financeira_id,
+    v_lote_conciliacao_id
+)
+INTO v_relatorio_divergencias;
+
+
+
+ RETURN jsonb_build_object(
+    'ok', true,
+    'empresa_id', p_empresa_id,
+    'conta_financeira_id', p_conta_financeira_id,
+    'lote_conciliacao_id', v_lote_conciliacao_id,
+    'linhas_processadas', v_qtd,
+    'comparacao_financeiro', v_relatorio_comparacao,
+    'divergencias_financeiro', v_relatorio_divergencias
+);
+
+  --  RETURN jsonb_build_object(
+--        'ok', true,
+--        'empresa_id', p_empresa_id,
+--        'conta_financeira_id', p_conta_financeira_id,
+ --       'linhas_processadas', v_qtd
+--    );
 END;
 $$;

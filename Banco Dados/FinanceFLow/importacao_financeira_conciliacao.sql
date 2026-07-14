@@ -25,6 +25,7 @@ add column if not exists transacao_id bigint,
 add column if not exists pagar_id bigint,
 add column if not exists receber_id bigint,
 add column if not exists fatura_id bigint;
+add column if not exists recorrente_id bigint;
 
  
  alter table public.conciliacao_financeira
@@ -154,3 +155,24 @@ insert into public.bancos (codigo, nome, icone_url, cor_hex) values
 ('260', 'Nubank', null, '#c12ce3'),
 ('077', 'Banco Inter', null, '#2f2ce3'),
 ('323', 'Mercado Pago', null, '#0c2f2c');
+
+DROP TABLE IF EXISTS public.conta_pagar_receber_conciliacao CASCADE;
+
+CREATE TABLE public.conta_pagar_receber_conciliacao (
+  id BIGSERIAL PRIMARY KEY,
+
+  empresa_id BIGINT NOT NULL,
+  lote_conciliacao_id BIGINT NULL,
+  conciliacao_financeira_id BIGINT NOT NULL,
+  transacao_id   BIGINT   NULL,
+  tipo_evento VARCHAR(30) NOT NULL, -- pagar / receber
+
+  conta_pagar_id BIGINT NULL,
+  conta_receber_id BIGINT NULL,
+  recorrente_id  BIGINT NULL,
+  status VARCHAR(20) NOT NULL DEFAULT 'pendente',
+  acao VARCHAR(40) NULL,
+
+  criado_em TIMESTAMP NOT NULL DEFAULT now(),
+  resolvido_em TIMESTAMP NULL
+);
