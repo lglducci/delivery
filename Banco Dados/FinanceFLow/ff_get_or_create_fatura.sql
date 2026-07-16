@@ -50,7 +50,7 @@ BEGIN
   ------------------------------------------------------------------
   -- 2) Define mês de referência pela regra do fechamento
   ------------------------------------------------------------------
-  IF EXTRACT(DAY FROM p_data_compra) >= v_fechamento_dia THEN
+  IF EXTRACT(DAY FROM p_data_compra) > v_fechamento_dia THEN
     v_mes_ref := date_trunc('month', (p_data_compra + INTERVAL '1 month'))::date;
   ELSE
     v_mes_ref := date_trunc('month', p_data_compra)::date;

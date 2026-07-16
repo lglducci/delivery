@@ -176,3 +176,6 @@ CREATE TABLE public.conta_pagar_receber_conciliacao (
   criado_em TIMESTAMP NOT NULL DEFAULT now(),
   resolvido_em TIMESTAMP NULL
 );
+
+ALTER TABLE public.conciliacao_financeira
+ADD COLUMN IF NOT EXISTS historico_lancamento text;

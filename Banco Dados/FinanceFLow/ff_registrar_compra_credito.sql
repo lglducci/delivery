@@ -1,17 +1,19 @@
-   CREATE OR REPLACE FUNCTION ff_registrar_compra_credito(
-  p_empresa_id   	 BIGINT,
-  p_cartao_nome   	TEXT,
-  p_descricao     	TEXT,
-  p_valor_total  	  NUMERIC,
-  p_parcelas      	INT DEFAULT 1,
-  p_data_compra  	  DATE DEFAULT CURRENT_DATE,
-  p_contabil_id     BIGINT DEFAULT NULL,
-  p_classificacao    text default not null , 
-  p_modelo_codigo    text default   null,
-  p_tipo_compra      text default 'manual',
-  p_importacao_id    BIGINT DEFAULT NULL
-  
+ CREATE OR REPLACE FUNCTION public.ff_registrar_compra_credito(
+    p_empresa_id BIGINT,
+    p_cartao_nome TEXT,
+    p_descricao TEXT,
+    p_valor_total NUMERIC,
+    p_parcelas INT DEFAULT 1,
+    p_data_compra DATE DEFAULT CURRENT_DATE,
+    p_contabil_id BIGINT DEFAULT NULL,
+    p_classificacao TEXT DEFAULT NULL,
+    p_modelo_codigo TEXT DEFAULT NULL,
+    p_tipo_compra TEXT DEFAULT 'manual',
+    p_importacao_id BIGINT DEFAULT NULL,
+    p_data_inicio_parcelas DATE DEFAULT NULL
 )
+
+
 RETURNS BIGINT
 LANGUAGE plpgsql
 AS $$
@@ -26,7 +28,21 @@ DECLARE
   v_fatura_id     BIGINT;
   v_compra_id     BIGINT;
   v_modelo_codigo  TEXT;
+  v_data_inicio_parcela DATE DEFAULT CURRENT_DATE; --acrescentei 
 BEGIN
+ --acrescentei 
+
+ v_data_inicio_parcela :=
+    CASE
+        WHEN COALESCE(p_tipo_compra, 'manual') = 'implantacao'
+        THEN COALESCE(p_data_inicio_parcelas, CURRENT_DATE)
+        ELSE p_data_compra
+    END;
+ 
+ 
+
+ --acrescentei 
+
   IF p_parcelas IS NULL OR p_parcelas < 1 THEN
     p_parcelas := 1;
   END IF;
@@ -125,7 +141,7 @@ END IF;
 
   -- parcelas -> cada uma vai para SUA fatura
   FOR v_parcela IN 1..p_parcelas LOOP
-    v_data_parcela := ff_calcula_data_parcela(p_data_compra, v_parcela);
+    v_data_parcela := ff_calcula_data_parcela(v_data_inicio_parcela, v_parcela); -- acrescentei  mudei data iinicio parcela 
 
     v_fatura_id := ff_get_or_create_fatura(
       p_empresa_id,

@@ -186,7 +186,7 @@ WHERE classificacao = 'financeiro'
             NULL::text,
             NULL::text,
             abs(r.valor)::numeric,
-            r.historico::text,
+           COALESCE(r.historico_lancamento, r.historico)::text,
             r.data_mov::date,
             'conciliacao'::text,
             COALESCE(r.classificacao, 'receita')::text,
@@ -205,7 +205,8 @@ WHERE classificacao = 'financeiro'
                 NULL::text,
                 NULL::text,
                 abs(r.valor)::numeric,
-                r.historico::text,
+              
+                COALESCE(r.historico_lancamento, r.historico)::text,
                 r.data_mov::date,
                 'conciliacao'::text,
                 COALESCE(r.classificacao, 'despesa')::text,
@@ -323,7 +324,8 @@ END LOOP;*/
                     v_conta_origem_id,
                     v_conta_destino_id,
                     ABS(r.valor),
-                    r.historico,
+                   
+                    COALESCE(r.historico_lancamento, r.historico)::text,
                     r.data_mov,
                     v_lote_conciliacao_id,
                     r.id

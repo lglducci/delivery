@@ -29,7 +29,8 @@ DECLARE
     v_total_compras NUMERIC(14,2) := 0;
     v_total_creditos NUMERIC(14,2) := 0;
     v_implantacao_existente BOOLEAN := false;
-v_data_corte DATE;
+     v_data_corte DATE;
+     v_contabil_id BIGINT;
 BEGIN
     IF p_empresa_id IS NULL THEN
         RAISE EXCEPTION 'empresa_id obrigatório';
@@ -144,6 +145,11 @@ BEGIN
 
         v_parcela_texto := NULLIF(v_item->>'parcela', '');
 
+        v_contabil_id := COALESCE(
+                NULLIF(v_item->>'conta_contabil_id', '')::BIGINT,
+                NULLIF(v_item->>'contabil_id', '')::BIGINT
+            );
+
         IF v_parcela_texto IS NULL OR v_parcela_texto = '-' THEN
             v_parcela_texto := '1 de 1';
             v_parcela_atual := 1;
@@ -194,7 +200,8 @@ BEGIN
             tipo_linha,
             status_conciliacao,
             hash_registro,
-            dados_originais
+            dados_originais,
+            contabil_id
         )
         VALUES (
             p_empresa_id,
@@ -210,7 +217,8 @@ BEGIN
             v_tipo_linha,
             'pendente',
             v_hash,
-            v_item
+            v_item,
+            v_contabil_id
         )
         ON CONFLICT (empresa_id, cartao_id, hash_registro)
         WHERE hash_registro IS NOT NULL
