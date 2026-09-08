@@ -1,0 +1,41 @@
+ CREATE OR REPLACE FUNCTION contab.ff_get_fornecedor_cartao(
+    p_empresa_id BIGINT
+)
+RETURNS BIGINT
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_pessoa_id BIGINT;
+BEGIN
+    -- 1) Tenta buscar
+    SELECT id
+      INTO v_pessoa_id
+      FROM public.pessoa
+     WHERE empresa_id = p_empresa_id
+       AND cpf_cnpj   = '00000000000000'
+     LIMIT 1;
+
+    IF v_pessoa_id IS NOT NULL THEN
+        RETURN v_pessoa_id;
+    END IF;
+
+    -- 2) Cria se não existir
+    INSERT INTO public.pessoa (
+        empresa_id,
+        tipo,
+        nome,
+        cpf_cnpj,
+        validado
+    )
+    VALUES (
+        p_empresa_id,
+        'fornecedor',
+        'CARTÃO DE CRÉDITO',
+        '00000000000000',
+        TRUE
+    )
+    RETURNING id INTO v_pessoa_id;
+
+    RETURN v_pessoa_id;
+END;
+$$;

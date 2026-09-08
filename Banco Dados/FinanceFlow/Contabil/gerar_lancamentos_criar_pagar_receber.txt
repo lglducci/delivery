@@ -1,0 +1,112 @@
+CREATE OR REPLACE FUNCTION contab.gerar_lancamentos_criar_pagar_receber(
+    p_diario_id  BIGINT,
+    p_empresa_id BIGINT
+)
+RETURNS void
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_diario            contab.diario%ROWTYPE;
+    v_modelo            contab.modelos%ROWTYPE;
+    v_valor             NUMERIC(14,2);
+
+    v_conta_variavel_id BIGINT;
+    v_conta_fixa_id     BIGINT;
+BEGIN
+    -------------------------------------------------------------------
+    -- 1) Diário
+    -------------------------------------------------------------------
+    SELECT *
+      INTO v_diario
+      FROM contab.diario
+     WHERE id = p_diario_id
+       AND modelo_codigo IN ('CRIAR_PAGAR', 'CRIAR_RECEBER')
+       AND empresa_id = p_empresa_id;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Diário % não encontrado.', p_diario_id;
+    END IF;
+
+    v_valor := v_diario.valor_total;
+
+    IF v_valor IS NULL OR v_valor <= 0 THEN
+        RAISE EXCEPTION 'Valor inválido no diário %.', p_diario_id;
+    END IF;
+
+    -------------------------------------------------------------------
+    -- 2) Modelo
+    -------------------------------------------------------------------
+    SELECT *
+      INTO v_modelo
+      FROM contab.modelos
+     WHERE codigo = v_diario.modelo_codigo
+       AND empresa_id = p_empresa_id
+       AND ativo = TRUE;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Modelo % não encontrado.', v_diario.modelo_codigo;
+    END IF;
+
+    -------------------------------------------------------------------
+    -- 3) Conta variável (vem do diário)
+    -------------------------------------------------------------------
+    v_conta_variavel_id :=
+        (v_diario.outros ->> 'conta_contabil_id')::BIGINT;
+
+    IF v_conta_variavel_id IS NULL THEN
+        RAISE EXCEPTION
+            'Conta contábil variável não informada no diário %.',
+            p_diario_id;
+    END IF;
+
+    -------------------------------------------------------------------
+    -- 4) Conta fixa do modelo
+    -------------------------------------------------------------------
+    SELECT ml.conta_id
+      INTO v_conta_fixa_id
+      FROM contab.modelos_linhas ml
+     WHERE ml.modelo_id = v_modelo.id
+       AND ml.empresa_id = p_empresa_id
+       AND ml.dc = CASE
+            WHEN v_modelo.codigo = 'CRIAR_PAGAR'    THEN 'C'
+            WHEN v_modelo.codigo = 'CRIAR_RECEBER'  THEN 'D'
+       END
+     LIMIT 1;
+
+    IF v_conta_fixa_id IS NULL THEN
+        RAISE EXCEPTION
+            'Modelo % sem conta fixa configurada.',
+            v_modelo.codigo;
+    END IF;
+
+    -------------------------------------------------------------------
+    -- 5) Lançamentos
+    -------------------------------------------------------------------
+    IF v_modelo.codigo = 'CRIAR_PAGAR' THEN
+        -- D = Custo / Despesa / Estoque
+        -- C = Fornecedores
+        INSERT INTO contab.lancamentos
+            (empresa_id, diario_id, data_mov, conta_id, historico, debito, credito, modelo_id)
+        VALUES
+            (p_empresa_id, v_diario.id, v_diario.data_mov,
+             v_conta_variavel_id, v_diario.historico, v_valor, 0, v_modelo.id),
+
+            (p_empresa_id, v_diario.id, v_diario.data_mov,
+             v_conta_fixa_id, v_diario.historico, 0, v_valor, v_modelo.id);
+
+    ELSE
+        -- CRIAR_RECEBER
+        -- D = Clientes
+        -- C = Receita
+        INSERT INTO contab.lancamentos
+            (empresa_id, diario_id, data_mov, conta_id, historico, debito, credito, modelo_id)
+        VALUES
+            (p_empresa_id, v_diario.id, v_diario.data_mov,
+             v_conta_fixa_id, v_diario.historico, v_valor, 0, v_modelo.id),
+
+            (p_empresa_id, v_diario.id, v_diario.data_mov,
+             v_conta_variavel_id, v_diario.historico, 0, v_valor, v_modelo.id);
+    END IF;
+
+END;
+$$;

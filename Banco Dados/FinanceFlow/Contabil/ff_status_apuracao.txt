@@ -1,0 +1,25 @@
+CREATE OR REPLACE FUNCTION contab.ff_status_apuracao(
+  p_empresa_id bigint,
+  p_ano int,
+  p_mes int
+)
+RETURNS TABLE (
+  status text
+)
+LANGUAGE sql
+STABLE
+AS $$
+  SELECT
+    CASE
+      WHEN EXISTS (
+        SELECT 1
+        FROM contab.lancamentos l
+        WHERE l.empresa_id = p_empresa_id
+          AND l.historico ILIKE 'Fechamento do mês%'
+          AND EXTRACT(YEAR FROM l.data_mov) = p_ano
+          AND EXTRACT(MONTH FROM l.data_mov) = p_mes
+      )
+      THEN 'JA_APURADO'
+      ELSE 'ABERTO'
+    END AS status;
+$$;

@@ -1,0 +1,57 @@
+CREATE OR REPLACE FUNCTION contab.ff_balanco_por_nivel(
+  p_empresa_id BIGINT,
+  p_data_ini DATE,
+  p_data_fim DATE,
+  p_nivel INT
+)
+RETURNS TABLE (
+  codigo TEXT,
+  nome TEXT,
+  nivel INT,
+  valor NUMERIC
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+
+  RETURN QUERY
+
+  WITH base AS (
+    SELECT
+      c.id,
+      c.codigo,
+      c.nome,
+      c.nivel,
+      c.natureza,
+      SUM(l.debito - l.credito) AS saldo
+    FROM contab.contas c
+    LEFT JOIN contab.lancamentos l
+      ON l.conta_id = c.id
+      AND l.data_mov BETWEEN p_data_ini AND p_data_fim
+    WHERE c.empresa_id = p_empresa_id
+    GROUP BY c.id, c.codigo, c.nome, c.nivel, c.natureza
+  ),
+
+  agrupado AS (
+    SELECT
+      c.codigo::text AS codigo,
+      c.nome::text AS nome,   -- 🔥 AQUI
+      c.nivel,
+
+      (
+        SELECT COALESCE(SUM(b.saldo),0)
+        FROM base b
+        WHERE b.codigo LIKE c.codigo || '%'
+      ) AS valor
+
+    FROM contab.contas c
+    WHERE c.empresa_id = p_empresa_id
+      AND c.nivel <= p_nivel
+  )
+
+  SELECT *
+  FROM agrupado
+  ORDER BY codigo;
+
+END;
+$$;

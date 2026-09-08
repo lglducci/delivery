@@ -1,0 +1,18 @@
+CREATE OR REPLACE VIEW contab.vw_balanco_base AS
+SELECT
+  empresa_id,
+  data_mov,
+  CASE
+    WHEN conta_codigo LIKE '1.1%' THEN 'ATIVO_CIRCULANTE'
+    WHEN conta_codigo LIKE '1.2%' THEN 'ATIVO_NAO_CIRC'
+    WHEN conta_codigo LIKE '2.1%' THEN 'PASSIVO_CIRC'
+    WHEN conta_codigo LIKE '2.2%' THEN 'PASSIVO_NAO_CIRC'
+    WHEN conta_codigo LIKE '3%'   THEN 'PATRIMONIO_LIQ'
+    ELSE NULL
+  END AS grupo,
+  valor
+FROM contab.vw_mov_contabil
+WHERE
+  conta_codigo LIKE '1%'
+  OR conta_codigo LIKE '2%'
+  OR conta_codigo LIKE '3%';

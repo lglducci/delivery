@@ -1,0 +1,18 @@
+CREATE OR REPLACE FUNCTION util_valida_cnpj(p_cnpj text)
+RETURNS boolean AS $$
+DECLARE
+    v text;
+BEGIN
+    -- Remove ., -, /
+    v := REPLACE(REPLACE(REPLACE(p_cnpj, '.', ''), '-', ''), '/', '');
+
+    -- Só números
+    IF v !~ '^[0-9]{14}$' THEN
+        RETURN FALSE;
+    END IF;
+
+    -- NÃO FAZ validação matemática (DV),
+    -- apenas formatação e tamanho.
+    RETURN TRUE;
+END;
+$$ LANGUAGE plpgsql IMMUTABLE;

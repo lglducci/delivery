@@ -1,0 +1,97 @@
+CREATE OR REPLACE FUNCTION contab.ff_ajustar_saldo_conta_ctb(
+    p_empresa_id          BIGINT,
+    p_conta_id            BIGINT,
+    p_conta_contra_id     BIGINT,
+    p_operacao            TEXT,       -- 'ACRESCENTAR' | 'DIMINUIR'
+    p_valor               NUMERIC(14,2),
+    p_data_mov            DATE,
+    p_historico           TEXT
+)
+RETURNS VOID
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_natureza CHAR(1);
+    v_dc_principal CHAR(1);
+    v_dc_contra    CHAR(1);
+BEGIN
+    ------------------------------------------------------------------
+    -- 1) Buscar natureza da conta
+    ------------------------------------------------------------------
+    SELECT natureza
+      INTO v_natureza
+      FROM contab.contas
+     WHERE id = p_conta_id
+       AND empresa_id = p_empresa_id;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Conta % não encontrada.', p_conta_id;
+    END IF;
+
+    ------------------------------------------------------------------
+    -- 2) Definir débito/crédito automaticamente
+    ------------------------------------------------------------------
+    IF v_natureza = 'D' THEN
+        IF p_operacao = 'ACRESCENTAR' THEN
+            v_dc_principal := 'D';
+            v_dc_contra    := 'C';
+        ELSE
+            v_dc_principal := 'C';
+            v_dc_contra    := 'D';
+        END IF;
+    ELSE
+        IF p_operacao = 'ACRESCENTAR' THEN
+            v_dc_principal := 'C';
+            v_dc_contra    := 'D';
+        ELSE
+            v_dc_principal := 'D';
+            v_dc_contra    := 'C';
+        END IF;
+    END IF;
+
+    ------------------------------------------------------------------
+    -- 3) Lançamento na conta principal
+    ------------------------------------------------------------------
+    INSERT INTO contab.lancamentos (
+        empresa_id,
+        data_mov,
+        conta_id,
+        historico,
+        debito,
+        credito,
+        origem
+    )
+    VALUES (
+        p_empresa_id,
+        p_data_mov,
+        p_conta_id,
+        p_historico,
+        CASE WHEN v_dc_principal = 'D' THEN p_valor ELSE 0 END,
+        CASE WHEN v_dc_principal = 'C' THEN p_valor ELSE 0 END,
+        'AJUSTE_SALDO'
+    );
+
+    ------------------------------------------------------------------
+    -- 4) Lançamento na conta contrapartida
+    ------------------------------------------------------------------
+    INSERT INTO contab.lancamentos (
+        empresa_id,
+        data_mov,
+        conta_id,
+        historico,
+        debito,
+        credito,
+        origem
+    )
+    VALUES (
+        p_empresa_id,
+        p_data_mov,
+        p_conta_contra_id,
+        p_historico,
+        CASE WHEN v_dc_contra = 'D' THEN p_valor ELSE 0 END,
+        CASE WHEN v_dc_contra = 'C' THEN p_valor ELSE 0 END,
+        'AJUSTE_SALDO'
+    );
+
+END;
+$$;

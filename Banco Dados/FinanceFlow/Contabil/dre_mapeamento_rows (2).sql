@@ -1,0 +1,1 @@
+INSERT INTO "contab"."dre_mapeamento" ("empresa_id", "conta_prefix", "grupo", "ordem", "sinal") VALUES ('1', '4', 'RECEITA_BRUTA', '10', '-1'), ('1', '5', 'CUSTOS', '30', '1'), ('1', '6', 'DESPESAS_OPERACIONAIS', '40', '1');

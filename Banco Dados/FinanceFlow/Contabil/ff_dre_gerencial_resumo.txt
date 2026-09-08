@@ -1,0 +1,66 @@
+CREATE OR REPLACE FUNCTION contab.ff_dre_gerencial_resumo(
+  p_empresa_id BIGINT,
+  p_data_ini   DATE,
+  p_data_fim   DATE
+)
+RETURNS TABLE (
+  receita NUMERIC(18,2),
+  custo_variavel NUMERIC(18,2),
+  custo_fixo NUMERIC(18,2),
+  despesa_variavel NUMERIC(18,2),
+  despesa_fixa NUMERIC(18,2),
+  nao_operacional NUMERIC(18,2),
+  margem_contribuicao NUMERIC(18,2),
+  margem_percentual NUMERIC(18,4),
+  lucro_operacional NUMERIC(18,2),
+  resultado_final NUMERIC(18,2)
+)
+LANGUAGE sql
+AS $$
+WITH base AS (
+  SELECT
+    c.tipo,
+    c.classificacao_gerencial,
+    CASE
+      WHEN c.tipo = 'RECEITA' THEN (SUM(l.credito) - SUM(l.debito))
+      WHEN c.tipo IN ('CUSTO', 'DESPESA') THEN (SUM(l.debito) - SUM(l.credito))
+      ELSE 0
+    END::numeric(18,2) AS valor
+  FROM contab.lancamentos l
+  JOIN contab.contas c
+    ON c.id = l.conta_id
+  WHERE l.empresa_id = p_empresa_id
+    AND l.data_mov BETWEEN p_data_ini AND p_data_fim
+    AND c.analitica = true
+    AND c.tipo IN ('RECEITA', 'CUSTO', 'DESPESA')
+  GROUP BY
+    c.tipo,
+    c.classificacao_gerencial
+),
+totais AS (
+  SELECT
+    COALESCE(SUM(valor) FILTER (WHERE classificacao_gerencial = 'receita'), 0)::numeric(18,2) AS receita,
+    COALESCE(SUM(valor) FILTER (WHERE classificacao_gerencial = 'custo_variavel'), 0)::numeric(18,2) AS custo_variavel,
+    COALESCE(SUM(valor) FILTER (WHERE classificacao_gerencial = 'custo_fixo'), 0)::numeric(18,2) AS custo_fixo,
+    COALESCE(SUM(valor) FILTER (WHERE classificacao_gerencial = 'despesa_variavel'), 0)::numeric(18,2) AS despesa_variavel,
+    COALESCE(SUM(valor) FILTER (WHERE classificacao_gerencial = 'despesa_fixa'), 0)::numeric(18,2) AS despesa_fixa,
+    COALESCE(SUM(valor) FILTER (WHERE classificacao_gerencial = 'nao_operacional'), 0)::numeric(18,2) AS nao_operacional
+  FROM base
+)
+SELECT
+  receita,
+  custo_variavel,
+  custo_fixo,
+  despesa_variavel,
+  despesa_fixa,
+  nao_operacional,
+  (receita - custo_variavel - despesa_variavel)::numeric(18,2) AS margem_contribuicao,
+  CASE
+    WHEN receita <> 0
+      THEN ((receita - custo_variavel - despesa_variavel) / receita)::numeric(18,4)
+    ELSE 0
+  END AS margem_percentual,
+  (receita - custo_variavel - despesa_variavel - custo_fixo - despesa_fixa)::numeric(18,2) AS lucro_operacional,
+  (receita - custo_variavel - despesa_variavel - custo_fixo - despesa_fixa - nao_operacional)::numeric(18,2) AS resultado_final
+FROM totais;
+$$;

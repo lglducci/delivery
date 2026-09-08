@@ -1,0 +1,74 @@
+  CREATE OR REPLACE FUNCTION contab.gerar_lancamentos_estorno_generico(
+    p_diario_id  BIGINT,   -- diário 15 (ESTORNO)
+    p_empresa_id BIGINT
+)
+RETURNS void
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_diario_estorno   contab.diario%ROWTYPE;
+    v_transacao_origem_id BIGINT;
+    v_diario_origem_id BIGINT;
+    v_lote_id          BIGINT;
+BEGIN
+    -- 1) Carrega diário de estorno (ex: 15)
+    SELECT *
+      INTO v_diario_estorno
+      FROM contab.diario
+     WHERE id = p_diario_id
+       AND empresa_id = p_empresa_id
+       AND modelo_codigo = 'ESTORNO';
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Diário de estorno % não encontrado.', p_diario_id;
+    END IF;
+
+---   1.1 mudei a partir daqui  
+   v_transacao_origem_id :=  (v_diario_estorno.outros ->> 'origem_id')::BIGINT;
+
+      SELECT id
+           INTO v_diario_origem_id
+      FROM contab.diario
+  WHERE transacao_id = v_transacao_origem_id
+             AND empresa_id = p_empresa_id;
+
+    -- 2) Pega o diário origem (ex: 5) do JSON
+   -- comentei isso agora pego da tabela  v_diario_origem_id := (v_diario_estorno.outros ->> 'origem_id')::BIGINT;
+
+    IF v_diario_origem_id IS NULL THEN
+        RAISE EXCEPTION 'Diário origem da transação % não encontrado.', v_transacao_origem_id;
+    END IF;
+
+    -- 3) Gera um lote único para a nova partida dobrada
+    v_lote_id := nextval('contab.lote_id_seq');
+
+    -- 4) Insere estorno invertendo D/C do diário 5
+    INSERT INTO contab.lancamentos (
+        diario_id,
+        empresa_id,
+        data_mov,
+        conta_id,
+        historico,
+        debito,
+        credito,
+        modelo_id,
+        origem,
+        lote_id
+    )
+    SELECT
+        v_diario_estorno.id,         -- grava no diário 15
+        l.empresa_id,
+        v_diario_estorno.data_mov,
+        l.conta_id,
+        'ESTORNO - ' || l.historico,
+        l.credito,                   -- INVERTE
+        l.debito,                    -- INVERTE
+        l.modelo_id,
+        'ESTORNO',
+        v_lote_id
+    FROM contab.lancamentos l
+    WHERE l.diario_id = v_diario_origem_id
+      AND l.empresa_id = p_empresa_id;
+
+END;
+$$;

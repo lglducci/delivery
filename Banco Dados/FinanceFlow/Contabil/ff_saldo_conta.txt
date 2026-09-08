@@ -1,0 +1,39 @@
+CREATE OR REPLACE FUNCTION contab.ff_saldo_conta(
+    p_empresa_id BIGINT,
+    p_conta_id   BIGINT
+)
+RETURNS NUMERIC
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_saldo_inicial NUMERIC(14,2) := 0;
+    v_debitos       NUMERIC(14,2) := 0;
+    v_creditos      NUMERIC(14,2) := 0;
+    v_saldo_final   NUMERIC(14,2);
+BEGIN
+
+    -- saldo inicial
+    SELECT COALESCE(saldo,0)
+    INTO v_saldo_inicial
+    FROM contab.saldos_iniciais
+    WHERE empresa_id = p_empresa_id
+      AND conta_id   = p_conta_id;
+
+    -- soma movimentos
+    SELECT
+        COALESCE(SUM(debito),0),
+        COALESCE(SUM(credito),0)
+    INTO
+        v_debitos,
+        v_creditos
+    FROM contab.lancamentos
+    WHERE empresa_id = p_empresa_id
+      AND conta_id   = p_conta_id;
+
+    -- saldo final
+    v_saldo_final := v_saldo_inicial + v_debitos - v_creditos;
+
+    RETURN v_saldo_final;
+
+END;
+$$;

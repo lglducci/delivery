@@ -1,0 +1,16 @@
+-- VIEW: RAZÃO (schema contab)
+CREATE OR REPLACE VIEW contab.vw_razao AS
+SELECT
+  l.empresa_id,
+  l.data_mov,
+  c.id          AS conta_id,
+  c.codigo      AS conta_codigo,
+  c.nome        AS conta_nome,
+  l.historico,
+  l.debito,
+  l.credito,
+  l.diario_id,
+  d.modelo_codigo
+FROM contab.lancamentos l
+JOIN contab.contas c ON c.id = l.conta_id
+JOIN contab.diario d ON d.id = l.diario_id;
