@@ -1,0 +1,15 @@
+-- exemplo baseado no gpt-4o-mini (ajuste depois se quiser)
+create or replace function ff_calcula_custo_consumo_ia(
+  p_input int,
+  p_output int
+) returns numeric as $$
+declare
+  v_custo numeric;
+begin
+  v_custo :=
+    (p_input / 1000.0 * 0.005) +   -- input
+    (p_output / 1000.0 * 0.015);   -- output
+
+  return v_custo;
+end;
+$$ language plpgsql;
