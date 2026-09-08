@@ -1,0 +1,18 @@
+CREATE OR REPLACE FUNCTION contab.ff_diario_confirmar(
+    p_empresa_id int,
+    p_diario_id  bigint
+)
+RETURNS void AS
+$$
+BEGIN
+    UPDATE contab.diario
+       SET status = 'confirmado'
+     WHERE id = p_diario_id
+       AND empresa_id = p_empresa_id
+       AND status = 'rascunho';
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Lançamento não encontrado ou já não está em rascunho.';
+    END IF;
+END;
+$$ LANGUAGE plpgsql;

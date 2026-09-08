@@ -1,0 +1,79 @@
+  CREATE OR REPLACE FUNCTION contab.sp_kpi_gerencial_mensal (
+  p_empresa_id BIGINT,
+  p_ano INT,
+  p_mes INT
+)
+RETURNS TABLE (
+  receita_liquida        NUMERIC(14,2),
+  cmv_csp                NUMERIC(14,2),
+  margem_contribuicao    NUMERIC(14,2),
+  despesa_fixa           NUMERIC(14,2),
+  resultado_liquido      NUMERIC(14,2),
+  liquidez_aprox         NUMERIC(18,6),
+  endividamento_aprox    NUMERIC(18,6)
+)
+LANGUAGE sql
+AS $$
+WITH mov AS (
+  SELECT
+    l.empresa_id,
+    c.codigo::text AS conta_codigo,
+    c.tipo,
+    c.natureza,
+    -- saldo normalizado pela natureza (C = crédito aumenta / D = débito aumenta)
+    CASE
+      WHEN c.natureza = 'C' THEN COALESCE(l.credito,0) - COALESCE(l.debito,0)
+      ELSE COALESCE(l.debito,0) - COALESCE(l.credito,0)
+    END AS valor_norm,
+    cc.tipo_dre
+  FROM contab.lancamentos l
+  JOIN contab.contas c
+    ON c.id = l.conta_id
+  LEFT JOIN contab.conta_classificacao cc
+    ON cc.empresa_id = l.empresa_id
+   AND cc.conta_codigo = c.codigo
+  WHERE l.empresa_id = p_empresa_id
+    AND EXTRACT(YEAR  FROM l.data_mov) = p_ano
+    AND EXTRACT(MONTH FROM l.data_mov) = p_mes
+),
+dre_class AS (
+  SELECT
+    CASE
+      WHEN tipo_dre IS NOT NULL THEN tipo_dre
+      -- fallback por código (se não tiver conta_classificacao)
+      WHEN conta_codigo LIKE '4.1.9%' THEN 'DED_RECEITA'
+      WHEN conta_codigo LIKE '4.%'     THEN 'RECEITA_BRUTA'
+      WHEN conta_codigo LIKE '5.%'     THEN 'CMV_CSP'
+      WHEN conta_codigo LIKE '6.%'     THEN 'DESPESA_FIXA'
+      ELSE NULL
+    END AS tipo_dre_calc,
+    valor_norm
+  FROM mov
+),
+dre_tot AS (
+  SELECT
+    -- tudo “gerencial”: receitas e custos/despesas em valores positivos
+    COALESCE(SUM(CASE WHEN tipo_dre_calc = 'RECEITA_BRUTA' THEN valor_norm ELSE 0 END),0) AS receita_bruta,
+    COALESCE(SUM(CASE WHEN tipo_dre_calc = 'DED_RECEITA'   THEN ABS(valor_norm) ELSE 0 END),0) AS deducoes,
+    COALESCE(SUM(CASE WHEN tipo_dre_calc = 'CMV_CSP'        THEN ABS(valor_norm) ELSE 0 END),0) AS cmv,
+    COALESCE(SUM(CASE WHEN tipo_dre_calc = 'DESPESA_FIXA'   THEN ABS(valor_norm) ELSE 0 END),0) AS desp_fixa
+  FROM dre_class
+),
+balanco AS (
+  SELECT
+    COALESCE(SUM(CASE WHEN tipo = 'ATIVO'   THEN valor_norm ELSE 0 END),0) AS ativo,
+    COALESCE(SUM(CASE WHEN tipo = 'PASSIVO' THEN valor_norm ELSE 0 END),0) AS passivo
+  FROM mov
+)
+SELECT
+  -- Receita líquida = Receita bruta - Deduções
+  (d.receita_bruta - d.deducoes)::numeric(14,2)                                   AS receita_liquida,
+  d.cmv::numeric(14,2)                                                            AS cmv_csp,
+  ((d.receita_bruta - d.deducoes) - d.cmv)::numeric(14,2)                         AS margem_contribuicao,
+  d.desp_fixa::numeric(14,2)                                                      AS despesa_fixa,
+  (((d.receita_bruta - d.deducoes) - d.cmv) - d.desp_fixa)::numeric(14,2)         AS resultado_liquido,
+  (b.ativo / NULLIF(b.passivo,0))::numeric(18,6)                                  AS liquidez_aprox,
+  (b.passivo / NULLIF(b.ativo,0))::numeric(18,6)                                  AS endividamento_aprox
+FROM dre_tot d
+CROSS JOIN balanco b;
+$$;

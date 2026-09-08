@@ -1,0 +1,26 @@
+  CREATE OR REPLACE FUNCTION contab.dashboard_top_contas (
+    p_empresa_id BIGINT,
+    p_data_ini DATE,
+    p_data_fim DATE,
+    p_limit INT DEFAULT 10
+)
+RETURNS TABLE (
+    codigo TEXT,
+    nome TEXT,
+    valor NUMERIC
+)
+LANGUAGE sql
+AS $$
+SELECT
+    c.codigo,
+    c.nome,
+    SUM(l.credito - l.debito) AS valor
+FROM contab.lancamentos l
+JOIN contab.contas c ON c.id = l.conta_id
+WHERE l.empresa_id = p_empresa_id
+  AND l.data_mov BETWEEN p_data_ini AND p_data_fim
+GROUP BY c.codigo, c.nome
+ORDER BY ABS(SUM(l.credito - l.debito)) DESC
+LIMIT p_limit;
+$$;
+

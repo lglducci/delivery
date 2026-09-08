@@ -1,0 +1,64 @@
+CREATE OR REPLACE FUNCTION contab.ff_diario_estornar(
+    p_empresa_id int,
+    p_diario_id  bigint
+)
+RETURNS bigint AS
+$$
+DECLARE
+    v_novo_id bigint;
+BEGIN
+    -- garante que existe e não foi estornado antes
+    PERFORM 1
+      FROM contab.diario
+     WHERE id = p_diario_id
+       AND empresa_id = p_empresa_id
+       AND status IN ('confirmado', 'processado');
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Lançamento não encontrado, ou já estornado, ou ainda em rascunho.';
+    END IF;
+
+    -- marca o original como estornado
+    UPDATE contab.diario
+       SET status = 'estornado'
+     WHERE id = p_diario_id
+       AND empresa_id = p_empresa_id;
+
+    -- cria o lançamento de estorno (valores invertidos)
+    INSERT INTO contab.diario (
+        empresa_id,
+        data_mov,
+        modelo_codigo,
+        historico,
+        doc_ref,
+        parceiro_id,
+        data_vencto,
+        valor_total,
+        valor_custo,
+        valor_imposto,
+        desconto,
+        outros,
+        status
+    )
+    SELECT
+        d.empresa_id,
+        CURRENT_DATE,  -- data do estorno (pode trocar para d.data_mov se quiser retroativo)
+        d.modelo_codigo,
+        'ESTORNO DO LANÇAMENTO ' || d.id || ' - ' || d.historico,
+        d.doc_ref,
+        d.parceiro_id,
+        d.data_vencto,
+        -d.valor_total,
+        -d.valor_custo,
+        -d.valor_imposto,
+        -d.desconto,
+        d.outros,
+        'processado'
+    FROM contab.diario d
+    WHERE d.id = p_diario_id
+      AND d.empresa_id = p_empresa_id
+    RETURNING id INTO v_novo_id;
+
+    RETURN v_novo_id;
+END;
+$$ LANGUAGE plpgsql;
