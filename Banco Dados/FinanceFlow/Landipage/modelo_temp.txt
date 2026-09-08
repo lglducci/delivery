@@ -1,0 +1,12 @@
+CREATE TABLE saas_vendas.modelo_temp (
+  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+
+  codigo_modelo TEXT NOT NULL,
+  codigo_credito TEXT,
+  nome_credito TEXT,
+  conta_credit_dc CHAR(1),
+  codigo_debito TEXT,
+  nome_debito TEXT,
+  conta_debito_dc CHAR(1),
+ nome_modelo  TEXT
+);

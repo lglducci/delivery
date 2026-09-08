@@ -1,0 +1,8 @@
+CREATE UNIQUE INDEX IF NOT EXISTS ux_template_motor
+ON contab.template_eventos_contabeis (
+  codigo_evento,
+  tipo_evento,
+  classificacao,
+  forma_operacao
+)
+WHERE ativo = true;

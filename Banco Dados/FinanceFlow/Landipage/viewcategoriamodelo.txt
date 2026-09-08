@@ -1,0 +1,20 @@
+CREATE OR REPLACE VIEW public.vw_categorias_modelos AS
+SELECT  
+    c.id              AS categoria_id,
+    c.empresa_id,
+    c.nome            AS categoria,
+    c.tipo,
+    c.classificacao,
+    m.id              AS modelo_id,
+    m.codigo,
+    m.nome            AS modelo_nome,
+    m.tipo_operacao,
+    cm.ativo          AS vinculo_ativo
+FROM public.categorias_gerenciais c
+INNER JOIN contab.categorias_modelos cm 
+    ON c.id = cm.categoria_id
+   AND c.empresa_id = cm.empresa_id
+INNER JOIN contab.modelos m 
+    ON m.id = cm.modelo_id
+   AND m.empresa_id = c.empresa_id
+ORDER BY c.id;

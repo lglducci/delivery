@@ -1,0 +1,20 @@
+CREATE TABLE saas_vendas.notificacoes_enviadas (
+  id BIGSERIAL PRIMARY KEY,
+  tipo_alerta TEXT NOT NULL,
+  id_referencia BIGINT NOT NULL,
+  canal TEXT NOT NULL, -- EMAIL / WHATSAPP
+  enviado_em TIMESTAMP NOT NULL DEFAULT now(),
+
+  UNIQUE (tipo_alerta, id_referencia, canal)
+);
+
+
+CREATE OR REPLACE VIEW saas_vendas.dashboard_alertas_pendentes AS
+SELECT a.*
+FROM saas_vendas.dashboard_alertas a
+WHERE NOT EXISTS (
+  SELECT 1
+  FROM saas_vendas.notificacoes_enviadas n
+  WHERE n.tipo_alerta = a.tipo_alerta
+    AND n.id_referencia = a.id_referencia
+);

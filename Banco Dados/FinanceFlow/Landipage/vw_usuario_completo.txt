@@ -1,0 +1,31 @@
+ CREATE OR REPLACE VIEW saas_vendas.vw_usuario_completo AS
+SELECT
+  -- 🔐 ligação
+  svu.auth_user_id,
+
+  -- 👤 usuário SaaS
+  svu.id            AS saas_usuario_id,
+  svu.trial_inicio,
+  svu.trial_fim,
+  svu.plano_id,
+  svu.ativo         AS saas_ativo,
+  svu.criado_em     AS saas_criado_em,
+
+  -- 👤 usuário público
+  pu.id             AS public_usuario_id,
+  pu.nome           AS usuario_nome,
+  pu.email,
+
+  -- 🏢 empresa
+  e.id              AS empresa_id,
+  e.nome            AS empresa_nome,
+  e.tipo            AS empresa_tipo,
+  e.criado_em       AS empresa_criado_em
+
+FROM saas_vendas.usuarios svu
+JOIN public.usuarios pu
+  ON pu.auth_user_id = svu.auth_user_id
+JOIN public.usuario_empresa ue
+  ON ue.usuario_id = pu.id
+JOIN public.empresas e
+  ON e.id = ue.empresa_id;

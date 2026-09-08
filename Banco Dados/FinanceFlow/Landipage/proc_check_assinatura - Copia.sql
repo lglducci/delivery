@@ -1,0 +1,117 @@
+     CREATE OR REPLACE FUNCTION saas_vendas.proc_check_assinatura (
+  p_empresa_id BIGINT
+)
+RETURNS TABLE (
+  status TEXT,
+  bloquear BOOLEAN,
+  mensagem TEXT
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_hoje DATE := CURRENT_DATE;
+  v_ass saas_vendas.assinaturas%ROWTYPE;
+BEGIN
+ 
+
+  ------------------------------------------------------------------
+  -- 1️⃣ Trial válido para algum usuário da empresa
+  ------------------------------------------------------------------
+  IF EXISTS (
+    SELECT 1
+FROM public.usuario_empresa ue
+JOIN public.usuarios pu 
+  ON pu.id = ue.usuario_id
+JOIN saas_vendas.usuarios svu 
+  ON svu.auth_user_id = pu.auth_user_id
+WHERE ue.empresa_id = p_empresa_id
+ and svu.ativo = true
+  AND svu.trial_inicio::date <= v_hoje
+  AND (
+        svu.trial_fim IS NULL
+        OR svu.trial_fim::date >= v_hoje
+      )
+
+  ) THEN
+    RETURN QUERY
+    SELECT
+      'TRIAL',
+      FALSE,
+      'Trial ativo até ' || (
+        SELECT to_char(MAX(svu.trial_fim), 'DD/MM/YYYY')
+        FROM public.usuario_empresa ue
+        JOIN public.usuarios pu ON pu.id = ue.usuario_id
+        JOIN saas_vendas.usuarios svu ON svu.auth_user_id = pu.auth_user_id
+        WHERE ue.empresa_id = p_empresa_id
+          AND svu.trial_inicio <= v_hoje
+          AND (svu.trial_fim IS NULL OR svu.trial_fim >= v_hoje)
+     )
+    RETURN;
+  END IF;
+
+  ------------------------------------------------------------------
+  -- 2️⃣ Verifica assinatura vinculada à empresa
+  ------------------------------------------------------------------
+  SELECT *
+    INTO v_ass
+    FROM saas_vendas.assinaturas a
+   WHERE a.empresa_id = p_empresa_id 
+and a.status = 'ATIVA'
+   ORDER BY a.data_inicio DESC
+   LIMIT 1;
+
+ 
+
+
+  ------------------------------------------------------------------
+  -- 3️⃣ Sem assinatura
+  ------------------------------------------------------------------
+  IF NOT FOUND THEN
+    RETURN QUERY
+    SELECT
+      'SEM_ASSINATURA',
+      TRUE,
+      'Empresa sem assinatura ativa';
+    RETURN;
+  END IF; 
+  ------------------------------------------------------------------
+  -- 5️⃣ Assinatura ativa
+  ------------------------------------------------------------------
+  IF v_ass.status = 'ATIVA'
+     AND v_ass.data_inicio <= v_hoje
+     AND (v_ass.data_fim IS NULL OR v_ass.data_fim >= v_hoje) THEN
+    RETURN QUERY
+    SELECT
+      'OK',
+      FALSE,
+      'Assinatura ativa';
+    RETURN;
+  END IF;
+ 
+  ------------------------------------------------------------------
+  -- 4️⃣ Assinatura trial
+  ------------------------------------------------------------------
+  IF v_ass.status = 'trial'
+     AND v_ass.data_inicio <= v_hoje
+     AND (v_ass.data_fim IS NULL OR v_ass.data_fim >= v_hoje) THEN
+    RETURN QUERY
+    SELECT
+      'TRIAL',
+      FALSE,
+      'Trial ativo até ' || COALESCE(to_char(v_ass.data_fim, 'DD/MM/YYYY'), 'indefinido');
+    RETURN;
+  END IF;
+ 
+
+  ------------------------------------------------------------------
+  -- 6️⃣ Assinatura expirada
+  ------------------------------------------------------------------
+  RETURN QUERY
+  SELECT
+    'EXPIRADO',
+    TRUE,
+    'Assinatura expirada';
+
+END;
+$$;

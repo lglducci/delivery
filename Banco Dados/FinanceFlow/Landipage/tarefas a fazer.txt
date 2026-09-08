@@ -1,0 +1,113 @@
+✅ PLANO DE AÇÃO (Checklist)
+1️⃣ UX – Explicação ao Usuário (Janela Categoria)
+
+ Ajustar tooltip explicando:
+
+Classificação = natureza contábil
+
+Forma operação = quem está do outro lado
+
+ Exemplo simples:
+
+Despesa + Fornecedor
+
+Imobilizado + Financiamento
+
+ Evitar termos técnicos excessivos
+
+2️⃣ Banco – Evolução Estrutural
+Categorias
+
+ Garantir coluna forma_operacao
+
+ Atualizar CHECK de classificacao
+
+ Validar se precisa CHECK para forma_operacao
+
+3️⃣ Template – Revisão Completa
+
+ Revisar todas as linhas da template_eventos_contabeis
+
+ Garantir que cada combinação tenha:
+
+tipo_evento
+
+classificacao
+
+forma_operacao
+
+ Inserir novos casos:
+
+imobilizado + FINANCIAMENTO
+
+passivo + BANCO
+
+etc
+
+ Remover combinações ambíguas
+
+4️⃣ Proc de Implantação
+
+ Alterar para resolver template por:
+
+tipo_evento
+classificacao
+forma_operacao
+
+ Remover resolução antiga só por classificação
+
+ Garantir fallback controlado (se desejar)
+
+5️⃣ Proc de Inserção de Categoria
+
+ Validar se combinação existe no template
+
+ Se não existir → RAISE EXCEPTION
+
+ Evitar categoria sem template válido
+
+6️⃣ Nova Proc de Validação
+
+Criar:
+
+proc_valida_template_categoria(
+  p_empresa_id,
+  p_categoria_id
+)
+
+Ela deve:
+
+Buscar categoria
+
+Buscar template correspondente
+
+Se não achar → erro claro:
+"Não existe template configurado para esta combinação"
+
+7️⃣ Testes Essenciais
+
+ Despesa fornecedor
+
+ Estoque fornecedor
+
+ Imobilizado financiamento
+
+ Empréstimo banco
+
+ Receita cliente
+
+ Baixa passivo
+
+📌 Histórico da Evolução
+
+Fase 1 → Motor simples (tipo + classificação)
+Fase 2 → Motor intermediário (tipo + classificação + forma_operacao) ← Estamos aqui
+Fase 3 → (Futuro) Categoria define contas diretamente
+
+🎯 Resultado Esperado
+
+✔ Combinações controladas
+✔ Escalável
+✔ Sem explosão de modelos
+✔ Usuário continua leigo
+✔ Motor contábil profissional

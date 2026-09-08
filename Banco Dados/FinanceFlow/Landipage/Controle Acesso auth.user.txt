@@ -1,0 +1,60 @@
+ CREATE OR REPLACE FUNCTION saas_vendas.handle_new_user()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_nome TEXT;
+BEGIN
+
+  v_nome := COALESCE(
+      NEW.raw_user_meta_data->>'nome',
+      'Usuário'
+  );
+
+  INSERT INTO saas_vendas.usuarios (
+      auth_user_id,
+      nome,
+      email,
+      status,
+      plano,
+      ativo,
+      trial_inicio,
+      trial_fim
+  )
+  VALUES (
+      NEW.id,
+      v_nome,
+      NEW.email,
+      'trial',
+      'trial',
+      true,
+      now(),
+      now() + interval '7 days'
+  );
+
+  PERFORM public.proc_bootstrap_usuario(
+      NEW.id,
+      v_nome,
+      NEW.email
+  );
+
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER on_auth_user_created
+AFTER INSERT ON auth.users
+FOR EACH ROW
+EXECUTE FUNCTION saas_vendas.handle_new_user();
+
+
+
+
+ ALTER TABLE contab.modelos
+DROP CONSTRAINT modelos_codigo_key cascade;
+
+
+ALTER TABLE contab.modelos
+ADD CONSTRAINT modelos_empresa_codigo_key
+UNIQUE (empresa_id, codigo);
