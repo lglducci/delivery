@@ -1,0 +1,16 @@
+ CREATE OR REPLACE VIEW vw_resultado_mes_atual AS
+SELECT
+  empresa_id,
+  COALESCE(
+    SUM(
+      CASE
+        WHEN tipo = 'entrada' THEN valor
+        WHEN tipo = 'saida' THEN -valor
+        ELSE 0
+      END
+    ),
+    0
+  ) AS resultado
+FROM transacoes
+WHERE date_trunc('month', data_movimento) = date_trunc('month', CURRENT_DATE)
+GROUP BY empresa_id;

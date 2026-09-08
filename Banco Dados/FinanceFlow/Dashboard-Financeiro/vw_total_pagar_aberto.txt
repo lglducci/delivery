@@ -1,0 +1,7 @@
+ CREATE OR REPLACE VIEW vw_total_pagar_aberto AS
+SELECT
+  empresa_id,
+  COALESCE(SUM(valor), 0::numeric(12,2)) AS total_pagar
+FROM contas_a_pagar
+WHERE status = 'aberto'
+GROUP BY empresa_id;

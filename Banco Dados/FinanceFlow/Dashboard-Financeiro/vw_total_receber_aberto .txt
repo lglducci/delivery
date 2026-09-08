@@ -1,0 +1,7 @@
+CREATE OR REPLACE VIEW public.vw_total_receber_aberto AS
+SELECT
+    empresa_id,
+    SUM(valor) AS total_receber
+FROM public.contas_a_receber
+WHERE status IN ('aberto', 'pendente')
+GROUP BY empresa_id;

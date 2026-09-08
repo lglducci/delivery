@@ -1,0 +1,64 @@
+--✅ 1️⃣ View — Cartões a pagar (abertos)
+
+--Essa entra no card “Cartões a vencer”:
+
+CREATE OR REPLACE VIEW public.vw_cartoes_a_pagar_aberto AS
+SELECT
+    empresa_id,
+      COALESCE(SUM(valor_total), 0)  AS total_aberto
+FROM public.cartoes_faturas
+WHERE status = 'aberta'
+GROUP BY empresa_id;
+
+--✅ 2️⃣ View — Próximas faturas (detalhado)
+
+--Pra listar no bloco "Próximos pagamentos":
+
+CREATE OR REPLACE VIEW public.vw_cartoes_proximos_pagamentos AS
+SELECT
+    empresa_id,
+    id,
+    numero,
+    mes_referencia,
+    vencimento, 
+ COALESCE(valor_total, 0) as valor_total 
+FROM public.cartoes_faturas
+WHERE status = 'aberta'
+  AND vencimento >= CURRENT_DATE
+ORDER BY vencimento;
+
+--✅ 3️⃣ View — Cartões vencidos
+CREATE OR REPLACE VIEW public.vw_cartoes_vencidos AS
+SELECT
+    empresa_id,
+     COALESCE(SUM(valor_total), 0)  AS total_vencido
+FROM public.cartoes_faturas
+WHERE status = 'aberta'
+  AND vencimento < CURRENT_DATE
+GROUP BY empresa_id;
+
+--✅ 4️⃣ View — Cartões 6 meses
+CREATE OR REPLACE VIEW public.vw_cartoes_6_meses AS
+SELECT
+    empresa_id,
+    mes_referencia,
+    COALESCE(SUM(valor_total), 0)  AS total_mes
+FROM public.cartoes_faturas
+WHERE status = 'aberta'
+  AND vencimento BETWEEN CURRENT_DATE 
+                      AND (CURRENT_DATE + INTERVAL '6 months')
+GROUP BY empresa_id, mes_referencia
+ORDER BY mes_referencia;
+
+--✅ 5️⃣ View — Cartões 12 meses
+CREATE OR REPLACE VIEW public.vw_cartoes_12_meses AS
+SELECT
+    empresa_id,
+    mes_referencia,
+     COALESCE(SUM(valor_total), 0) AS total_mes
+FROM public.cartoes_faturas
+WHERE status = 'aberta'
+  AND vencimento BETWEEN CURRENT_DATE 
+                      AND (CURRENT_DATE + INTERVAL '12 months')
+GROUP BY empresa_id, mes_referencia
+ORDER BY mes_referencia;

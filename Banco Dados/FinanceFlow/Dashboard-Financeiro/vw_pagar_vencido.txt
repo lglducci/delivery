@@ -1,0 +1,10 @@
+ CREATE OR REPLACE VIEW vw_pagar_vencido AS
+SELECT
+  empresa_id,
+  COUNT(*) AS quantidade,
+  COALESCE(SUM(valor), 0::numeric(12,2)) AS valor_total
+FROM contas_a_pagar
+WHERE
+  status = 'aberto'
+  AND vencimento < CURRENT_DATE
+GROUP BY empresa_id;

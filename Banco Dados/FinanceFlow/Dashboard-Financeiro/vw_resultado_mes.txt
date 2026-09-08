@@ -1,0 +1,10 @@
+ CREATE OR REPLACE VIEW vw_resultado_mes AS
+SELECT
+  r.empresa_id,
+  r.ano_mes,
+  COALESCE(r.total_recebido, 0::numeric(12,2)) 
+  - COALESCE(p.total_pago, 0::numeric(12,2)) AS resultado
+FROM vw_recebido_mes r
+LEFT JOIN vw_pago_mes p
+  ON p.empresa_id = r.empresa_id
+ AND p.ano_mes = r.ano_mes;

@@ -1,0 +1,9 @@
+CREATE OR REPLACE VIEW public.vw_resultado_30_dias AS
+SELECT
+  COALESCE(r.empresa_id, d.empresa_id) AS empresa_id,
+  COALESCE(r.total_recebido, 0) AS total_recebido,
+  COALESCE(d.total_despesa, 0) AS total_despesa,
+  COALESCE(r.total_recebido, 0) - COALESCE(d.total_despesa, 0) AS resultado
+FROM public.vw_receita_30_dias r
+FULL JOIN public.vw_despesa_30_dias d
+  ON d.empresa_id = r.empresa_id;

@@ -1,0 +1,15 @@
+CREATE OR REPLACE FUNCTION fn_pagar_periodo(
+  p_empresa_id BIGINT,
+  p_inicio DATE,
+  p_fim DATE
+)
+RETURNS NUMERIC
+LANGUAGE sql
+AS $$
+  SELECT COALESCE(SUM(valor),0)
+  FROM contas_a_pagar
+  WHERE
+    empresa_id = p_empresa_id
+    AND status = 'aberto'
+    AND vencimento BETWEEN p_inicio AND p_fim;
+$$;

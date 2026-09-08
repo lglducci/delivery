@@ -1,0 +1,9 @@
+   CREATE OR REPLACE VIEW vw_resultado_12_meses AS
+SELECT
+  r.empresa_id,
+  r.ano_mes,
+  COALESCE(r.total_recebido, 0) - COALESCE(d.total_despesa, 0) AS resultado
+FROM vw_receita_12_meses r
+LEFT JOIN vw_despesa_12_meses d
+  ON d.empresa_id = r.empresa_id
+ AND d.ano_mes = r.ano_mes;

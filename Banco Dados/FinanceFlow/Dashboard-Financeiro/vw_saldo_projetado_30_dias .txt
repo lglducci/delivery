@@ -1,0 +1,26 @@
+CREATE OR REPLACE VIEW vw_saldo_projetado_30_dias AS
+SELECT
+    empresa_id,
+    SUM(valor) AS saldo_projetado
+FROM (
+    -- RECEBER 30 DIAS
+    SELECT 
+        empresa_id,
+        valor
+    FROM contas_a_receber
+    WHERE status = 'aberto'
+      AND vencimento BETWEEN CURRENT_DATE 
+                          AND CURRENT_DATE + INTERVAL '30 days'
+
+    UNION ALL
+
+    -- PAGAR 30 DIAS (negativo)
+    SELECT 
+        empresa_id,
+        -valor
+    FROM contas_a_pagar
+    WHERE status = 'aberto'
+      AND vencimento BETWEEN CURRENT_DATE 
+                          AND CURRENT_DATE + INTERVAL '30 days'
+) x
+GROUP BY empresa_id;
