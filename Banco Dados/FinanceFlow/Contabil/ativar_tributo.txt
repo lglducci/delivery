@@ -1,0 +1,15 @@
+CREATE OR REPLACE FUNCTION contab.ativar_tributo(
+  p_empresa_id BIGINT,
+  p_tributo_id BIGINT,
+  p_ativo      BOOLEAN
+)
+RETURNS VOID
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  UPDATE contab.tributos
+     SET ativo = p_ativo
+   WHERE id = p_tributo_id
+     AND empresa_id = p_empresa_id;
+END;
+$$;
