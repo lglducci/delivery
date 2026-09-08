@@ -1,0 +1,45 @@
+  DROP FUNCTION IF EXISTS public.ff_insere_categoria_gerencial;
+
+CREATE OR REPLACE FUNCTION public.ff_insere_categoria_gerencial(
+    p_empresa_id BIGINT,
+    p_nome TEXT,
+    p_tipo TEXT 
+)
+RETURNS BIGINT
+LANGUAGE plpgsql
+AS
+$$
+DECLARE
+    v_categoria_id BIGINT;
+BEGIN
+
+    ----------------------------------------------------------------
+    -- 1️⃣ Validações básicas
+    ----------------------------------------------------------------
+    IF p_nome IS NULL OR trim(p_nome) = '' THEN
+        RAISE EXCEPTION 'Nome da categoria é obrigatório.';
+    END IF;
+
+    IF lower(p_tipo) NOT IN ('entrada', 'saida') THEN
+        RAISE EXCEPTION 'Tipo deve ser entrada ou saida.';
+    END IF;
+ 
+
+    ----------------------------------------------------------------
+    -- 2️⃣ Inserir categoria
+    ----------------------------------------------------------------
+    INSERT INTO public.categorias_gerenciais (
+        empresa_id,
+        nome,
+        tipo 
+      
+    )
+    VALUES (
+        p_empresa_id,
+        trim(p_nome),
+        lower(p_tipo) 
+    )
+    RETURNING  v_categoria_id; 
+
+END;
+$$;

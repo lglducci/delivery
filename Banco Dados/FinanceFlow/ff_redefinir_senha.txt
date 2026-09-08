@@ -1,0 +1,42 @@
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+
+CREATE OR REPLACE FUNCTION public.ff_redefinir_senha(
+  p_token UUID,
+  p_nova_senha_hash TEXT
+)
+RETURNS JSON
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_usuario_id BIGINT;
+BEGIN
+  SELECT usuario_id
+  INTO v_usuario_id
+  FROM public.recuperacao_senha
+  WHERE token = p_token
+    AND usado = false
+    AND expira_em > now();
+
+  IF NOT FOUND THEN
+    RETURN json_build_object(
+      'ok', false,
+      'message', 'Token inválido ou expirado'
+    );
+  END IF;
+
+  UPDATE public.usuarios
+  SET senha_hash =  p_nova_senha_hash 
+  WHERE id = v_usuario_id;
+
+  UPDATE public.recuperacao_senha
+  SET usado = true
+  WHERE token = p_token;
+
+  RETURN json_build_object(
+    'ok', true,
+    'message', 'Senha alterada com sucesso'
+  );
+END;
+$$;
+ 

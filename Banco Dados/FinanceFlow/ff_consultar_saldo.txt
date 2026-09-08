@@ -1,0 +1,36 @@
+CREATE OR REPLACE FUNCTION ff_consultar_saldo(
+  p_empresa_id BIGINT,
+  p_conta_nome TEXT DEFAULT NULL  -- NULL ou 'todas' = todas as contas
+)
+RETURNS TABLE (
+  conta_nome TEXT,
+  saldo NUMERIC
+)
+LANGUAGE sql
+AS $$
+  WITH base AS (
+    SELECT
+      c.id,
+      c.nome,
+      c.saldo_inicial
+    FROM contas_financeiras c
+    WHERE c.empresa_id = p_empresa_id
+      AND (p_conta_nome IS NULL
+           OR lower(p_conta_nome) = 'todas'
+           OR lower(c.nome) = lower(p_conta_nome))
+  ),
+  mov AS (
+    SELECT
+      t.conta_id,
+      SUM(CASE WHEN t.tipo = 'entrada' THEN t.valor ELSE -t.valor END) AS mov
+    FROM transacoes t
+    WHERE t.empresa_id = p_empresa_id
+    GROUP BY t.conta_id
+  )
+  SELECT
+    b.nome AS conta_nome,
+    b.saldo_inicial + COALESCE(m.mov, 0) AS saldo
+  FROM base b
+  LEFT JOIN mov m ON m.conta_id = b.id
+  ORDER BY b.nome;
+$$;

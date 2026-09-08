@@ -1,0 +1,76 @@
+CREATE OR REPLACE FUNCTION ff_excluir_parcelamento_pagar(
+    p_empresa_id BIGINT,
+    p_lote_id    BIGINT
+)
+RETURNS TEXT
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_data_compra DATE;
+    v_parcela_paga INTEGER;
+    v_data_pagamento DATE;
+    v_qtd INTEGER;
+BEGIN
+    ------------------------------------------------------------
+    -- 1) Verifica se o lote existe
+    ------------------------------------------------------------
+    SELECT COUNT(*)
+      INTO v_qtd
+      FROM contas_a_pagar
+     WHERE empresa_id = p_empresa_id
+       AND lote_id = p_lote_id;
+
+    IF v_qtd = 0 THEN
+        RAISE EXCEPTION 'Lote % não encontrado para a empresa %.', p_lote_id, p_empresa_id;
+    END IF;
+
+    ------------------------------------------------------------
+    -- 2) Busca a data base do lote ANTES de excluir
+    --    (data de criação/origem do parcelamento)
+    ------------------------------------------------------------
+    SELECT MIN(criado_em::date)
+      INTO v_data_compra
+      FROM contas_a_pagar
+     WHERE empresa_id = p_empresa_id
+       AND lote_id = p_lote_id;
+
+    ------------------------------------------------------------
+    -- 3) Verifica se existe parcela paga
+    --    Se existir, pega a última parcela paga
+    ------------------------------------------------------------
+    SELECT parcela_num,
+           data_pagamento
+      INTO v_parcela_paga,
+           v_data_pagamento
+      FROM contas_a_pagar
+     WHERE empresa_id = p_empresa_id
+       AND lote_id = p_lote_id
+       AND status = 'pago'
+     ORDER BY parcela_num DESC, data_pagamento DESC NULLS LAST
+     LIMIT 1;
+
+    IF v_parcela_paga IS NOT NULL THEN
+        RAISE EXCEPTION
+        'Não é possível excluir o parcelamento. Existe parcela paga. Última parcela paga: %, data pagamento: %.',
+        v_parcela_paga,
+        COALESCE(v_data_pagamento::text, 'sem data');
+    END IF;
+
+    ------------------------------------------------------------
+    -- 4) Exclui o lote inteiro
+    ------------------------------------------------------------
+    DELETE
+      FROM contas_a_pagar
+     WHERE empresa_id = p_empresa_id
+       AND lote_id = p_lote_id;
+
+    ------------------------------------------------------------
+    -- 5) Sensibiliza controle de processamento
+    ------------------------------------------------------------
+    IF v_data_compra IS NOT NULL THEN
+        PERFORM contab.marcar_reprocessamento(p_empresa_id, v_data_compra);
+    END IF;
+
+    RETURN 'Parcelamento excluído com sucesso.';
+END;
+$$;

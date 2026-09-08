@@ -1,0 +1,32 @@
+CREATE OR REPLACE FUNCTION ff_get_categoria_id(
+  p_empresa_id BIGINT,
+  p_categoria_nome TEXT,
+  p_tipo TEXT  -- 'entrada' ou 'saida'
+)
+RETURNS BIGINT
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_cat_id BIGINT;
+BEGIN
+  IF p_categoria_nome IS NULL OR trim(p_categoria_nome) = '' THEN
+    RETURN NULL;
+  END IF;
+
+  SELECT id
+    INTO v_cat_id
+  FROM categorias_gerenciais
+  WHERE empresa_id = p_empresa_id
+    AND lower(nome) = lower(p_categoria_nome)
+    AND tipo = p_tipo
+  LIMIT 1;
+
+  IF v_cat_id IS NULL THEN
+    INSERT INTO categorias_gerenciais (empresa_id, nome, tipo)
+    VALUES (p_empresa_id, p_categoria_nome, p_tipo)
+    RETURNING id INTO v_cat_id;
+  END IF;
+
+  RETURN v_cat_id;
+END;
+$$;

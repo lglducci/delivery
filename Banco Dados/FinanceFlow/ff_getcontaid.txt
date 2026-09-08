@@ -1,0 +1,36 @@
+ CREATE OR REPLACE FUNCTION ff_get_conta_id(
+  p_empresa_id BIGINT,
+  p_conta_nome TEXT
+)
+RETURNS BIGINT
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_conta_id BIGINT;
+BEGIN
+  -- 1) Tenta encontrar a conta pelo nome
+  SELECT id
+    INTO v_conta_id
+  FROM contas_financeiras
+  WHERE empresa_id = p_empresa_id
+    AND lower(nome) = lower(COALESCE(p_conta_nome, ''))
+  LIMIT 1;
+
+  -- 2) Se não encontrou → pega a conta marcada como padrão
+  IF v_conta_id IS NULL THEN
+    SELECT id
+      INTO v_conta_id
+    FROM contas_financeiras
+    WHERE empresa_id = p_empresa_id
+      AND padrao = true
+    LIMIT 1;
+  END IF;
+
+  -- 3) Se ainda assim não encontrou → erro real
+  IF v_conta_id IS NULL THEN
+    RAISE EXCEPTION 'Nenhuma conta financeira encontrada (nem nome, nem padrão) para empresa %', p_empresa_id;
+  END IF;
+
+  RETURN v_conta_id;
+END;
+$$;

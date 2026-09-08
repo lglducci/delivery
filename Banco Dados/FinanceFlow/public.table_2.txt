@@ -1,0 +1,129 @@
+CREATE TABLE  config_meios_recebimento (
+    id BIGSERIAL PRIMARY KEY,
+    empresa_id BIGINT NOT NULL REFERENCES empresas(id),
+
+    tipo TEXT NOT NULL CHECK (
+        tipo IN ('DINHEIRO','PIX','DEBITO','CREDITO','FIADO')
+    ), 
+    descricao TEXT NOT NULL, 
+    dias_liquidacao INT NOT NULL DEFAULT 0,   -- D+0, D+1, D+30
+    taxa_percentual NUMERIC(5,2) NOT NULL DEFAULT 0.00, 
+    conta_financeira_id BIGINT NULL REFERENCES contab.contas(id), 
+    conta_provisao_id BIGINT NULL REFERENCES contab.contas(id), 
+    ativo BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+
+
+
+ALTER TABLE cartoes_compras
+ADD COLUMN conta_contabil_id BIGINT
+REFERENCES contab.contas(id);
+ CREATE INDEX idx_cartoes_transacoes_compra
+ON cartoes_transacoes (empresa_id, compra_id);
+
+
+
+ALTER TABLE contas_a_receber
+ADD CONSTRAINT fk_contas_a_receber_conta_contabil
+FOREIGN KEY (contabil_id)
+REFERENCES contab.contas(id);
+
+
+ALTER TABLE contas_a_pagar
+ADD CONSTRAINT fk_contas_a_pagar_conta_contabil
+FOREIGN KEY (contabil_id)
+REFERENCES contab.contas(id);
+
+ 
+
+
+-----CONTAS_A_PAGAR 
+ALTER TABLE contas_a_pagar
+ADD COLUMN IF NOT EXISTS classificacao TEXT NOT NULL DEFAULT 'despesa';
+
+ALTER TABLE contas_a_pagar
+ADD CONSTRAINT contas_a_pagar_classificacao_chk
+CHECK (classificacao IN (
+    'despesa',
+    'estoque',
+    'imobilizado',
+    'passivo'
+)); 
+
+-----CONTAS_A_RECEBER 
+ALTER TABLE contas_a_receber
+ADD COLUMN IF NOT EXISTS classificacao TEXT NOT NULL DEFAULT 'receita';
+
+ALTER TABLE contas_a_receber
+ADD CONSTRAINT contas_a_receber_classificacao_chk
+CHECK (classificacao IN (
+    'receita',
+    'ativo'
+)); 
+
+----COMPRAS_CARTAO 
+ 
+ALTER TABLE cartoes_compras
+ADD COLUMN IF NOT EXISTS classificacao TEXT NOT NULL DEFAULT 'despesa';
+
+ALTER TABLE cartoes_compras
+ADD CONSTRAINT compras_cartao_classificacao_chk
+CHECK (classificacao IN (
+    'despesa',
+    'estoque',
+    'imobilizado'
+)); 
+---TRANSACOES (à vista) 
+ALTER TABLE transacoes
+ADD COLUMN IF NOT EXISTS classificacao TEXT NOT NULL;
+
+ALTER TABLE transacoes
+ADD CONSTRAINT transacoes_classificacao_chk
+CHECK (classificacao IN (
+    'receita',
+    'ativo',
+    'passivo',
+    'despesa',
+    'estoque',
+    'imobilizado','custo'
+));
+
+
+
+create table ia_consumo (
+  id bigserial primary key,
+  empresa_id bigint not null,
+  pergunta text,
+  resposta text,
+  tokens_input integer default 0,
+  tokens_output integer default 0,
+  tokens_total integer default 0,
+  custo_estimado numeric(10,6) default 0,
+  modelo text,
+  created_at timestamp default now()
+);
+
+
+
+
+
+create table ia_conhecimento (
+  id serial primary key,
+  tipo text,         -- conceito, processo, navegacao
+  assunto text,      -- token, contas, lancamento, cartao, etc
+  titulo text,
+  conteudo text, 
+rota text null 
+);
+
+ create table ia_historico (
+  id bigserial primary key,
+  empresa_id bigint not null,
+  role text not null, -- 'user' ou 'assistant'
+  mensagem text not null,
+  created_at timestamp default now()
+);
+
+create index idx_hist_empresa on ia_historico(empresa_id);
+ 

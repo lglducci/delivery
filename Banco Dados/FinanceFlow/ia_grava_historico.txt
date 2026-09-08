@@ -1,0 +1,31 @@
+create or replace function ia_grava_historico(
+  p_empresa_id bigint,
+  p_pergunta text,
+  p_resposta text
+)
+returns void
+language plpgsql
+as $$
+begin
+
+  -- 🔥 INSERE USER
+  insert into ia_historico (empresa_id, role, mensagem)
+  values (p_empresa_id, 'user', p_pergunta);
+
+  -- 🔥 INSERE IA
+  insert into ia_historico (empresa_id, role, mensagem)
+  values (p_empresa_id, 'assistant', p_resposta);
+
+  -- 🔥 MANTÉM APENAS AS 6 MAIS RECENTES
+  delete from ia_historico
+  where id not in (
+    select id
+    from ia_historico
+    where empresa_id = p_empresa_id
+    order by created_at desc
+    limit 6
+  )
+  and empresa_id = p_empresa_id;
+
+end;
+$$;

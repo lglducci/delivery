@@ -1,0 +1,75 @@
+CREATE OR REPLACE FUNCTION ff_excluir_parcelamento_receber(
+    p_empresa_id BIGINT,
+    p_lote_id    BIGINT
+)
+RETURNS TEXT
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_data_compra DATE;
+    v_parcela_recebida INTEGER;
+    v_data_recebimento DATE;
+    v_qtd INTEGER;
+BEGIN
+    ------------------------------------------------------------
+    -- 1) Verifica se o lote existe
+    ------------------------------------------------------------
+    SELECT COUNT(*)
+      INTO v_qtd
+      FROM contas_a_receber
+     WHERE empresa_id = p_empresa_id
+       AND lote_id = p_lote_id;
+
+    IF v_qtd = 0 THEN
+        RAISE EXCEPTION 'Lote % não encontrado para a empresa %.', p_lote_id, p_empresa_id;
+    END IF;
+
+    ------------------------------------------------------------
+    -- 2) Busca a data base do lote antes de excluir
+    ------------------------------------------------------------
+    SELECT MIN(criado_em::date)
+      INTO v_data_compra
+      FROM contas_a_receber
+     WHERE empresa_id = p_empresa_id
+       AND lote_id = p_lote_id;
+
+    ------------------------------------------------------------
+    -- 3) Verifica se existe parcela recebida
+    --    Se existir, pega a última parcela recebida
+    ------------------------------------------------------------
+    SELECT parcela_num,
+           data_recebimento
+      INTO v_parcela_recebida,
+           v_data_recebimento
+      FROM contas_a_receber
+     WHERE empresa_id = p_empresa_id
+       AND lote_id = p_lote_id
+       AND status = 'recebido'
+     ORDER BY parcela_num DESC, data_recebimento DESC NULLS LAST
+     LIMIT 1;
+
+    IF v_parcela_recebida IS NOT NULL THEN
+        RAISE EXCEPTION
+        'Não é possível excluir o parcelamento. Existe parcela recebida. Última parcela recebida: %, data recebimento: %.',
+        v_parcela_recebida,
+        COALESCE(v_data_recebimento::text, 'sem data');
+    END IF;
+
+    ------------------------------------------------------------
+    -- 4) Exclui o lote inteiro
+    ------------------------------------------------------------
+    DELETE
+      FROM contas_a_receber
+     WHERE empresa_id = p_empresa_id
+       AND lote_id = p_lote_id;
+
+    ------------------------------------------------------------
+    -- 5) Sensibiliza controle de processamento
+    ------------------------------------------------------------
+    IF v_data_compra IS NOT NULL THEN
+        PERFORM contab.marcar_reprocessamento(p_empresa_id, v_data_compra);
+    END IF;
+
+    RETURN 'Parcelamento a receber excluído com sucesso.';
+END;
+$$;
