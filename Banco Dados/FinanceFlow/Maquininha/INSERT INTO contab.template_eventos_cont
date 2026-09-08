@@ -1,0 +1,44 @@
+INSERT INTO contab.template_eventos_contabeis
+(
+    codigo_evento,
+    descricao,
+    tipo_evento,
+    classificacao,
+    conta_debito_codigo,
+    conta_credito_codigo,
+    gera_provisao,
+    gera_financeiro,
+    ativo,
+    natureza_fluxo,
+    forma_operacao,
+    conta_pai
+)
+VALUES
+(
+    'TAXA_RECEBIVEL_DEBITO',
+    'Taxa da operadora sobre recebível de débito',
+    'taxa_operadora',
+    'despesa',
+    '6.1.9.99',
+    '1.1.2.01',
+    false,
+    false,
+    true,
+    'SAIDA',
+    'OPERADORA',
+    NULL
+),
+(
+    'TAXA_RECEBIVEL_CREDITO',
+    'Taxa da operadora sobre recebível de crédito',
+    'taxa_operadora',
+    'despesa',
+    '6.1.9.99',
+    '1.1.3.01',
+    false,
+    false,
+    true,
+    'SAIDA',
+    'OPERADORA',
+    NULL
+);
